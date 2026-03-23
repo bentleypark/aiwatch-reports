@@ -27,12 +27,22 @@ a:hover { color: #79c0ff; }
 h1, h2, h3, h4 { color: var(--text0); }
 p, li { color: var(--text1); }
 strong { color: var(--text0); }
+em { color: var(--text2); }
+
+/* Catch-all for minima color overrides */
+.page-content, .post-content,
+.page-content p, .page-content li,
+.page-content td, .page-content th {
+  color: inherit;
+}
 
 /* Table */
 table {
   border-collapse: collapse;
   width: 100%;
   margin-bottom: 16px;
+  color: var(--text1);
+  border: 1px solid var(--border);
 }
 th, td {
   border: 1px solid var(--border);
@@ -49,6 +59,7 @@ tr:nth-child(even) { background: var(--bg1); }
 /* Header */
 .site-header {
   background: var(--bg1);
+  border-top: 5px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 .site-title, .site-title:visited {
@@ -102,15 +113,36 @@ blockquote strong {
   color: var(--text1);
 }
 
-/* Code */
+/* Code & syntax highlighting */
 pre, code {
-  background: var(--bg2);
-  color: var(--text0);
+  background: var(--bg2) !important;
+  color: var(--text0) !important;
   border: 1px solid var(--border);
 }
 pre {
   padding: 12px 16px;
   overflow-x: auto;
+}
+.highlight, .highlighter-rouge .highlight {
+  background: var(--bg2) !important;
+}
+.highlighter-rouge {
+  color: var(--text0);
+}
+.highlight .c, .highlight .cm, .highlight .c1, .highlight .cs,
+.highlight .cp, .highlight .err, .highlight .k, .highlight .o,
+.highlight .kc, .highlight .kd, .highlight .kp, .highlight .kr, .highlight .kt,
+.highlight .m, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .mo,
+.highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc,
+.highlight .sd, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx,
+.highlight .sr, .highlight .ss,
+.highlight .na, .highlight .nb, .highlight .nc, .highlight .nd, .highlight .ne,
+.highlight .nf, .highlight .ni, .highlight .nn, .highlight .no, .highlight .nt,
+.highlight .nv, .highlight .ow, .highlight .w, .highlight .bp,
+.highlight .vc, .highlight .vg, .highlight .vi, .highlight .il,
+.highlight .gd, .highlight .gi, .highlight .go, .highlight .gp,
+.highlight .gs, .highlight .gu, .highlight .gt, .highlight .ge, .highlight .gr, .highlight .gh {
+  color: var(--text1);
 }
 
 /* Horizontal rule */
