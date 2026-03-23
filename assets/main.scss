@@ -31,6 +31,11 @@ strong { color: var(--text0) !important; }
 em { color: var(--text2) !important; }
 
 /* ── Table ── */
+.post-content table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 table {
   border-collapse: collapse !important;
   width: 100% !important;
@@ -159,7 +164,7 @@ hr {
 
 /* ── Layout ── */
 .wrapper {
-  max-width: 760px !important;
+  max-width: 860px !important;
   margin: 0 auto;
   padding-left: 24px !important;
   padding-right: 24px !important;
