@@ -51,32 +51,32 @@ March 2026 reveals three patterns worth noting:
 
 Unlike raw uptime %, it incorporates incident frequency (how often things break), recovery time (how fast they fix it), and real downtime impact — making it a more realistic reliability signal for developers. All formulas are publicly documented. [How it's calculated →](https://ai-watch.dev/#about-score)
 
-| Rank | Service | Score | Grade | Why |
-|---|---|---|---|---|
-| 1= | Cohere API | 100 | Excellent 🟢 | Zero incidents, perfect uptime |
-| 1= | DeepSeek API | 100 | Excellent 🟢 | Zero incidents, perfect uptime |
-| 3 | Hugging Face | 96 | Excellent 🟢 | Near-perfect uptime, minimal incidents |
-| 4 | Groq Cloud | 93 | Excellent 🟢 | Perfect uptime, 1 minor incident |
-| 5 | Together AI | 89 | Excellent 🟢 | Stable uptime, minimal disruption |
-| 6 | OpenAI API | 86 | Excellent 🟢 | Only 1h 30m downtime all month |
-| 7 | Mistral API | 83 | Good 🟢 | 1 affected day (uptime not published) |
-| 8 | Windsurf | 82 | Good 🟢 | Good uptime, 14 affected days |
-| 9 | Gemini API | 76 | Good 🟢 | 3 affected days (uptime not published) |
-| 10 | Cursor | 75 | Good 🟢 | Perfect uptime despite 18 affected days |
-| 11 | Replicate | 74 | Good 🟢 | Single 5h 21m outage |
-| 12 | ChatGPT | 73 | Good 🟢 | Stable API; UI incidents excluded |
-| 13 | GitHub Copilot | 66 | Fair 🟡 | Webhooks & Codespaces instability |
-| 14 | Claude Code | 65 | Fair 🟡 | Per-model reporting inflates count |
-| 15 | Claude API | 62 | Fair 🟡 | Per-model reporting inflates count |
-| 16 | claude.ai | 62 | Fair 🟡 | Per-model reporting inflates count |
-| 17 | ElevenLabs | 52 | Degrading 🟠 | 8 separate incident days, low uptime |
-| — | Perplexity | N/A | — | No uptime data + zero incidents in period |
-| — | xAI (Grok) | N/A | — | No uptime data + zero incidents in period |
+| Rank | Service | Score | Grade | Confidence | Why |
+|---|---|---|---|---|---|
+| 1= | Cohere API | 100 | Excellent 🟢 | High | Zero incidents, perfect uptime |
+| 1= | DeepSeek API | 100 | Excellent 🟢 | High | Zero incidents, perfect uptime |
+| 3 | Hugging Face | 96 | Excellent 🟢 | High | Near-perfect uptime, minimal incidents |
+| 4 | Groq Cloud | 93 | Excellent 🟢 | High | Perfect uptime, 1 minor incident |
+| 5 | Together AI | 89 | Excellent 🟢 | High | Stable uptime, minimal disruption |
+| 6 | OpenAI API | 86 | Excellent 🟢 | High | Only 1h 30m downtime all month |
+| 7 | Mistral API | 83 | Good 🟢 | Medium | 1 affected day (uptime not published) |
+| 8 | Windsurf | 82 | Good 🟢 | High | Good uptime, 14 affected days |
+| 9 | Gemini API | 76 | Good 🟢 | Medium | 3 affected days (uptime not published) |
+| 10 | Cursor | 75 | Good 🟢 | High | Perfect uptime despite 18 affected days |
+| 11 | Replicate | 74 | Good 🟢 | High | Single 5h 21m outage |
+| 12 | ChatGPT | 73 | Good 🟢 | High | Stable API; UI incidents excluded |
+| 13 | GitHub Copilot | 66 | Fair 🟡 | High | Webhooks & Codespaces instability |
+| 14 | Claude Code | 65 | Fair 🟡 | High | Per-model reporting inflates count |
+| 15 | Claude API | 62 | Fair 🟡 | High | Per-model reporting inflates count |
+| 16 | claude.ai | 62 | Fair 🟡 | High | Per-model reporting inflates count |
+| 17 | ElevenLabs | 52 | Degrading 🟠 | High | 8 separate incident days, low uptime |
+| — | Perplexity | N/A | — | Low | No uptime data + zero incidents in period |
+| — | xAI (Grok) | N/A | — | Low | No uptime data + zero incidents in period |
 
 **Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
 
-> Mistral and Gemini scores use industry-average uptime (99.5%) as a baseline since they don't publish official uptime metrics. Confidence: Medium.
-> Perplexity and xAI have insufficient data for scoring (no uptime data + zero 30-day incidents).
+> **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
+> Mistral and Gemini use industry-average uptime (99.5%) as baseline — scores are reasonable estimates, not confirmed figures.
 > Anthropic services score lower due to per-model component reporting — each model tier counts separately toward affected days.
 
 ---
@@ -185,6 +185,18 @@ Three large incidents (file downloads 47h 5m, file uploads 26h 52m, pinned chats
 **Adjusted**: 5 incidents, 1h 30m
 
 One incident returned a negative duration value from the upstream status feed — a data anomaly rather than a real event. Excluding it brings the total to 1h 30m, making OpenAI API one of the most stable services this month.
+
+---
+
+## Choosing the Right Provider
+
+| Use Case | Recommended | Reason |
+|---|---|---|
+| Production-critical | OpenAI API, Cohere | Lowest downtime, highest stability |
+| Low latency / cost | Groq Cloud, Together AI | Fast recovery (~20m avg), stable uptime |
+| Coding workflows | Cursor, Windsurf | High uptime despite incident activity |
+| General purpose (unverified uptime) | Mistral, Gemini | Good scores, but uptime not publicly disclosed — use with monitoring |
+| Voice / audio | ElevenLabs (with fallback) | Only option — implement retry + caching |
 
 ---
 

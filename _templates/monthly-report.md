@@ -52,13 +52,14 @@ This report analyzes AI API reliability, uptime, incidents, and recovery time ac
 
 Unlike raw uptime %, it incorporates incident frequency (how often things break), recovery time (how fast they fix it), and real downtime impact — making it a more realistic reliability signal for developers. All formulas are publicly documented. [How it's calculated →](https://ai-watch.dev/#about-score)
 
-| Rank | Service | Score | Grade | Why |
-|---|---|---|---|---|
+| Rank | Service | Score | Grade | Confidence | Why |
+|---|---|---|---|---|---|
 <!-- To be filled with data -->
-| 1 | | | | |
+| 1 | | | | | |
 
 **Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
 
+> **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
 > Scoring notes and caveats go here.
 
 ---
@@ -96,6 +97,18 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 **Longest**:
 
 <!-- Description -->
+
+---
+
+## Choosing the Right Provider
+
+| Use Case | Recommended | Reason |
+|---|---|---|
+| Production-critical | | |
+| Low latency / cost | | |
+| Coding workflows | | |
+| General purpose (unverified uptime) | | |
+| Voice / audio | | |
 
 ---
 
