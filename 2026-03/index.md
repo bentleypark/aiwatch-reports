@@ -53,23 +53,23 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 | Rank | Service | Score | Grade | Confidence | Why |
 |---|---|---|---|---|---|
-| 1= | Cohere API | 100 | Excellent 🟢 | High | Zero incidents, perfect uptime |
-| 1= | DeepSeek API | 100 | Excellent 🟢 | High | Zero incidents, perfect uptime |
-| 3 | Hugging Face | 96 | Excellent 🟢 | High | Near-perfect uptime, minimal incidents |
-| 4 | Groq Cloud | 93 | Excellent 🟢 | High | Perfect uptime, 1 minor incident |
-| 5 | Together AI | 89 | Excellent 🟢 | High | Stable uptime, minimal disruption |
-| 6 | OpenAI API | 86 | Excellent 🟢 | High | Only 1h 30m downtime all month |
-| 7 | Mistral API | 83 | Good 🟢 | Medium | 1 affected day (uptime not published) |
-| 8 | Windsurf | 82 | Good 🟢 | High | Good uptime, 14 affected days |
-| 9 | Gemini API | 76 | Good 🟢 | Medium | 3 affected days (uptime not published) |
-| 10 | Cursor | 75 | Good 🟢 | High | Perfect uptime despite 18 affected days |
-| 11 | Replicate | 74 | Good 🟢 | High | Single 5h 21m outage |
-| 12 | ChatGPT | 73 | Good 🟢 | High | Stable API; UI incidents excluded |
-| 13 | GitHub Copilot | 66 | Fair 🟡 | High | Webhooks & Codespaces instability |
-| 14 | Claude Code | 65 | Fair 🟡 | High | Per-model reporting inflates count |
-| 15 | Claude API | 62 | Fair 🟡 | High | Per-model reporting inflates count |
-| 16 | claude.ai | 62 | Fair 🟡 | High | Per-model reporting inflates count |
-| 17 | ElevenLabs | 52 | Degrading 🟠 | High | 8 separate incident days, low uptime |
+| 1= | Cohere API | 100 | Excellent | High | Zero incidents, perfect uptime |
+| 1= | DeepSeek API | 100 | Excellent | High | Zero incidents, perfect uptime |
+| 3 | Hugging Face | 96 | Excellent | High | Near-perfect uptime, minimal incidents |
+| 4 | Groq Cloud | 93 | Excellent | High | Perfect uptime, 1 minor incident |
+| 5 | Together AI | 89 | Excellent | High | Stable uptime, minimal disruption |
+| 6 | OpenAI API | 86 | Excellent | High | Only 1h 30m downtime all month |
+| 7 | Mistral API | 83 | Good | Medium | 1 affected day (uptime not published) |
+| 8 | Windsurf | 82 | Good | High | Good uptime, 14 affected days |
+| 9 | Gemini API | 76 | Good | Medium | 3 affected days (uptime not published) |
+| 10 | Cursor | 75 | Good | High | Perfect uptime despite 18 affected days |
+| 11 | Replicate | 74 | Good | High | Single 5h 21m outage |
+| 12 | ChatGPT | 73 | Good | High | Stable API; UI incidents excluded |
+| 13 | GitHub Copilot | 66 | Fair | High | Webhooks & Codespaces instability |
+| 14 | Claude Code | 65 | Fair | High | Per-model reporting inflates count |
+| 15 | Claude API | 62 | Fair | High | Per-model reporting inflates count |
+| 16 | claude.ai | 62 | Fair | High | Per-model reporting inflates count |
+| 17 | ElevenLabs | 52 | Degrading | High | 8 separate incident days, low uptime |
 | — | Perplexity | N/A | — | Low | No uptime data + zero incidents in period |
 | — | xAI (Grok) | N/A | — | Low | No uptime data + zero incidents in period |
 
