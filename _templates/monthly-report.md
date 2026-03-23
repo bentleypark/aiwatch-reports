@@ -10,17 +10,16 @@ date: [YYYY-MM-DD]
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
+> **Services monitored**: 20 — 14 LLM APIs, 4 coding agents, 2 web apps
 
 This report analyzes AI service reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
-<!-- Opening paragraph — update with month-specific narrative -->
+<!-- Opening narrative: 2-3 sentences summarizing the month's highlights and patterns -->
 
 ---
 
 ## TL;DR
 
-<!-- 5 key bullet points summarizing the month -->
 - **Most reliable**:
 - **Best balance (stability + ecosystem)**:
 - **Riskiest this month**:
@@ -36,7 +35,7 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 
 ## Key Insight
 
-<!-- 3 patterns worth noting this month -->
+[MONTH] [YEAR] reveals three patterns worth noting:
 
 - **Pattern 1**:
 - **Pattern 2**:
@@ -54,13 +53,12 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 | Rank | Service | Score | Grade | Confidence | Why |
 |---|---|---|---|---|---|
-<!-- To be filled with data -->
 | 1 | | | | | |
 
 **Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
 
 > **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
-> Scoring notes and caveats go here.
+> <!-- Additional scoring notes and caveats go here -->
 
 ---
 
@@ -69,10 +67,11 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 > **Note on methodology**: Incident counts and downtime reflect all affected components per service (e.g., Claude API counts Opus, Sonnet, and Haiku separately). Official uptime % is based on a single primary component. These two metrics are not directly comparable.
 >
 > **A higher incident count does not necessarily indicate lower reliability.** Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level. Direct comparisons should account for this difference.
+>
+> <!-- Additional data notes (excluded incidents, anomalies, etc.) -->
 
 | Service | Incidents | Total Downtime | Longest Incident | Avg Resolution |
 |---|---|---|---|---|
-<!-- To be filled with data -->
 | | | | | |
 
 ---
@@ -83,14 +82,13 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 | Service | Uptime |
 |---|---|
-<!-- To be filled with data -->
 | | |
 
 ---
 
 ## Notable Incidents
 
-<!-- Top 5-6 notable incidents, raw vs adjusted duration where applicable -->
+<!-- Top 5-6 notable incidents with raw vs adjusted duration where applicable -->
 
 ### 1. [Title]
 **Affected**:
