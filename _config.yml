@@ -1,0 +1,10 @@
+title: AIWatch Reports
+description: Monthly AI API Incident Reports
+baseurl: /aiwatch-reports
+url: https://bentleypark.github.io
+theme: minima
+
+header_pages: []
+
+plugins:
+  - jekyll-seo-tag
