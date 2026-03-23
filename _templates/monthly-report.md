@@ -1,18 +1,18 @@
 ---
 layout: page
-title: "[MONTH] [YEAR] AI API Incident Report"
-description: "Monthly reliability report for 20 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+title: "[MONTH] [YEAR] AI Service Incident Report"
+description: "Monthly reliability report for 20 AI services including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 ---
 
-# [MONTH] [YEAR] AI API Incident Report
+# [MONTH] [YEAR] AI Service Incident Report
 
-> **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI API status monitoring
+> **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
 > **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
 
-This report analyzes AI API reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
 <!-- Opening paragraph — update with month-specific narrative -->
 
@@ -48,7 +48,7 @@ This report analyzes AI API reliability, uptime, incidents, and recovery time ac
 
 **AIWatch Score (0–100)** is designed to answer one question:
 
-> *"Which AI API is safest to rely on in production?"*
+> *"Which AI service is safest to rely on in production?"*
 
 Unlike raw uptime %, it incorporates incident frequency (how often things break), recovery time (how fast they fix it), and real downtime impact — making it a more realistic reliability signal for developers. All formulas are publicly documented. [How it's calculated →](https://ai-watch.dev/#about-score)
 

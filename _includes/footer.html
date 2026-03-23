@@ -1,0 +1,15 @@
+<footer class="site-footer h-card">
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="{{ 'feed.xml' | relative_url }}">
+            <svg class="svg-icon orange"><use xlink:href="{{ 'assets/minima-social-icons.svg#rss' | relative_url }}"></use></svg><span>Subscribe</span>
+          </a>
+        </p>
+        <p>{{ site.description | escape }}</p>
+        <p>&copy; {{ site.time | date: '%Y' }} <a href="https://ai-watch.dev">AIWatch</a></p>
+      </div>
+    </div>
+  </div>
+</footer>

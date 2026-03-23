@@ -1,18 +1,18 @@
 ---
 layout: page
-title: "March 2026 AI API Incident Report"
-description: "Monthly reliability report for 20 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+title: "March 2026 AI Service Incident Report"
+description: "Monthly reliability report for 20 AI services including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
 date: 2026-03-31
 ---
 
-# March 2026 AI API Incident Report
+# March 2026 AI Service Incident Report
 
-> **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI API status monitoring
+> **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 1–31, 2026
 > **Published**: April 2026
 > **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
 
-This report analyzes AI API reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
 March 2026 showed a clear divide: OpenAI and Cohere remained highly stable, while Anthropic experienced frequent multi-component incidents driven by its per-model reporting structure. ElevenLabs recorded the lowest uptime of any monitored service. Coding agents saw mixed results, with Cursor maintaining perfect uptime despite 18 affected days, while GitHub Copilot faced persistent infrastructure instability.
 
@@ -47,7 +47,7 @@ March 2026 reveals three patterns worth noting:
 
 **AIWatch Score (0–100)** is designed to answer one question:
 
-> *"Which AI API is safest to rely on in production?"*
+> *"Which AI service is safest to rely on in production?"*
 
 Unlike raw uptime %, it incorporates incident frequency (how often things break), recovery time (how fast they fix it), and real downtime impact — making it a more realistic reliability signal for developers. All formulas are publicly documented. [How it's calculated →](https://ai-watch.dev/#about-score)
 
