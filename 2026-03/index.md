@@ -99,6 +99,7 @@ title: "AIWatch Monthly Report — March 2026"
 - **Incident data:** Aggregated from official status pages (Atlassian Statuspage, incident.io, Instatus, Google Cloud, BetterStack)
 - **Uptime data:** Official status page metrics where available; polling-based estimates otherwise
 - **Score methodology:** See [About AIWatch Score](https://ai-watch.dev/#about-score)
+- **Note:** AIWatch monitoring began March 20, 2026. Uptime figures in this report use official provider status pages covering the full month of March. Incident data is sourced from each provider's public status feed.
 - **Next report:** April 2026
 
 ---
