@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MONTH] [YEAR] AI API Incident Report"
-description: "Monthly reliability report for 19 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 20 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 ---
 
@@ -10,9 +10,9 @@ date: [YYYY-MM-DD]
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI API status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 19 — LLM APIs, coding agents, and voice systems
+> **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
 
-This report analyzes AI API reliability, uptime, incidents, and recovery time across 19 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI API reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
 <!-- Opening paragraph — update with month-specific narrative -->
 

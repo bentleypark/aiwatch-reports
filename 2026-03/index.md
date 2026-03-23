@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "March 2026 AI API Incident Report"
-description: "Monthly reliability report for 19 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 20 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
 date: 2026-03-31
 ---
 
@@ -10,9 +10,9 @@ date: 2026-03-31
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI API status monitoring
 > **Period**: March 1–31, 2026
 > **Published**: April 2026
-> **Services monitored**: 19 — LLM APIs, coding agents, and voice systems
+> **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
 
-This report analyzes AI API reliability, uptime, incidents, and recovery time across 19 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI API reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
 March 2026 showed a clear divide: OpenAI and Cohere remained highly stable, while Anthropic experienced frequent multi-component incidents driven by its per-model reporting structure. ElevenLabs recorded the lowest uptime of any monitored service. Coding agents saw mixed results, with Cursor maintaining perfect uptime despite 18 affected days, while GitHub Copilot faced persistent infrastructure instability.
 
@@ -94,7 +94,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 |---|---|---|---|---|
 | claude.ai | 33 | 65h 24m | 7h 29m | ~2h 0m |
 | Claude Code | 27 | 56h 47m | 7h 29m | ~2h 6m |
-| Claude API | 25 | 49h 19m | 7h 29m | ~1h 58m |
+| Claude API | 25 | 49h 20m | 7h 29m | ~1h 58m |
 | GitHub Copilot | 14 | 22h 29m | 7h 40m | ~1h 36m |
 | ChatGPT | 7 | 15h 6m | 4h 59m | ~2h 9m |
 | Cursor | 7 | 10h 30m | 4h 3m | ~1h 30m |
