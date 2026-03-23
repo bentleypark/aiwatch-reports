@@ -16,7 +16,7 @@ title: "AIWatch Monthly Report — March 2026"
 
 ## TL;DR
 
-<!-- 핵심 5줄 요약 — 3/31 데이터 기반 작성 -->
+<!-- 5-line summary — to be filled with 3/31 data -->
 1.
 2.
 3.
@@ -35,46 +35,46 @@ title: "AIWatch Monthly Report — March 2026"
 
 ## AIWatch Score Ranking
 
-> AIWatch Score는 uptime(50점), incident frequency(30점), recovery speed(20점)의 가중 합산입니다.
-> 점수 기준: Excellent(85+), Good(70–84), Fair(55–69), Degrading(40–54), Unstable(<40)
+> AIWatch Score is a weighted composite of uptime (50pts), incident frequency (30pts), and recovery speed (20pts).
+> Grades: Excellent (85+), Good (70–84), Fair (55–69), Degrading (40–54), Unstable (<40)
 
 | Rank | Service | Score | Grade | Why |
 |---|---|---|---|---|
-<!-- 3/31 데이터 기반 작성 -->
+<!-- To be filled with 3/31 data -->
 | 1 | | | | |
 
-> *Uptime 데이터가 없는 서비스(Gemini, Mistral, Perplexity, xAI)는 업계 평균 99.5%를 가정하고 10% 감점합니다 (confidence: medium).*
+> *Services without uptime data (Gemini, Mistral, Perplexity, xAI) assume industry average of 99.5% with a 10% penalty applied (confidence: medium).*
 
 ---
 
 ## Incident Summary
 
-> **방법론:** 인시던트 건수와 다운타임은 각 서비스 status page의 컴포넌트별 보고를 합산한 수치입니다.
-> 일부 서비스(Anthropic 등)는 모델별로 별도 인시던트를 보고하므로, 건수가 실제 장애 횟수보다 많을 수 있습니다.
-> 비핵심 인시던트(Desktop app, file handling, webhooks 등)는 제외했습니다.
+> **Methodology:** Incident counts and downtime are aggregated from each service's status page on a per-component basis.
+> Some services (e.g., Anthropic) report separate incidents per model, so counts may exceed the actual number of distinct outages.
+> Non-core incidents (Desktop app, file handling, webhooks, etc.) are excluded.
 
 | Service | Incidents | Total Downtime | Longest Incident |
 |---|---|---|---|
-<!-- 3/31 데이터 기반 작성 -->
+<!-- To be filled with 3/31 data -->
 | | | | |
 
 ---
 
 ## Official Uptime
 
-> 각 서비스가 공식 status page에서 보고하는 단일 컴포넌트 기준 uptime입니다.
-> Incident Summary의 합산 다운타임과는 직접 비교할 수 없습니다.
+> Official uptime as reported by each service's status page, based on a single primary component.
+> Not directly comparable to the aggregated downtime in the Incident Summary above.
 
 | Service | Official Uptime (%) | Source |
 |---|---|---|
-<!-- 3/31 데이터 기반 작성 -->
+<!-- To be filled with 3/31 data -->
 | | | |
 
 ---
 
 ## Notable Incidents
 
-<!-- Top 5-6 주요 인시던트, raw vs adjusted duration 명시 -->
+<!-- Top 5-6 notable incidents, raw vs adjusted duration -->
 
 ### 1.
 
@@ -89,7 +89,7 @@ title: "AIWatch Monthly Report — March 2026"
 
 ## Observations
 
-<!-- 서비스별 actionable 권장사항 -->
+<!-- Per-service actionable recommendations -->
 
 ---
 
