@@ -1,10 +1,25 @@
 title: AIWatch Reports
-description: Monthly AI API Incident Reports
+description: Monthly AI API Incident Reports — uptime, incidents, and reliability rankings for 19 AI services
 baseurl: /aiwatch-reports
 url: https://bentleypark.github.io
 theme: minima
+lang: en
+
+author:
+  name: AIWatch
+  url: https://ai-watch.dev
 
 header_pages: []
 
 plugins:
   - jekyll-seo-tag
+  - jekyll-sitemap
+
+twitter:
+  card: summary
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: null

@@ -1,6 +1,8 @@
 ---
 layout: page
-title: "AIWatch Monthly Report — March 2026"
+title: "March 2026 AI API Incident Report"
+description: "Monthly reliability report for 19 AI APIs including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+date: 2026-03-31
 ---
 
 # AIWatch Monthly Report — March 2026
