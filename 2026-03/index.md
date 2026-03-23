@@ -16,6 +16,9 @@ date: 2026-03-31
 
 ---
 
+<!-- Opening paragraph — update with final 3/31 data before publishing -->
+March 2026 showed a clear divide: OpenAI and Cohere remained highly stable, while Anthropic experienced frequent multi-component incidents driven by its per-model reporting structure. ElevenLabs recorded the lowest uptime of any monitored service.
+
 ## TL;DR
 
 <!-- 5-line summary — to be filled with 3/31 data -->
@@ -103,6 +106,14 @@ date: 2026-03-31
 - **Score methodology:** See [About AIWatch Score](https://ai-watch.dev/#about-score)
 - **Note:** AIWatch monitoring began March 20, 2026. Uptime figures in this report use official provider status pages covering the full month of March. Incident data is sourced from each provider's public status feed.
 - **Next report:** April 2026
+
+---
+
+---
+
+**Live status**: [ai-watch.dev](https://ai-watch.dev)
+**Slack/Discord alerts**: Set up at [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
+**Score methodology**: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
 
 ---
 
