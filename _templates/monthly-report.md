@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MONTH] [YEAR] AI Service Incident Report"
-description: "Monthly reliability report for 20 AI services including OpenAI, Anthropic Claude, Gemini, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 21 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 ---
 

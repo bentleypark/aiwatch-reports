@@ -11,7 +11,7 @@
 
 | Month | Link | Services | Status |
 |---|---|---|---|
-| March 2026 | [View →](https://bentleypark.github.io/aiwatch-reports/2026-03/) | 20 | Publishing March 31 |
+| March 2026 | [View →](https://bentleypark.github.io/aiwatch-reports/2026-03/) | 21 | Publishing March 31 |
 
 ---
 
@@ -29,7 +29,7 @@ Each monthly report includes:
 
 ## Methodology
 
-- **20 services monitored**: 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
+- **21 services monitored**: 12 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, RSS feeds
 - **AIWatch Score**: Weighted composite of uptime (50pts), incident affected days (30pts), recovery time (20pts)
 - **Uptime figures**: Official single-component metrics from each provider's status page
