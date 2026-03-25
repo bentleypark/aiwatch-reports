@@ -10,7 +10,7 @@ date: 2026-03-31
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 1–31, 2026
 > **Published**: April 2026
-> **Services monitored**: 20 — 11 LLM APIs, 4 coding agents, 2 web apps, 3 voice & inference
+> **Services monitored**: 20 — 14 API services, 4 coding agents, 2 web apps
 
 This report analyzes AI service reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
@@ -230,6 +230,7 @@ Data sourced from [ai-watch.dev](https://ai-watch.dev), which aggregates real-ti
 - Downtime figures exclude non-API incidents (UI bugs, file handling, webhooks)
 - Uptime % reflects official single-component figures from provider status pages
 - Services showing "—" for uptime have no publicly accessible uptime metric
+- Regional availability data (xAI, Gemini, OpenAI, ChatGPT) is tracked per-region when incident titles include region identifiers
 - AIWatch monitoring began March 20, 2026. Uptime figures use official provider status pages covering the full month of March. Incident data is sourced from each provider's public status feed.
 
 **Next report**: April 2026
