@@ -1,10 +1,10 @@
 ---
 layout: home
 title: AIWatch Monthly Reports
-description: "Monthly AI service incident reports covering 21 AI services — uptime, incidents, and reliability rankings."
+description: "Monthly AI service incident reports covering 22 AI services — uptime, incidents, and reliability rankings."
 ---
 
-Monthly AI service incident reports covering 21 AI services monitored by [AIWatch](https://ai-watch.dev).
+Monthly AI service incident reports covering 22 AI services monitored by [AIWatch](https://ai-watch.dev).
 
 ## Reports
 
