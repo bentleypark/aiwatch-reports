@@ -91,7 +91,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <!-- Top 5-6 notable incidents with raw vs adjusted duration where applicable -->
 
 ### 1. [Title]
-**Affected**:
+**Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
 **Longest**:
 
 <!-- Description -->
@@ -130,6 +130,7 @@ Data sourced from [ai-watch.dev](https://ai-watch.dev), which aggregates real-ti
 - Downtime figures exclude non-API incidents (UI bugs, file handling, webhooks)
 - Uptime % reflects official single-component figures from provider status pages
 - Services showing "—" for uptime have no publicly accessible uptime metric
+- Regional availability data (xAI, Gemini, OpenAI, ChatGPT) is tracked per-region when incident titles include region identifiers
 
 **Next report**: [NEXT_MONTH] [YEAR]
 
