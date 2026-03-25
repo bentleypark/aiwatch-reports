@@ -127,7 +127,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
 * **Incident Counting:** Incident counts reflect all affected components per service. Downtime figures specifically exclude non-API issues (e.g., UI bugs, file handling, webhooks) to focus on core model availability.
 * **Uptime Metrics:** Uptime percentages reflect official single-component figures provided by the status pages. Services marked with "—" do not provide a publicly accessible uptime metric.
-* **Regional Tracking:** For xAI, Gemini, OpenAI, and ChatGPT, availability is tracked per-region when incident titles include explicit identifiers. Incidents without specific region tags are classified as global service interruptions affecting all monitored regions.
+* **Regional Tracking:** For xAI, Gemini, and OpenAI, availability is tracked per-region when incident titles include explicit identifiers. Incidents without specific region tags are classified as global service interruptions affecting all monitored regions.
 * **Timezone Standard:** To ensure alignment with upstream status providers and facilitate accurate cross-referencing, all timestamps in this report are recorded in **UTC**.
 
 **Next report**: [NEXT_MONTH] [YEAR]
