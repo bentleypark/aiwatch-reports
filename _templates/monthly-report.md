@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MONTH] [YEAR] AI Service Incident Report"
-description: "Monthly reliability report for 22 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 25 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 ---
 
@@ -10,9 +10,9 @@ date: [YYYY-MM-DD]
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 20 — 14 LLM APIs, 4 coding agents, 2 web apps
+> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 web apps, 5 voice & inference
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 20 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 25 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
 <!-- Opening narrative: 2-3 sentences summarizing the month's highlights and patterns -->
 

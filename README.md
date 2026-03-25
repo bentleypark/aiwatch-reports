@@ -1,6 +1,6 @@
 # AIWatch Monthly Reports
 
-> Monthly AI service reliability reports covering uptime, incidents, and performance across 20 major AI services.
+> Monthly AI service reliability reports covering uptime, incidents, and performance across 25 major AI services.
 
 **Live site**: [bentleypark.github.io/aiwatch-reports](https://bentleypark.github.io/aiwatch-reports)
 **Data source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
@@ -11,7 +11,7 @@
 
 | Month | Link | Services | Status |
 |---|---|---|---|
-| March 2026 | [View →](https://bentleypark.github.io/aiwatch-reports/2026-03/) | 21 | Publishing March 31 |
+| March 2026 | [View →](https://bentleypark.github.io/aiwatch-reports/2026-03/) | 25 | Publishing March 31 |
 
 ---
 
@@ -29,7 +29,7 @@ Each monthly report includes:
 
 ## Methodology
 
-- **22 services monitored**: 12 LLM APIs, 4 coding agents, 2 web apps, 4 voice & inference
+- **25 services monitored**: 13 LLM APIs, 4 coding agents, 3 web apps, 5 voice & inference
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, RSS feeds
 - **AIWatch Score**: Weighted composite of uptime (50pts), incident affected days (30pts), recovery time (20pts)
 - **Uptime figures**: Official single-component metrics from each provider's status page
@@ -41,7 +41,7 @@ Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
 
 ## About AIWatch
 
-AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 20 major AI services.
+AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 25 major AI services.
 
 - **Live dashboard**: [ai-watch.dev](https://ai-watch.dev)
 - **Source code**: [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch) (AGPL-3.0)
