@@ -230,7 +230,8 @@ Data sourced from [ai-watch.dev](https://ai-watch.dev), which aggregates real-ti
 - Downtime figures exclude non-API incidents (UI bugs, file handling, webhooks)
 - Uptime % reflects official single-component figures from provider status pages
 - Services showing "—" for uptime have no publicly accessible uptime metric
-- Regional availability data (xAI, Gemini, OpenAI, ChatGPT) is tracked per-region when incident titles include region identifiers
+- Regional availability data (xAI, Gemini, OpenAI, ChatGPT) is tracked per-region when incident titles include region identifiers. Incidents without explicit region tags are classified as global service interruptions
+- All incident timestamps in this report use UTC to align with upstream status page data
 - AIWatch monitoring began March 20, 2026. Uptime figures use official provider status pages covering the full month of March. Incident data is sourced from each provider's public status feed.
 
 **Next report**: April 2026
