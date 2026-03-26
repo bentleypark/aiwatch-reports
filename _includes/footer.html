@@ -14,13 +14,28 @@ document.addEventListener('click', function(e) {
   var a = e.target.closest('a');
   if (!a || typeof gtag !== 'function') return;
   var href = a.getAttribute('href') || '';
-  // Dashboard link (ai-watch.dev, not reports subdomain)
+  var inFooter = !!a.closest('footer');
+  var page = location.pathname.match(/\/(\d{4}-\d{2})\//)?.[1] || 'index';
+  // ai-watch.dev links — classify by destination
   if (href.includes('ai-watch.dev') && !href.includes('reports.ai-watch.dev')) {
-    gtag('event', 'click_dashboard', { location: 'reports_site', source: a.closest('footer') ? 'footer' : 'body' });
+    if (href.includes('#settings')) {
+      gtag('event', 'click_cta_alerts', { location: 'reports_site', source: inFooter ? 'footer' : 'body', page: page });
+    } else if (href.includes('#about-score')) {
+      gtag('event', 'click_score_info', { location: 'reports_site', source: inFooter ? 'footer' : 'body', page: page });
+    } else if (href.includes('#ranking')) {
+      gtag('event', 'click_ranking', { location: 'reports_site', source: inFooter ? 'footer' : 'body', page: page });
+    } else {
+      gtag('event', 'click_dashboard', { location: 'reports_site', source: inFooter ? 'footer' : 'body', page: page });
+    }
+    return;
   }
   // Report link (monthly report pages)
   if (href.match(/\/\d{4}-\d{2}\//)) {
-    gtag('event', 'click_report', { location: 'reports_site', report_month: href.match(/(\d{4}-\d{2})/)?.[1] || '' });
+    gtag('event', 'click_report', { location: 'reports_site', report_month: href.match(/(\d{4}-\d{2})/)?.[1] || '', page: page });
+  }
+  // GitHub link
+  if (href.includes('github.com/bentleypark/aiwatch')) {
+    gtag('event', 'click_github', { location: 'reports_site', page: page });
   }
 });
 </script>
