@@ -8,3 +8,19 @@
     </div>
   </div>
 </footer>
+<script>
+// GA4 event delegation — auto-track link clicks
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a');
+  if (!a || typeof gtag !== 'function') return;
+  var href = a.getAttribute('href') || '';
+  // Dashboard link (ai-watch.dev, not reports subdomain)
+  if (href.includes('ai-watch.dev') && !href.includes('reports.ai-watch.dev')) {
+    gtag('event', 'click_dashboard', { location: 'reports_site', source: a.closest('footer') ? 'footer' : 'body' });
+  }
+  // Report link (monthly report pages)
+  if (href.match(/\/\d{4}-\d{2}\//)) {
+    gtag('event', 'click_report', { location: 'reports_site', report_month: href.match(/(\d{4}-\d{2})/)?.[1] || '' });
+  }
+});
+</script>
