@@ -17,6 +17,8 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 
 March 2026 showed a clear divide: OpenAI and Cohere remained highly stable, while Anthropic experienced frequent multi-component incidents driven by its per-model reporting structure. ElevenLabs recorded the lowest uptime of any monitored service. Coding agents saw mixed results, with Cursor maintaining perfect uptime despite 18 affected days, while GitHub Copilot faced persistent infrastructure instability.
 
+![Daily Service Status](../../assets/2026-03/uptime-heatmap.svg)
+
 ---
 
 ## TL;DR
@@ -79,6 +81,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 > **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
 > Mistral and Gemini use industry-average uptime (99.5%) as baseline — scores are reasonable estimates, not confirmed figures.
 > Anthropic services score lower due to per-model component reporting — each model tier counts separately toward affected days.
+
+![AIWatch Score Rankings](../../assets/2026-03/score-chart.svg)
 
 ---
 

@@ -16,6 +16,9 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 
 <!-- Opening narrative: 2-3 sentences summarizing the month's highlights and patterns -->
 
+<!-- Daily status heatmap: auto-generated from AIWatch polling data -->
+![Daily Service Status](../../assets/[YYYY-MM]/uptime-heatmap.svg)
+
 ---
 
 ## TL;DR
@@ -59,6 +62,9 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 > **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
 > <!-- Additional scoring notes and caveats go here -->
+
+<!-- Generate with: node scripts/generate-charts.js [YYYY-MM]/index.md -->
+![AIWatch Score Rankings](../../assets/[YYYY-MM]/score-chart.svg)
 
 ---
 
