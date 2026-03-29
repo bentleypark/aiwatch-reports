@@ -11,7 +11,7 @@ published: false
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 1–31, 2026
 > **Published**: April 2026
-> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 web apps, 5 voice & inference (Amazon Bedrock, Pinecone, Character.AI, Stability AI, Azure OpenAI added March 25)
+> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 AI apps, 5 voice & inference (Amazon Bedrock, Pinecone, Character.AI, Stability AI, Azure OpenAI added March 25)
 
 This report analyzes AI service reliability, uptime, incidents, and recovery time across 25 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), Pinecone, and others — to help developers make informed infrastructure decisions.
 

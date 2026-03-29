@@ -29,7 +29,7 @@ Each monthly report includes:
 
 ## Methodology
 
-- **25 services monitored**: 13 LLM APIs, 4 coding agents, 3 web apps, 5 voice & inference
+- **25 services monitored**: 13 LLM APIs, 4 coding agents, 3 AI apps, 5 voice & inference
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, RSS feeds
 - **AIWatch Score**: Weighted composite of uptime (50pts), incident affected days (30pts), recovery time (20pts)
 - **Uptime figures**: Official single-component metrics from each provider's status page

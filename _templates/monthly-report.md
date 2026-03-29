@@ -10,7 +10,7 @@ date: [YYYY-MM-DD]
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 web apps, 5 voice & inference
+> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 AI apps, 5 voice & inference
 
 This report analyzes AI service reliability, uptime, incidents, and recovery time across 25 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
 
