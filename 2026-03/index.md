@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "March 2026 AI Service Incident Report"
-description: "Monthly reliability report for 25 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 27 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: 2026-03-31
 published: false
 ---
@@ -11,9 +11,9 @@ published: false
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 1–31, 2026
 > **Published**: April 2026
-> **Services monitored**: 25 — 13 LLM APIs, 4 coding agents, 3 AI apps, 5 voice & inference (Amazon Bedrock, Pinecone, Character.AI, Stability AI, Azure OpenAI added March 25)
+> **Services monitored**: 27 — 15 LLM APIs, 4 coding agents, 3 AI apps, 7 voice 5 voice & inference inference (Amazon Bedrock, Pinecone, Character.AI, Stability AI, Azure OpenAI added March 25)
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 25 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), Pinecone, and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), Pinecone, and others — to help developers make informed infrastructure decisions.
 
 March 2026 showed a clear divide: OpenAI and Cohere remained highly stable, while Anthropic experienced frequent multi-component incidents driven by its per-model reporting structure. ElevenLabs recorded the lowest uptime of any monitored service. Coding agents saw mixed results, with Cursor maintaining perfect uptime despite 18 affected days, while GitHub Copilot faced persistent infrastructure instability.
 
