@@ -33,6 +33,11 @@ document.addEventListener('click', function(e) {
   if (href.match(/\/\d{4}-\d{2}\//)) {
     gtag('event', 'click_report', { location: 'reports_site', report_month: href.match(/(\d{4}-\d{2})/)?.[1] || '', page: page });
   }
+  // Service request link
+  if (href.includes('service_request.md')) {
+    gtag('event', 'click_request_service', { location: 'reports_site', page: page });
+    return;
+  }
   // GitHub link
   if (href.includes('github.com/bentleypark/aiwatch')) {
     gtag('event', 'click_github', { location: 'reports_site', page: page });

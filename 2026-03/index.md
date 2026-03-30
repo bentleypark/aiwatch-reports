@@ -248,3 +248,4 @@ OpenAI API (1h 30m total downtime), Together AI (1h 40m), Groq Cloud (59m) — g
 ---
 
 *Have feedback or spotted an error? Open an issue at [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch)*
+*Want us to track a service? [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)*

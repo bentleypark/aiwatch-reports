@@ -148,3 +148,4 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 ---
 
 *Have feedback or spotted an error? Open an issue at [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch)*
+*Want us to track a service? [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)*
