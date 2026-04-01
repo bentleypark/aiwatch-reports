@@ -6,8 +6,6 @@ date: 2026-03-31
 published: true
 ---
 
-# March 2026 AI Service Reliability Report
-
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 20–31, 2026
 > **Published**: April 2026
@@ -119,18 +117,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 | DeepSeek API | 1 | 1h 4m | 1h 4m | 1h 4m |
 | AssemblyAI | 1 | 5h 14m | 5h 14m | 5h 14m |
 | Replicate | 1 | 9h 38m | 9h 38m | 9h 38m |
-| Gemini API | 0 | — | — | — |
-| Amazon Bedrock | 0 | — | — | — |
-| Azure OpenAI | 0 | — | — | — |
-| Cohere API | 0 | — | — | — |
-| Groq Cloud | 0 | — | — | — |
-| Perplexity | 0 | — | — | — |
-| xAI (Grok) | 0 | — | — | — |
-| OpenRouter | 0 | — | — | — |
-| Hugging Face | 0 | — | — | — |
-| Pinecone | 0 | — | — | — |
-| Stability AI | 0 | — | — | — |
-| Windsurf | 0 | — | — | — |
+
+**Zero incidents (12 services):** Gemini API, Amazon Bedrock, Azure OpenAI, Cohere API, Groq Cloud, Perplexity, xAI (Grok), OpenRouter, Hugging Face, Pinecone, Stability AI, Windsurf
 
 ---
 
@@ -138,29 +126,19 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 *Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
 
-| Service | Uptime |
-|---|---|
-| Amazon Bedrock | 100.00% |
-| Cohere API | 100.00% |
-| Groq Cloud | 100.00% |
-| DeepSeek API | 100.00% |
-| Stability AI | 100.00% |
-| Cursor | 100.00% |
-| OpenAI API | 99.99% |
-| Hugging Face | 99.99% |
-| ChatGPT | 99.99% |
-| Windsurf | 99.99% |
-| Pinecone | 99.98% |
-| AssemblyAI | 99.95% |
-| OpenRouter | 99.89% |
-| GitHub Copilot | 99.62% |
-| Together AI | 99.60% |
-| Character.AI | 99.56% |
-| Claude Code | 99.26% |
-| Claude API | 99.03% |
-| claude.ai | 98.88% |
-| Replicate | 98.61% |
-| ElevenLabs | 97.55% |
+| Service | Uptime | | Service | Uptime |
+|---|---|---|---|---|
+| Amazon Bedrock | 100.00% | | Pinecone | 99.98% |
+| Cohere API | 100.00% | | AssemblyAI | 99.95% |
+| Groq Cloud | 100.00% | | OpenRouter | 99.89% |
+| DeepSeek API | 100.00% | | GitHub Copilot | 99.62% |
+| Stability AI | 100.00% | | Together AI | 99.60% |
+| Cursor | 100.00% | | Character.AI | 99.56% |
+| OpenAI API | 99.99% | | Claude Code | 99.26% |
+| Hugging Face | 99.99% | | Claude API | 99.03% |
+| ChatGPT | 99.99% | | claude.ai | 98.88% |
+| Windsurf | 99.99% | | Replicate | 98.61% |
+| | | | ElevenLabs | 97.55% |
 
 ---
 
