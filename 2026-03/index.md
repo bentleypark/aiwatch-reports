@@ -67,7 +67,7 @@ March 2026 reveals three patterns worth noting:
 
 - **높은 업타임 ≠ 적은 인시던트**: Anthropic은 99%+ 업타임을 유지했지만 인시던트가 가장 많았습니다. 모델별(Opus/Sonnet/Haiku) 개별 리포팅 방식 때문이지, 시스템 전체 불안정이 아닙니다.
 - **짧은 장애도 쌓인다**: Together AI는 20건으로 최다 인시던트를 기록했지만 평균 25분이었습니다. 총 다운타임(8시간 37분)은 Replicate 단일 장애(9시간 38분)보다 적었습니다.
-- **업스트림 의존성이 중요**: Deepgram의 최장 장애(74시간)는 OpenAI 장애가 Voice Agent 하류에 영향을 준 것입니다. 다른 AI 위에 구축된 서비스는 해당 API의 안정성 리스크를 그대로 상속합니다.
+- **업스트림 의존성이 중요**: Deepgram의 최장 장애(74시간)는 OpenAI 장애가 Voice Agent 하류에 영향을 준 것입니다. 다른 AI 위에 구축된 서비스는 해당 API의 장애 영향을 피할 수 없습니다.
 
 </details>
 
