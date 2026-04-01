@@ -129,23 +129,23 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 >
 > One Claude API incident ("Elevated connection reset errors in Cowork") was excluded — a Cowork-specific client issue (resolved by restarting Claude Desktop), not a Claude API outage.
 
-| Service | Incidents | Total Downtime | Longest Incident | Avg Resolution |
-|---|---|---|---|---|
-| Together AI | 20 | 8h 37m | 55m | ~25m |
-| claude.ai | 14 | 41h 43m | 9h 47m | ~2h 58m |
-| Claude API | 9 | 32h 30m | 9h 47m | ~3h 36m |
-| Claude Code | 9 | 32h 30m | 9h 47m | ~3h 36m |
-| GitHub Copilot | 8 | 13h 32m | 6h 19m | ~1h 41m |
-| Mistral API | 7 | 44m | 22m | ~6m |
-| Cursor | 6 | 14h 45m | 4h 4m | ~2h 27m |
-| Character.AI | 4 | 11m | 8m | ~2m |
-| ChatGPT | 4 | 36h 17m | 19h 46m | ~9h 4m |
-| ElevenLabs | 2 | 4h 57m | 4h 47m | ~2h 28m |
-| Deepgram | 2 | 74h 2m | 74h 1m | ~37h 1m |
-| OpenAI API | 1 | 2h 56m | 2h 56m | 2h 56m |
-| DeepSeek API | 1 | 1h 4m | 1h 4m | 1h 4m |
-| AssemblyAI | 1 | 5h 14m | 5h 14m | 5h 14m |
-| Replicate | 1 | 9h 38m | 9h 38m | 9h 38m |
+| Service | Inc | Downtime (longest) |
+|---|---|---|
+| Together AI | 20 | 8h 37m (55m) |
+| claude.ai | 14 | 41h 43m (9h 47m) |
+| Claude API | 9 | 32h 30m (9h 47m) |
+| Claude Code | 9 | 32h 30m (9h 47m) |
+| GitHub Copilot | 8 | 13h 32m (6h 19m) |
+| Mistral API | 7 | 44m (22m) |
+| Cursor | 6 | 14h 45m (4h 4m) |
+| Character.AI | 4 | 11m (8m) |
+| ChatGPT | 4 | 36h 17m (19h 46m) |
+| ElevenLabs | 2 | 4h 57m (4h 47m) |
+| Deepgram | 2 | 74h 2m (74h 1m) |
+| OpenAI API | 1 | 2h 56m |
+| DeepSeek API | 1 | 1h 4m |
+| AssemblyAI | 1 | 5h 14m |
+| Replicate | 1 | 9h 38m |
 
 **Zero incidents (12 services):** Gemini API, Amazon Bedrock, Azure OpenAI, Cohere API, Groq Cloud, Perplexity, xAI (Grok), OpenRouter, Hugging Face, Pinecone, Stability AI, Windsurf
 
