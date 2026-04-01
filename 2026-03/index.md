@@ -160,8 +160,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 *Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
 
-<div class="uptime-grid" markdown="0">
-<table>
+<table class="uptime-cols">
 <thead><tr><th>Service</th><th>Uptime</th></tr></thead>
 <tbody>
 <tr><td>Amazon Bedrock</td><td>100.00%</td></tr>
@@ -174,12 +173,6 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <tr><td>Hugging Face</td><td>99.99%</td></tr>
 <tr><td>ChatGPT</td><td>99.99%</td></tr>
 <tr><td>Windsurf</td><td>99.99%</td></tr>
-<tr><td>ElevenLabs</td><td>97.55%</td></tr>
-</tbody>
-</table>
-<table>
-<thead><tr><th>Service</th><th>Uptime</th></tr></thead>
-<tbody>
 <tr><td>Pinecone</td><td>99.98%</td></tr>
 <tr><td>AssemblyAI</td><td>99.95%</td></tr>
 <tr><td>OpenRouter</td><td>99.89%</td></tr>
@@ -190,9 +183,9 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <tr><td>Claude API</td><td>99.03%</td></tr>
 <tr><td>claude.ai</td><td>98.88%</td></tr>
 <tr><td>Replicate</td><td>98.61%</td></tr>
+<tr><td>ElevenLabs</td><td>97.55%</td></tr>
 </tbody>
 </table>
-</div>
 
 ---
 

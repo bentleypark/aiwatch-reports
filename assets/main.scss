@@ -72,20 +72,21 @@ tr:nth-child(odd) { background: transparent !important; }
   .hide-mobile { display: none !important; }
 }
 
-/* Uptime grid: 2 columns on desktop, 1 on mobile */
-.uptime-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 24px;
+/* Uptime table: 2-column flow on desktop, 1 on mobile */
+.uptime-cols tbody {
+  columns: 2;
+  column-gap: 0;
+  display: block;
 }
-.uptime-grid table {
-  width: 100% !important;
-  margin-bottom: 0 !important;
+.uptime-cols tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
+.uptime-cols tr td:first-child { width: 60%; }
+.uptime-cols tr td:last-child { width: 40%; }
 @media (max-width: 768px) {
-  .uptime-grid {
-    grid-template-columns: 1fr;
-  }
+  .uptime-cols tbody { columns: 1; }
 }
 
 /* ── Header ── */
