@@ -234,12 +234,12 @@ OpenAI API (2h 56m total downtime), Groq Cloud (zero incidents), DeepSeek API (1
 
 ---
 
-**→ Live status**: [ai-watch.dev](https://ai-watch.dev)
-**→ Slack/Discord alerts**: [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
-**→ Score methodology**: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
-**→ All reports**: [reports.ai-watch.dev](https://reports.ai-watch.dev)
+- **Live status** — [ai-watch.dev](https://ai-watch.dev)
+- **Slack/Discord alerts** — [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
+- **Score methodology** — [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+- **All reports** — [reports.ai-watch.dev](https://reports.ai-watch.dev)
 
 ---
 
-*Have feedback or spotted an error? Open an issue at [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch)*
-*Want us to track a service? [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)*
+- *Have feedback or spotted an error?* [Open an issue](https://github.com/bentleypark/aiwatch)
+- *Want us to track a service?* [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)
