@@ -1,23 +1,34 @@
 ---
 layout: page
-title: "[MONTH] [YEAR] AI Service Incident Report"
+title: "[MONTH] [YEAR] AI Service Reliability Report"
 description: "Monthly reliability report for 27 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
+published: true
 ---
-
-# [MONTH] [YEAR] AI Service Incident Report
 
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 27 — 15 LLM APIs, 4 coding agents, 3 AI apps, 7 voice 5 voice & inference inference
+> **Services monitored**: 27 — 20 API services, 4 coding agents, 3 AI apps
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), and others — to help developers make informed infrastructure decisions.
 
 <!-- Opening narrative: 2-3 sentences summarizing the month's highlights and patterns -->
 
 <!-- Daily status heatmap: auto-generated from AIWatch polling data -->
-![Daily Service Status](../../assets/[YYYY-MM]/uptime-heatmap.svg)
+![Daily Service Status](../assets/[YYYY-MM]/uptime-heatmap.svg)
+
+---
+
+## Recommendations — Which AI should I use?
+
+| Use Case | Recommended | Why |
+|---|---|---|
+| **Production-critical** | | |
+| **Low latency / cost** | | |
+| **Coding workflows** | | |
+| **Voice / audio** | | |
+| **General purpose** | | |
 
 ---
 
@@ -29,10 +40,16 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 - **High incident noise**:
 - **Watch out**:
 
-**Recommendations**
-- **Primary**:
-- **Fallback**:
-- **Voice/audio**:
+<details markdown="1">
+<summary><strong>TL;DR in Korean</strong></summary>
+
+- **가장 안정적**:
+- **안정성 + 생태계 균형**:
+- **이번 달 가장 위험**:
+- **인시던트 수 주의**:
+- **주의 필요**:
+
+</details>
 
 ---
 
@@ -43,6 +60,15 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 - **Pattern 1**:
 - **Pattern 2**:
 - **Pattern 3**:
+
+<details markdown="1">
+<summary><strong>Key Insight in Korean</strong></summary>
+
+- **패턴 1**:
+- **패턴 2**:
+- **패턴 3**:
+
+</details>
 
 ---
 
@@ -60,11 +86,11 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 **Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
 
-> **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed); Low = insufficient data for scoring.
-> <!-- Additional scoring notes and caveats go here -->
-
 <!-- Generate with: node scripts/generate-charts.js [YYYY-MM]/index.md -->
-![AIWatch Score Rankings](../../assets/[YYYY-MM]/score-chart.svg)
+![AIWatch Score Rankings](../assets/[YYYY-MM]/score-chart.svg)
+
+> **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed) or partial monitoring period.
+> <!-- Additional scoring notes and caveats go here -->
 
 ---
 
@@ -76,19 +102,29 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 >
 > <!-- Additional data notes (excluded incidents, anomalies, etc.) -->
 
-| Service | Incidents | Total Downtime | Longest Incident | Avg Resolution |
-|---|---|---|---|---|
-| | | | | |
+<table>
+<thead>
+<tr><th>Service</th><th>Inc</th><th>Downtime (longest)</th><th class="hide-mobile">Longest</th><th class="hide-mobile">Avg Resolution</th></tr>
+</thead>
+<tbody>
+<tr><td></td><td></td><td></td><td class="hide-mobile"></td><td class="hide-mobile"></td></tr>
+</tbody>
+</table>
+
+**Zero incidents (N services):** <!-- List services with zero incidents inline -->
 
 ---
 
 ## Official Uptime (Primary Component)
 
-*Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
+*Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
 
-| Service | Uptime |
-|---|---|
-| | |
+<table class="uptime-cols">
+<thead><tr><th>Service</th><th>Uptime</th></tr></thead>
+<tbody>
+<tr><td></td><td></td></tr>
+</tbody>
+</table>
 
 ---
 
@@ -98,27 +134,13 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ### 1. [Title]
 **Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
-**Longest**:
+**Duration**:
 
 <!-- Description -->
 
 ---
 
-## Choosing the Right Provider
-
-| Use Case | Recommended | Reason |
-|---|---|---|
-| Production-critical | | |
-| Low latency / cost | | |
-| Coding workflows | | |
-| General purpose (unverified uptime) | | |
-| Voice / audio | | |
-
----
-
 ## Observations
-
-<!-- Per-service actionable recommendations -->
 
 ### If you build on [Service]
 -
@@ -130,22 +152,24 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ## About This Report
 
-* **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
-* **Incident Counting:** Incident counts reflect all affected components per service. Downtime figures specifically exclude non-API issues (e.g., UI bugs, file handling, webhooks) to focus on core model availability.
+* **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
+* **Monitoring Frequency:** All 27 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
+* **AIWatch Score (0–100):** Calculated from three components — **Uptime** (50%), **Incident frequency** (30%), and **Recovery speed** (20%). Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+* **Confidence Levels:** *High* = official uptime + incident data available; *Medium* = uptime not published (industry average 99.5% assumed) or partial monitoring period. Confidence reflects data completeness, not service quality.
+* **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.
 * **Uptime Metrics:** Uptime percentages reflect official single-component figures provided by the status pages. Services marked with "—" do not provide a publicly accessible uptime metric.
-* **Regional Tracking:** For xAI, Gemini, and OpenAI, availability is tracked per-region when incident titles include explicit identifiers. Incidents without specific region tags are classified as global service interruptions affecting all monitored regions.
-* **Timezone Standard:** To ensure alignment with upstream status providers and facilitate accurate cross-referencing, all timestamps in this report are recorded in **UTC**.
+* **Timezone Standard:** All timestamps are recorded in **UTC**.
 
 **Next report**: [NEXT_MONTH] [YEAR]
 
 ---
 
-**→ Live status**: [ai-watch.dev](https://ai-watch.dev)
-**→ Slack/Discord alerts**: [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
-**→ Score methodology**: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
-**→ All reports**: [bentleypark.github.io/aiwatch-reports](https://bentleypark.github.io/aiwatch-reports)
+- **Live status** — [ai-watch.dev](https://ai-watch.dev)
+- **Slack/Discord alerts** — [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
+- **Score methodology** — [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+- **All reports** — [reports.ai-watch.dev](https://reports.ai-watch.dev)
 
 ---
 
-*Have feedback or spotted an error? Open an issue at [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch)*
-*Want us to track a service? [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)*
+- *Have feedback or spotted an error?* [Open an issue](https://github.com/bentleypark/aiwatch/issues/new)
+- *Want us to track a service?* [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)

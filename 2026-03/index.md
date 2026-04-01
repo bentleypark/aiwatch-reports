@@ -279,5 +279,5 @@ OpenAI API (2h 56m total downtime), Groq Cloud (zero incidents), DeepSeek API (1
 
 ---
 
-- *Have feedback or spotted an error?* [Open an issue](https://github.com/bentleypark/aiwatch)
+- *Have feedback or spotted an error?* [Open an issue](https://github.com/bentleypark/aiwatch/issues/new)
 - *Want us to track a service?* [Request here](https://github.com/bentleypark/aiwatch/issues/new?template=service_request.md)
