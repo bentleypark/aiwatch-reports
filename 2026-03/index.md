@@ -41,7 +41,7 @@ March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded p
 - **High incident noise**: Anthropic services — counts inflated due to per-model component reporting
 - **Watch out**: GitHub Copilot infrastructure instability (18 affected days)
 
-<details>
+<details markdown="1">
 <summary><strong>TL;DR 한국어 요약</strong></summary>
 
 - **가장 안정적**: Cohere, Hugging Face (100점 — 인시던트 0건, 완벽한 업타임)
@@ -62,7 +62,7 @@ March 2026 reveals three patterns worth noting:
 - **Short incidents add up**: Together AI had 20 incidents — the most of any service — but averaged just 25 minutes each. Total downtime (8h 37m) was less than a single Replicate outage (9h 38m).
 - **Upstream dependencies matter**: Deepgram's longest incident (74h) was caused by an OpenAI outage affecting its Voice Agent downstream. Services built on other AI providers inherit their reliability risks.
 
-<details>
+<details markdown="1">
 <summary><strong>Key Insight 한국어</strong></summary>
 
 - **높은 업타임 ≠ 적은 인시던트**: Anthropic은 99%+ 업타임을 유지했지만 인시던트가 가장 많았습니다. 모델별(Opus/Sonnet/Haiku) 개별 리포팅 방식 때문이지, 시스템 전체 불안정이 아닙니다.
