@@ -122,7 +122,8 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
   const labelWidth = 130
   const padding = { top: 68, right: 16, bottom: 44, left: 16 }
   const gridWidth = visibleDays * (cellSize + cellGap)
-  const width = padding.left + labelWidth + gridWidth + padding.right
+  const minLegendWidth = 480
+  const width = Math.max(padding.left + labelWidth + gridWidth + padding.right, minLegendWidth)
   const height = padding.top + serviceNames.length * (cellSize + cellGap) + padding.bottom + 16
 
   // Day number headers — only visible days
@@ -174,7 +175,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     return `${label}\n${cells}`
   }).join('\n')
 
-  // Legend — aligned to left padding for consistent visibility
+  // Legend — single row with min-width guarantee
   const legendY = height - 28
   const legendItems = [
     { color: COLORS.operational, label: 'Operational' },
@@ -190,7 +191,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     ].join('\n')
   }).join('\n')
   // Footnote
-  const footnote = `  <text x="${padding.left}" y="${height - 6}" fill="${COLORS.textMuted}" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray areas indicate periods before a service was added to AIWatch monitoring.</text>`
+  const footnote = `  <text x="${padding.left}" y="${height - 4}" fill="${COLORS.textMuted}" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray areas indicate periods before a service was added to AIWatch monitoring.</text>`
 
   const [yr, mo] = monthKey.split('-').map(Number)
   const monthName = new Date(yr, mo - 1).toLocaleString('en-US', { month: 'long' })
