@@ -53,8 +53,21 @@ const ID_TO_NAME = {
   azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', stability: 'Stability AI',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI',
   claudecode: 'Claude Code', copilot: 'GitHub Copilot', cursor: 'Cursor',
-  windsurf: 'Windsurf',
+  windsurf: 'Windsurf', assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
 }
+
+// Category-based display order (matches dashboard)
+const CATEGORY_ORDER = [
+  // AI Apps
+  'claudeai', 'chatgpt', 'characterai',
+  // LLM API
+  'claude', 'openai', 'gemini', 'bedrock', 'azureopenai', 'mistral', 'cohere', 'groq',
+  'together', 'perplexity', 'xai', 'deepseek', 'openrouter',
+  // Voice & Inference
+  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone', 'stability',
+  // Coding Agents
+  'claudecode', 'copilot', 'cursor', 'windsurf',
+]
 
 function nameToId(name) {
   for (const [id, n] of Object.entries(ID_TO_NAME)) {
@@ -135,17 +148,12 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     return show ? `  <text x="${x + cellSize / 2}" y="${padding.top - 8}" fill="${COLORS.textMuted}" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle">${dayNum}</text>` : ''
   }).filter(Boolean).join('\n')
 
-  // Sort services: full-data services first, then partial-data (by data coverage desc)
+  // Sort services by category order (matches dashboard layout)
   const sortedNames = [...serviceNames].sort((a, b) => {
-    const aId = nameToId(a), bId = nameToId(b)
-    let aCount = 0, bCount = 0
-    for (let i = 0; i < visibleDays; i++) {
-      const dayNum = monitoringStartDay + i
-      const dateKey = `${monthKey}-${String(dayNum).padStart(2, '0')}`
-      if (uptimeHistory[dateKey]?.[aId]) aCount++
-      if (uptimeHistory[dateKey]?.[bId]) bCount++
-    }
-    return bCount - aCount
+    const aIdx = CATEGORY_ORDER.indexOf(nameToId(a))
+    const bIdx = CATEGORY_ORDER.indexOf(nameToId(b))
+    // Unknown services go to the end
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx)
   })
 
   const serviceRows = sortedNames.map((name, si) => {
@@ -292,7 +300,8 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      const serviceNames = incidents.map(r => r.Service)
+      // Use all 27 services in category order (not just incident table)
+      const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
       const heatmapPath = path.join(outDir, 'uptime-heatmap.svg')
