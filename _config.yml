@@ -14,10 +14,10 @@ plugins:
   - jekyll-sitemap
 
 twitter:
-  card: summary
+  card: summary_large_image
 
 defaults:
   - scope:
       path: ""
     values:
-      image: null
+      image: /assets/og-image.png

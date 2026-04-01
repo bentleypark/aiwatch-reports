@@ -1,6 +1,6 @@
 ---
 layout: page
-title: "[MONTH] [YEAR] AI Service Reliability Report"
+title: "[MON] [YEAR] AI Reliability Report"
 description: "Monthly reliability report for 27 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 published: true
@@ -11,16 +11,26 @@ published: true
 > **Published**: [PUBLISH_MONTH] [YEAR]
 > **Services monitored**: 27 — 20 API services, 4 coding agents, 3 AI apps
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), and others — to help developers make informed infrastructure decisions.
+## Summary
 
-<!-- Opening narrative: 2-3 sentences summarizing the month's highlights and patterns -->
+- **Most reliable**:
+- **Best balance (stability + ecosystem)**:
+- **Riskiest this month**:
+- **High incident noise**:
+- **Watch out**:
 
-<!-- Daily status heatmap: auto-generated from AIWatch polling data -->
-![Daily Service Status](../assets/[YYYY-MM]/uptime-heatmap.svg)
+<details markdown="1">
+<summary><strong>Summary in Korean</strong></summary>
 
----
+- **가장 안정적**:
+- **안정성 + 생태계 균형**:
+- **이번 달 가장 위험**:
+- **인시던트 수 주의**:
+- **주의 필요**:
 
-## Recommendations — Which AI should I use?
+</details>
+
+## Recommendations
 
 | Use Case | Recommended | Why |
 |---|---|---|
@@ -32,30 +42,9 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 
 ---
 
-## TL;DR
-
-- **Most reliable**:
-- **Best balance (stability + ecosystem)**:
-- **Riskiest this month**:
-- **High incident noise**:
-- **Watch out**:
-
-<details markdown="1">
-<summary><strong>TL;DR in Korean</strong></summary>
-
-- **가장 안정적**:
-- **안정성 + 생태계 균형**:
-- **이번 달 가장 위험**:
-- **인시던트 수 주의**:
-- **주의 필요**:
-
-</details>
-
----
-
 ## Key Insight
 
-[MONTH] [YEAR] reveals three patterns worth noting:
+<!-- Opening narrative: 1 sentence summarizing the month, then 3 patterns -->
 
 - **Pattern 1**:
 - **Pattern 2**:
@@ -69,6 +58,8 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 - **패턴 3**:
 
 </details>
+
+![Daily Service Status](../assets/[YYYY-MM]/uptime-heatmap.svg)
 
 ---
 

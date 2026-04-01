@@ -1,6 +1,6 @@
 ---
 layout: page
-title: "March 2026 AI Service Reliability Report"
+title: "Mar 2026 AI Reliability Report"
 description: "Monthly reliability report for 27 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: 2026-03-31
 published: true
@@ -13,15 +13,26 @@ published: true
 > **Published**: April 2026
 > **Services monitored**: 27 — 20 API services, 4 coding agents, 3 AI apps
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), and others — to help developers make informed infrastructure decisions. As the inaugural issue, it sets the benchmark for ongoing monthly comparisons.
+## Summary
 
-March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded perfect scores with zero incidents, while Anthropic services accumulated the highest incident counts due to per-model component reporting. ElevenLabs recorded the lowest uptime at 97.55%, and Deepgram experienced a 74-hour Voice Agent degradation triggered by an upstream OpenAI outage.
+- **Most reliable**: Cohere, Hugging Face (100/100 — zero incidents, near-perfect uptime)
+- **Best balance (stability + ecosystem)**: OpenAI API (88/100, only 2h 56m downtime, 99.99% uptime)
+- **Riskiest this month**: ElevenLabs (97.55% uptime, 8 affected days), Deepgram (74h single incident)
+- **High incident noise**: Anthropic services — counts inflated due to per-model component reporting
+- **Watch out**: GitHub Copilot infrastructure instability (18 affected days)
 
-![Daily Service Status](../assets/2026-03/uptime-heatmap.svg)
+<details markdown="1">
+<summary><strong>Summary in Korean</strong></summary>
 
----
+- **가장 안정적**: Cohere, Hugging Face (100점 — 인시던트 0건, 완벽한 업타임)
+- **안정성 + 생태계 균형**: OpenAI API (88점, 총 다운타임 2시간 56분, 업타임 99.99%)
+- **이번 달 가장 위험**: ElevenLabs (업타임 97.55%, 8일 영향), Deepgram (74시간 단일 장애)
+- **인시던트 수 주의**: Anthropic 서비스는 모델별(Opus/Sonnet/Haiku) 개별 집계로 건수가 부풀려 보임
+- **주의 필요**: GitHub Copilot 인프라 불안정 (18일 영향)
 
-## Recommendations — Which AI should I use?
+</details>
+
+## Recommendations
 
 | Use Case | Recommended | Why |
 |---|---|---|
@@ -33,30 +44,9 @@ March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded p
 
 ---
 
-## TL;DR
-
-- **Most reliable**: Cohere, Hugging Face (100/100 — zero incidents, near-perfect uptime)
-- **Best balance (stability + ecosystem)**: OpenAI API (88/100, only 2h 56m downtime, 99.99% uptime)
-- **Riskiest this month**: ElevenLabs (97.55% uptime, 8 affected days), Deepgram (74h single incident)
-- **High incident noise**: Anthropic services — counts inflated due to per-model component reporting
-- **Watch out**: GitHub Copilot infrastructure instability (18 affected days)
-
-<details markdown="1">
-<summary><strong>TL;DR in Korean</strong></summary>
-
-- **가장 안정적**: Cohere, Hugging Face (100점 — 인시던트 0건, 완벽한 업타임)
-- **안정성 + 생태계 균형**: OpenAI API (88점, 총 다운타임 2시간 56분, 업타임 99.99%)
-- **이번 달 가장 위험**: ElevenLabs (업타임 97.55%, 8일 영향), Deepgram (74시간 단일 장애)
-- **인시던트 수 주의**: Anthropic 서비스는 모델별(Opus/Sonnet/Haiku) 개별 집계로 건수가 부풀려 보임
-- **주의 필요**: GitHub Copilot 인프라 불안정 (18일 영향)
-
-</details>
-
----
-
 ## Key Insight
 
-March 2026 reveals three patterns worth noting:
+March 2026 showed a clear reliability divide across 27 AI services. Three patterns stand out:
 
 - **High uptime ≠ low incidents**: Anthropic maintained 99%+ uptime yet recorded the most incidents — driven by per-model component reporting (Opus/Sonnet/Haiku counted separately), not systemic instability.
 - **Short incidents add up**: Together AI had 20 incidents — the most of any service — but averaged just 25 minutes each. Total downtime (8h 37m) was less than a single Replicate outage (9h 38m).
@@ -70,6 +60,8 @@ March 2026 reveals three patterns worth noting:
 - **업스트림 의존성이 중요**: Deepgram의 최장 장애(74시간)는 OpenAI 장애가 Voice Agent 하류에 영향을 준 것입니다. 다른 AI 위에 구축된 서비스는 해당 API의 장애 영향을 피할 수 없습니다.
 
 </details>
+
+![Daily Service Status](../assets/2026-03/uptime-heatmap.svg)
 
 ---
 
