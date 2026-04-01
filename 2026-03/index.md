@@ -17,6 +17,8 @@ This report analyzes AI service reliability, uptime, incidents, and recovery tim
 
 March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded perfect scores with zero incidents, while Anthropic services accumulated the highest incident counts due to per-model component reporting. ElevenLabs recorded the lowest uptime at 97.55%, and Deepgram experienced a 74-hour Voice Agent degradation triggered by an upstream OpenAI outage.
 
+![Daily Service Status](../assets/2026-03/uptime-heatmap.svg)
+
 ---
 
 ## TL;DR
@@ -83,6 +85,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 | 27 | ElevenLabs | 47 | Degrading | Medium | 8 affected days, lowest uptime (97.55%) |
 
 **Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
+
+![AIWatch Score Rankings](../assets/2026-03/score-chart.svg)
 
 > **Confidence** reflects data completeness: High = full uptime + incident data available; Medium = uptime not published (industry average assumed) or partial monitoring period.
 > Amazon Bedrock, Azure OpenAI, Stability AI were added March 25 — scores reflect 7 days of data with medium confidence.
