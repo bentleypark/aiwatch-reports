@@ -32,14 +32,14 @@ em { color: var(--text2) !important; }
 
 /* ── Table ── */
 .post-content table {
-  display: inline-block;
+  display: block;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
 }
 table {
   border-collapse: collapse !important;
-  width: auto !important;
+  width: max-content !important;
   margin-bottom: 16px !important;
   color: var(--text1) !important;
   border: 1px solid var(--border) !important;
@@ -49,6 +49,7 @@ th, td {
   border: 1px solid var(--border) !important;
   padding: 8px 12px !important;
   color: var(--text1) !important;
+  white-space: nowrap !important;
 }
 th {
   background: var(--bg2) !important;
@@ -58,6 +59,17 @@ th {
 }
 tr:nth-child(even) { background: var(--bg1) !important; }
 tr:nth-child(odd) { background: transparent !important; }
+/* Mobile: smaller padding, allow text wrap for Why column */
+@media (max-width: 768px) {
+  th, td {
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+  }
+  td:last-child, th:last-child {
+    white-space: normal !important;
+    min-width: 120px;
+  }
+}
 
 /* ── Header ── */
 .site-header {
