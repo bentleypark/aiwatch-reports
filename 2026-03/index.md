@@ -42,7 +42,7 @@ March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded p
 - **Watch out**: GitHub Copilot infrastructure instability (18 affected days)
 
 <details markdown="1">
-<summary><strong>TL;DR 한국어 요약</strong></summary>
+<summary><strong>TL;DR in Korean</strong></summary>
 
 - **가장 안정적**: Cohere, Hugging Face (100점 — 인시던트 0건, 완벽한 업타임)
 - **안정성 + 생태계 균형**: OpenAI API (88점, 총 다운타임 2시간 56분, 업타임 99.99%)
@@ -63,7 +63,7 @@ March 2026 reveals three patterns worth noting:
 - **Upstream dependencies matter**: Deepgram's longest incident (74h) was caused by an OpenAI outage affecting its Voice Agent downstream. Services built on other AI providers inherit their reliability risks.
 
 <details markdown="1">
-<summary><strong>Key Insight 한국어</strong></summary>
+<summary><strong>Key Insight in Korean</strong></summary>
 
 - **높은 업타임 ≠ 적은 인시던트**: Anthropic은 99%+ 업타임을 유지했지만 인시던트가 가장 많았습니다. 모델별(Opus/Sonnet/Haiku) 개별 리포팅 방식 때문이지, 시스템 전체 불안정이 아닙니다.
 - **짧은 장애도 쌓인다**: Together AI는 20건으로 최다 인시던트를 기록했지만 평균 25분이었습니다. 총 다운타임(8시간 37분)은 Replicate 단일 장애(9시간 38분)보다 적었습니다.
