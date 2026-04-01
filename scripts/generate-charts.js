@@ -123,7 +123,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
   const padding = { top: 68, right: 16, bottom: 44, left: 16 }
   const gridWidth = visibleDays * (cellSize + cellGap)
   const width = padding.left + labelWidth + gridWidth + padding.right
-  const height = padding.top + serviceNames.length * (cellSize + cellGap) + padding.bottom
+  const height = padding.top + serviceNames.length * (cellSize + cellGap) + padding.bottom + 16
 
   // Day number headers — only visible days
   const dayHeaders = Array.from({ length: visibleDays }, (_, i) => {
@@ -134,7 +134,20 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     return show ? `  <text x="${x + cellSize / 2}" y="${padding.top - 8}" fill="${COLORS.textMuted}" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle">${dayNum}</text>` : ''
   }).filter(Boolean).join('\n')
 
-  const serviceRows = serviceNames.map((name, si) => {
+  // Sort services: full-data services first, then partial-data (by data coverage desc)
+  const sortedNames = [...serviceNames].sort((a, b) => {
+    const aId = nameToId(a), bId = nameToId(b)
+    let aCount = 0, bCount = 0
+    for (let i = 0; i < visibleDays; i++) {
+      const dayNum = monitoringStartDay + i
+      const dateKey = `${monthKey}-${String(dayNum).padStart(2, '0')}`
+      if (uptimeHistory[dateKey]?.[aId]) aCount++
+      if (uptimeHistory[dateKey]?.[bId]) bCount++
+    }
+    return bCount - aCount
+  })
+
+  const serviceRows = sortedNames.map((name, si) => {
     const y = padding.top + si * (cellSize + cellGap)
     const label = `  <text x="${padding.left + labelWidth - 8}" y="${y + 12}" fill="${COLORS.text}" font-size="11" font-weight="600" font-family="ui-monospace,monospace" text-anchor="end">${escapeXml(name)}</text>`
     const svcId = nameToId(name)
@@ -162,11 +175,12 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
   }).join('\n')
 
   // Legend — aligned to left padding for consistent visibility
-  const legendY = height - 14
+  const legendY = height - 28
   const legendItems = [
     { color: COLORS.operational, label: 'Operational' },
     { color: COLORS.heatDegraded, label: 'Degraded' },
     { color: COLORS.down, label: 'Down' },
+    { color: COLORS.noData, label: 'Not Monitored' },
   ]
   const legend = legendItems.map((item, i) => {
     const x = padding.left + i * 110
@@ -175,6 +189,8 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
       `  <text x="${x + 14}" y="${legendY + 9}" fill="${COLORS.textMuted}" font-size="10" font-family="ui-monospace,monospace">${item.label}</text>`,
     ].join('\n')
   }).join('\n')
+  // Footnote
+  const footnote = `  <text x="${padding.left}" y="${height - 6}" fill="${COLORS.textMuted}" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray areas indicate periods before a service was added to AIWatch monitoring.</text>`
 
   const [yr, mo] = monthKey.split('-').map(Number)
   const monthName = new Date(yr, mo - 1).toLocaleString('en-US', { month: 'long' })
@@ -195,6 +211,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
 ${dayHeaders}
 ${serviceRows}
 ${legend}
+${footnote}
 </svg>`
 }
 
