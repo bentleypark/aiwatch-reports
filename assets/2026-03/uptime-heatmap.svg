@@ -371,6 +371,6 @@
   <rect x="236" y="613" width="10" height="10" rx="2" fill="#ef4444" opacity="0.85"/>
   <text x="250" y="622" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace">Down</text>
   <rect x="346" y="613" width="10" height="10" rx="2" fill="#21262d" opacity="0.85"/>
-  <text x="360" y="622" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace">Not Monitored</text>
-  <text x="16" y="637" fill="#8b949e" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray areas indicate periods before a service was added to AIWatch monitoring.</text>
+  <text x="360" y="622" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace">Added Later</text>
+  <text x="16" y="637" fill="#8b949e" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray cells = service added after monitoring began (e.g., Amazon Bedrock, Azure OpenAI added Mar 25)</text>
 </svg>

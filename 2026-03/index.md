@@ -6,12 +6,14 @@ date: 2026-03-31
 published: true
 ---
 
+> **Inaugural Issue** — This is AIWatch's first monthly reliability report, establishing the baseline for AI service stability tracking across 27 providers.
+
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: March 20–31, 2026
 > **Published**: April 2026
 > **Services monitored**: 27 — 20 API services, 4 coding agents, 3 AI apps
 
-This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), and others — to help developers make informed infrastructure decisions.
+This report analyzes AI service reliability, uptime, incidents, and recovery time across 27 major providers including OpenAI, Anthropic (Claude), Google (Gemini), Amazon (Bedrock), and others — to help developers make informed infrastructure decisions. As the inaugural issue, it sets the benchmark for ongoing monthly comparisons.
 
 March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded perfect scores with zero incidents, while Anthropic services accumulated the highest incident counts due to per-model component reporting. ElevenLabs recorded the lowest uptime at 97.55%, and Deepgram experienced a 74-hour Voice Agent degradation triggered by an upstream OpenAI outage.
 
@@ -225,6 +227,9 @@ OpenAI API (2h 56m total downtime), Groq Cloud (zero incidents), DeepSeek API (1
 ## About This Report
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
+* **Monitoring Frequency:** All 27 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
+* **AIWatch Score (0–100):** Calculated from three components — **Uptime** (50%), **Incident frequency** (30%), and **Recovery speed** (20%). Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+* **Confidence Levels:** *High* = official uptime + incident data available; *Medium* = uptime not published (industry average 99.5% assumed) or partial monitoring period. Confidence reflects data completeness, not service quality.
 * **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.
 * **Uptime Metrics:** Uptime percentages reflect official single-component figures provided by the status pages. Services marked with "—" do not provide a publicly accessible uptime metric.
 * **Timezone Standard:** All timestamps are recorded in **UTC**.

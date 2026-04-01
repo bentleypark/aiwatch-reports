@@ -189,7 +189,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     { color: COLORS.operational, label: 'Operational' },
     { color: COLORS.heatDegraded, label: 'Degraded' },
     { color: COLORS.down, label: 'Down' },
-    { color: COLORS.noData, label: 'Not Monitored' },
+    { color: COLORS.noData, label: 'Added Later' },
   ]
   const legend = legendItems.map((item, i) => {
     const x = padding.left + i * 110
@@ -199,7 +199,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     ].join('\n')
   }).join('\n')
   // Footnote
-  const footnote = `  <text x="${padding.left}" y="${height - 4}" fill="${COLORS.textMuted}" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray areas indicate periods before a service was added to AIWatch monitoring.</text>`
+  const footnote = `  <text x="${padding.left}" y="${height - 4}" fill="${COLORS.textMuted}" font-size="8" font-family="ui-monospace,monospace" opacity="0.7">Gray cells = service added after monitoring began (e.g., Amazon Bedrock, Azure OpenAI added Mar 25)</text>`
 
   const [yr, mo] = monthKey.split('-').map(Number)
   const monthName = new Date(yr, mo - 1).toLocaleString('en-US', { month: 'long' })
