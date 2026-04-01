@@ -59,7 +59,7 @@ th {
 }
 tr:nth-child(even) { background: var(--bg1) !important; }
 tr:nth-child(odd) { background: transparent !important; }
-/* Mobile: smaller padding, allow text wrap for Why column */
+/* Mobile table adjustments */
 @media (max-width: 768px) {
   th, td {
     padding: 6px 8px !important;
@@ -68,6 +68,23 @@ tr:nth-child(odd) { background: transparent !important; }
   td:last-child, th:last-child {
     white-space: normal !important;
     min-width: 120px;
+  }
+  .hide-mobile { display: none !important; }
+}
+
+/* Uptime grid: 2 columns on desktop, 1 on mobile */
+.uptime-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+}
+.uptime-grid table {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+}
+@media (max-width: 768px) {
+  .uptime-grid {
+    grid-template-columns: 1fr;
   }
 }
 

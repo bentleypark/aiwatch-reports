@@ -129,23 +129,28 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 >
 > One Claude API incident ("Elevated connection reset errors in Cowork") was excluded — a Cowork-specific client issue (resolved by restarting Claude Desktop), not a Claude API outage.
 
-| Service | Inc | Downtime (longest) |
-|---|---|---|
-| Together AI | 20 | 8h 37m (55m) |
-| claude.ai | 14 | 41h 43m (9h 47m) |
-| Claude API | 9 | 32h 30m (9h 47m) |
-| Claude Code | 9 | 32h 30m (9h 47m) |
-| GitHub Copilot | 8 | 13h 32m (6h 19m) |
-| Mistral API | 7 | 44m (22m) |
-| Cursor | 6 | 14h 45m (4h 4m) |
-| Character.AI | 4 | 11m (8m) |
-| ChatGPT | 4 | 36h 17m (19h 46m) |
-| ElevenLabs | 2 | 4h 57m (4h 47m) |
-| Deepgram | 2 | 74h 2m (74h 1m) |
-| OpenAI API | 1 | 2h 56m |
-| DeepSeek API | 1 | 1h 4m |
-| AssemblyAI | 1 | 5h 14m |
-| Replicate | 1 | 9h 38m |
+<table>
+<thead>
+<tr><th>Service</th><th>Inc</th><th>Downtime (longest)</th><th class="hide-mobile">Longest</th><th class="hide-mobile">Avg Resolution</th></tr>
+</thead>
+<tbody>
+<tr><td>Together AI</td><td>20</td><td>8h 37m (55m)</td><td class="hide-mobile">55m</td><td class="hide-mobile">~25m</td></tr>
+<tr><td>claude.ai</td><td>14</td><td>41h 43m (9h 47m)</td><td class="hide-mobile">9h 47m</td><td class="hide-mobile">~2h 58m</td></tr>
+<tr><td>Claude API</td><td>9</td><td>32h 30m (9h 47m)</td><td class="hide-mobile">9h 47m</td><td class="hide-mobile">~3h 36m</td></tr>
+<tr><td>Claude Code</td><td>9</td><td>32h 30m (9h 47m)</td><td class="hide-mobile">9h 47m</td><td class="hide-mobile">~3h 36m</td></tr>
+<tr><td>GitHub Copilot</td><td>8</td><td>13h 32m (6h 19m)</td><td class="hide-mobile">6h 19m</td><td class="hide-mobile">~1h 41m</td></tr>
+<tr><td>Mistral API</td><td>7</td><td>44m (22m)</td><td class="hide-mobile">22m</td><td class="hide-mobile">~6m</td></tr>
+<tr><td>Cursor</td><td>6</td><td>14h 45m (4h 4m)</td><td class="hide-mobile">4h 4m</td><td class="hide-mobile">~2h 27m</td></tr>
+<tr><td>Character.AI</td><td>4</td><td>11m (8m)</td><td class="hide-mobile">8m</td><td class="hide-mobile">~2m</td></tr>
+<tr><td>ChatGPT</td><td>4</td><td>36h 17m (19h 46m)</td><td class="hide-mobile">19h 46m</td><td class="hide-mobile">~9h 4m</td></tr>
+<tr><td>ElevenLabs</td><td>2</td><td>4h 57m (4h 47m)</td><td class="hide-mobile">4h 47m</td><td class="hide-mobile">~2h 28m</td></tr>
+<tr><td>Deepgram</td><td>2</td><td>74h 2m (74h 1m)</td><td class="hide-mobile">74h 1m</td><td class="hide-mobile">~37h 1m</td></tr>
+<tr><td>OpenAI API</td><td>1</td><td>2h 56m</td><td class="hide-mobile">2h 56m</td><td class="hide-mobile">2h 56m</td></tr>
+<tr><td>DeepSeek API</td><td>1</td><td>1h 4m</td><td class="hide-mobile">1h 4m</td><td class="hide-mobile">1h 4m</td></tr>
+<tr><td>AssemblyAI</td><td>1</td><td>5h 14m</td><td class="hide-mobile">5h 14m</td><td class="hide-mobile">5h 14m</td></tr>
+<tr><td>Replicate</td><td>1</td><td>9h 38m</td><td class="hide-mobile">9h 38m</td><td class="hide-mobile">9h 38m</td></tr>
+</tbody>
+</table>
 
 **Zero incidents (12 services):** Gemini API, Amazon Bedrock, Azure OpenAI, Cohere API, Groq Cloud, Perplexity, xAI (Grok), OpenRouter, Hugging Face, Pinecone, Stability AI, Windsurf
 
@@ -155,19 +160,39 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 *Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
 
-| Service | Uptime | | Service | Uptime |
-|---|---|---|---|---|
-| Amazon Bedrock | 100.00% | | ChatGPT | 99.99% |
-| Cohere API | 100.00% | | Windsurf | 99.99% |
-| Groq Cloud | 100.00% | | Pinecone | 99.98% |
-| DeepSeek API | 100.00% | | AssemblyAI | 99.95% |
-| Stability AI | 100.00% | | OpenRouter | 99.89% |
-| Cursor | 100.00% | | GitHub Copilot | 99.62% |
-| OpenAI API | 99.99% | | Together AI | 99.60% |
-| Hugging Face | 99.99% | | Character.AI | 99.56% |
-| Claude Code | 99.26% | | Claude API | 99.03% |
-| claude.ai | 98.88% | | Replicate | 98.61% |
-| ElevenLabs | 97.55% | | | |
+<div class="uptime-grid" markdown="0">
+<table>
+<thead><tr><th>Service</th><th>Uptime</th></tr></thead>
+<tbody>
+<tr><td>Amazon Bedrock</td><td>100.00%</td></tr>
+<tr><td>Cohere API</td><td>100.00%</td></tr>
+<tr><td>Groq Cloud</td><td>100.00%</td></tr>
+<tr><td>DeepSeek API</td><td>100.00%</td></tr>
+<tr><td>Stability AI</td><td>100.00%</td></tr>
+<tr><td>Cursor</td><td>100.00%</td></tr>
+<tr><td>OpenAI API</td><td>99.99%</td></tr>
+<tr><td>Hugging Face</td><td>99.99%</td></tr>
+<tr><td>ChatGPT</td><td>99.99%</td></tr>
+<tr><td>Windsurf</td><td>99.99%</td></tr>
+<tr><td>ElevenLabs</td><td>97.55%</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Service</th><th>Uptime</th></tr></thead>
+<tbody>
+<tr><td>Pinecone</td><td>99.98%</td></tr>
+<tr><td>AssemblyAI</td><td>99.95%</td></tr>
+<tr><td>OpenRouter</td><td>99.89%</td></tr>
+<tr><td>GitHub Copilot</td><td>99.62%</td></tr>
+<tr><td>Together AI</td><td>99.60%</td></tr>
+<tr><td>Character.AI</td><td>99.56%</td></tr>
+<tr><td>Claude Code</td><td>99.26%</td></tr>
+<tr><td>Claude API</td><td>99.03%</td></tr>
+<tr><td>claude.ai</td><td>98.88%</td></tr>
+<tr><td>Replicate</td><td>98.61%</td></tr>
+</tbody>
+</table>
+</div>
 
 ---
 
