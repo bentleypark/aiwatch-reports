@@ -21,6 +21,18 @@ March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded p
 
 ---
 
+## Recommendations — Which AI should I use?
+
+| Use Case | Recommended | Why |
+|---|---|---|
+| **Production-critical** | OpenAI API, Cohere | Only 2h 56m / zero downtime, highest stability |
+| **Low latency / cost** | Groq Cloud, DeepSeek API | 100% uptime, fast recovery |
+| **Coding workflows** | Cursor, Windsurf | High uptime despite some affected days |
+| **Voice / audio** | AssemblyAI (with fallback) | 99.95% uptime; ElevenLabs and Deepgram had multi-hour outages |
+| **General purpose** | Gemini, Perplexity | Good scores, but uptime not publicly disclosed — use with monitoring |
+
+---
+
 ## TL;DR
 
 - **Most reliable**: Cohere, Hugging Face (100/100 — zero incidents, near-perfect uptime)
@@ -29,10 +41,16 @@ March 2026 showed a clear reliability divide: Cohere and Hugging Face recorded p
 - **High incident noise**: Anthropic services — counts inflated due to per-model component reporting
 - **Watch out**: GitHub Copilot infrastructure instability (18 affected days)
 
-**Recommendations**
-- **Primary**: OpenAI API (single short incident) or Cohere (zero incidents, 100% uptime)
-- **Fallback**: Groq Cloud (100% uptime, 1 affected day) or Together AI (20 incidents but avg 25m resolution)
-- **Voice/audio**: implement retry + caching if using ElevenLabs or Deepgram (both had multi-hour outages)
+<details>
+<summary><strong>TL;DR 한국어 요약</strong></summary>
+
+- **가장 안정적**: Cohere, Hugging Face (100점 — 인시던트 0건, 완벽한 업타임)
+- **안정성 + 생태계 균형**: OpenAI API (88점, 총 다운타임 2시간 56분, 업타임 99.99%)
+- **이번 달 가장 위험**: ElevenLabs (업타임 97.55%, 8일 영향), Deepgram (74시간 단일 장애)
+- **인시던트 수 주의**: Anthropic 서비스는 모델별(Opus/Sonnet/Haiku) 개별 집계로 건수가 부풀려 보임
+- **주의 필요**: GitHub Copilot 인프라 불안정 (18일 영향)
+
+</details>
 
 ---
 
@@ -43,6 +61,15 @@ March 2026 reveals three patterns worth noting:
 - **High uptime ≠ low incidents**: Anthropic maintained 99%+ uptime yet recorded the most incidents — driven by per-model component reporting (Opus/Sonnet/Haiku counted separately), not systemic instability.
 - **Short incidents add up**: Together AI had 20 incidents — the most of any service — but averaged just 25 minutes each. Total downtime (8h 37m) was less than a single Replicate outage (9h 38m).
 - **Upstream dependencies matter**: Deepgram's longest incident (74h) was caused by an OpenAI outage affecting its Voice Agent downstream. Services built on other AI providers inherit their reliability risks.
+
+<details>
+<summary><strong>Key Insight 한국어</strong></summary>
+
+- **높은 업타임 ≠ 적은 인시던트**: Anthropic은 99%+ 업타임을 유지했지만 인시던트가 가장 많았습니다. 모델별(Opus/Sonnet/Haiku) 개별 리포팅 방식 때문이지, 시스템 전체 불안정이 아닙니다.
+- **짧은 장애도 쌓인다**: Together AI는 20건으로 최다 인시던트를 기록했지만 평균 25분이었습니다. 총 다운타임(8시간 37분)은 Replicate 단일 장애(9시간 38분)보다 적었습니다.
+- **업스트림 의존성이 중요**: Deepgram의 최장 장애(74시간)는 OpenAI 장애가 Voice Agent 하류에 영향을 준 것입니다. 다른 AI 위에 구축된 서비스는 해당 API의 안정성 리스크를 그대로 상속합니다.
+
+</details>
 
 ---
 
@@ -182,18 +209,6 @@ GitHub Copilot had the highest number of affected days (18) of any service. Disr
 **Affected**: Model inference API
 
 A single 9h 38m outage — the longest single-service incident after Deepgram. No other incidents in the period, but the extended recovery time significantly impacted the score.
-
----
-
-## Choosing the Right Provider
-
-| Use Case | Recommended | Reason |
-|---|---|---|
-| Production-critical | Cohere, OpenAI API | Zero/minimal downtime, highest stability |
-| Low latency / cost | Groq Cloud, DeepSeek API | 100% uptime, fast recovery |
-| Coding workflows | Cursor, Windsurf | High uptime despite some affected days |
-| General purpose (unverified uptime) | Gemini, Perplexity | Good scores, but uptime not publicly disclosed — use with monitoring |
-| Voice / audio | AssemblyAI (with fallback) | 99.95% uptime; ElevenLabs and Deepgram had multi-hour outages |
 
 ---
 
