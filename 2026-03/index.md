@@ -128,17 +128,17 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 | Service | Uptime | | Service | Uptime |
 |---|---|---|---|---|
-| Amazon Bedrock | 100.00% | | Pinecone | 99.98% |
-| Cohere API | 100.00% | | AssemblyAI | 99.95% |
-| Groq Cloud | 100.00% | | OpenRouter | 99.89% |
-| DeepSeek API | 100.00% | | GitHub Copilot | 99.62% |
-| Stability AI | 100.00% | | Together AI | 99.60% |
-| Cursor | 100.00% | | Character.AI | 99.56% |
-| OpenAI API | 99.99% | | Claude Code | 99.26% |
-| Hugging Face | 99.99% | | Claude API | 99.03% |
-| ChatGPT | 99.99% | | claude.ai | 98.88% |
-| Windsurf | 99.99% | | Replicate | 98.61% |
-| | | | ElevenLabs | 97.55% |
+| Amazon Bedrock | 100.00% | | ChatGPT | 99.99% |
+| Cohere API | 100.00% | | Windsurf | 99.99% |
+| Groq Cloud | 100.00% | | Pinecone | 99.98% |
+| DeepSeek API | 100.00% | | AssemblyAI | 99.95% |
+| Stability AI | 100.00% | | OpenRouter | 99.89% |
+| Cursor | 100.00% | | GitHub Copilot | 99.62% |
+| OpenAI API | 99.99% | | Together AI | 99.60% |
+| Hugging Face | 99.99% | | Character.AI | 99.56% |
+| Claude Code | 99.26% | | Claude API | 99.03% |
+| claude.ai | 98.88% | | Replicate | 98.61% |
+| ElevenLabs | 97.55% | | | |
 
 ---
 
