@@ -119,6 +119,36 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ---
 
+## API Response Time — Monthly p75
+
+<!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
+<!-- 17 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
+
+| Rank | Service | p75 (ms) | p95 (ms) | Spikes | vs Last Month |
+|---|---|---|---|---|---|
+| 1 | | | | | |
+
+**Spike definition**: RTT > 3× daily median or connection failure (rtt = -1).
+
+> **Note**: Probe RTT measures direct API endpoint response time from Cloudflare Workers edge (5-min intervals). Values reflect network round-trip time, not inference latency. Services without probe coverage (Bedrock, Azure OpenAI, Pinecone) are excluded from rankings.
+
+---
+
+## Detection Lead
+
+<!-- Data source: detected:{svcId} KV timestamps vs official incident start times -->
+<!-- Only applicable when probe spike detection fires before status page update -->
+
+| Incident | Service | Detected At (UTC) | Official Report (UTC) | Lead Time |
+|---|---|---|---|---|
+| | | | | |
+
+**Average Detection Lead**: <!-- X min --> (across N incidents with probe spike detection)
+
+> **Detection Lead** measures how much earlier AIWatch detected an issue (via probe RTT spike) compared to the official status page report. Only incidents where probe spike detection fired before the status page update are included.
+
+---
+
 ## Notable Incidents
 
 <!-- Top 5-6 notable incidents with raw vs adjusted duration where applicable -->
