@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MON] [YEAR] AI Reliability Report"
-description: "Monthly reliability report for 27 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 30 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 published: true
 ---
@@ -9,7 +9,7 @@ published: true
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 27 — 20 API services, 4 coding agents, 3 AI apps
+> **Services monitored**: 30 — 23 API services, 4 coding agents, 3 AI apps
 
 ## Summary
 
@@ -174,7 +174,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 ## About This Report
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
-* **Monitoring Frequency:** All 27 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
+* **Monitoring Frequency:** All 30 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
 * **AIWatch Score (0–100):** Calculated from three components — **Uptime** (50%), **Incident affected days** (30%), and **Recovery speed** (20%). Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
 * **Confidence Levels:** *High* = official uptime + incident data available; *Medium* = uptime not published (industry average 99.5% assumed) or partial monitoring period. Confidence reflects data completeness, not service quality.
 * **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.
