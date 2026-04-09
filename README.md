@@ -2,7 +2,7 @@
 
 > Monthly AI service reliability reports covering uptime, incidents, and performance across 30 major AI services.
 
-**Live site**: [bentleypark.github.io/aiwatch-reports](https://bentleypark.github.io/aiwatch-reports)
+**Live site**: [reports.ai-watch.dev](https://reports.ai-watch.dev)
 **Data source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 
 ---
@@ -11,7 +11,7 @@
 
 | Month | Link | Services | Status |
 |---|---|---|---|
-| March 2026 | [View →](https://bentleypark.github.io/aiwatch-reports/2026-03/) | 27 | Publishing March 31 |
+| March 2026 | [View →](https://reports.ai-watch.dev/2026-03/) | 27 | Published |
 
 ---
 
@@ -29,13 +29,23 @@ Each monthly report includes:
 
 ## Methodology
 
-- **30 services monitored**: 14 LLM APIs, 3 voice & speech, 6 inference & infra, 3 AI apps, 4 coding agents
-- **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, RSS feeds
+- **30 services monitored**: 14 LLM APIs, 9 voice & inference, 3 AI apps, 4 coding agents
+- **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, AWS Health Dashboard, Azure Status RSS, OnlineOrNot
 - **AIWatch Score**: Weighted composite of uptime (50pts), incident affected days (30pts), recovery time (20pts)
-- **Uptime figures**: Official single-component metrics from each provider's status page
+- **Uptime figures**: Official status page metrics — single primary component basis where available, platform-wide average otherwise
 - **Incident counts**: Per-component aggregation — some providers (e.g., Anthropic) report per model, so counts may exceed distinct outages
+- **API probe**: Direct RTT measurement every 5 minutes to 19 services with public endpoints (supplementary monitoring data)
 
 Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+
+---
+
+## Data Preservation
+
+Monthly archive data is stored in two locations:
+
+- **Cloudflare KV**: `archive:monthly:{YYYY-MM}` (permanent, auto-generated on 1st of each month)
+- **Git**: `_data/{YYYY-MM}.json` (fetched via `scripts/fetch-archive.sh`)
 
 ---
 
