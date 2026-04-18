@@ -175,8 +175,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
 * **Monitoring Frequency:** All 30 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
-* **AIWatch Score (0–100):** Calculated from three components — **Uptime** (50%), **Incident affected days** (30%), and **Recovery speed** (20%). Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
-* **Confidence Levels:** *High* = official uptime + incident data available; *Medium* = uptime not published (industry average 99.5% assumed) or partial monitoring period. Confidence reflects data completeness, not service quality.
+* **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). Services without probe data use 80→100 score redistribution. Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+* **Confidence Levels:** *High* = official uptime data available; *Medium* = uptime not published (industry average 99.5% assumed) or estimate-based. Confidence reflects uptime data quality. Probe data status (Responsiveness) is shown separately on each service's dashboard.
 * **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.
 * **Uptime Metrics:** Uptime percentages reflect official single-component figures provided by the status pages. Services marked with "—" do not provide a publicly accessible uptime metric.
 * **Timezone Standard:** All timestamps are recorded in **UTC**.
