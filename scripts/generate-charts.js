@@ -47,13 +47,16 @@ function escapeXml(s) {
 const ID_TO_NAME = {
   claude: 'Claude API', openai: 'OpenAI API', gemini: 'Gemini API',
   mistral: 'Mistral API', cohere: 'Cohere API', groq: 'Groq Cloud',
-  together: 'Together AI', perplexity: 'Perplexity', huggingface: 'Hugging Face',
+  together: 'Together AI', fireworks: 'Fireworks AI',
+  perplexity: 'Perplexity', huggingface: 'Hugging Face',
   replicate: 'Replicate', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
   deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
   azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', stability: 'Stability AI',
+  voyageai: 'Voyage AI', modal: 'Modal',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI',
-  claudecode: 'Claude Code', copilot: 'GitHub Copilot', cursor: 'Cursor',
-  windsurf: 'Windsurf', assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
+  claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
+  copilot: 'GitHub Copilot', windsurf: 'Windsurf',
+  assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
 }
 
 // Category-based display order (matches dashboard)
@@ -62,11 +65,12 @@ const CATEGORY_ORDER = [
   'claudeai', 'chatgpt', 'characterai',
   // LLM API
   'claude', 'openai', 'gemini', 'bedrock', 'azureopenai', 'mistral', 'cohere', 'groq',
-  'together', 'perplexity', 'xai', 'deepseek', 'openrouter',
+  'together', 'fireworks', 'perplexity', 'xai', 'deepseek', 'openrouter',
   // Voice & Inference
-  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone', 'stability',
+  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone',
+  'stability', 'voyageai', 'modal',
   // Coding Agents
-  'claudecode', 'copilot', 'cursor', 'windsurf',
+  'claudecode', 'codex', 'cursor', 'copilot', 'windsurf',
 ]
 
 function nameToId(name) {
@@ -300,7 +304,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 30 services in category order (not just incident table)
+      // Use all 31 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
