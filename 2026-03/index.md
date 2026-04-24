@@ -267,7 +267,7 @@ OpenAI API (2h 56m total downtime), Groq Cloud (zero incidents), DeepSeek API (1
 - **Live status** — [ai-watch.dev](https://ai-watch.dev)
 - **Slack/Discord alerts** — [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
 - **Score methodology** — [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
-- **All reports** — [reports.ai-watch.dev](https://reports.ai-watch.dev)
+- **All reports** — [ai-watch.dev/reports](https://ai-watch.dev/reports/)
 
 ---
 
