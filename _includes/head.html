@@ -1,4 +1,13 @@
 <head>
+  <script>
+  // #264: reports moved to ai-watch.dev/reports/. Subdomain visitors bounce
+  // to the canonical main-domain URL so SEO consolidates and internal links
+  // (which now use baseurl=/reports) resolve correctly. Placed first so it
+  // fires before CSS/asset loading and GA4 — redirect happens immediately.
+  if (location.hostname === 'reports.ai-watch.dev') {
+    location.replace('https://ai-watch.dev/reports' + location.pathname + location.search + location.hash);
+  }
+  </script>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
