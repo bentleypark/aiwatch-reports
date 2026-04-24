@@ -16,11 +16,8 @@ document.addEventListener('click', function(e) {
   var href = a.getAttribute('href') || '';
   var inFooter = !!a.closest('footer');
   var page = location.pathname.match(/\/(\d{4}-\d{2})\//)?.[1] || 'index';
-  // ai-watch.dev links — classify by destination. After #264 migration, report
-  // pages live at ai-watch.dev/reports/, so exclude any /reports/ path here to
-  // avoid mis-classifying report-to-report navigation as dashboard clicks.
-  // Trailing slash anchors the match to path-prefix, not hash (#reports-info).
-  if (href.includes('ai-watch.dev') && !href.includes('/reports/')) {
+  // ai-watch.dev links — classify by destination
+  if (href.includes('ai-watch.dev') && !href.includes('reports.ai-watch.dev')) {
     if (href.includes('#settings')) {
       gtag('event', 'click_cta_alerts', { location: 'reports_site', source: inFooter ? 'footer' : 'body', page: page });
     } else if (href.includes('#about-score')) {

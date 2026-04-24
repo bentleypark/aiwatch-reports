@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ai-watch.dev/reports/sitemap.xml
+Sitemap: https://reports.ai-watch.dev/sitemap.xml

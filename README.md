@@ -2,7 +2,7 @@
 
 > Monthly AI service reliability reports covering uptime, incidents, and performance across 30 major AI services.
 
-**Live site**: [ai-watch.dev/reports](https://ai-watch.dev/reports/) (served via Vercel rewrite; legacy `reports.ai-watch.dev` self-redirects to the canonical path — #264)
+**Live site**: [reports.ai-watch.dev](https://reports.ai-watch.dev)
 **Data source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 
 ---
@@ -11,7 +11,7 @@
 
 | Month | Link | Services | Status |
 |---|---|---|---|
-| March 2026 | [View →](https://ai-watch.dev/reports/2026-03/) | 27 | Published |
+| March 2026 | [View →](https://reports.ai-watch.dev/2026-03/) | 27 | Published |
 
 ---
 
