@@ -49,6 +49,25 @@ Monthly archive data is stored in two locations:
 
 ---
 
+## Generating a Report Draft
+
+New monthly reports are generated from the permanent archive — no live-data fallback, by design. The cron fires on the 1st of the following month at 00:00 UTC; after that the draft can be produced either locally or via GitHub Actions.
+
+**Local:**
+```bash
+node scripts/generate-report.js 2026-04   # writes 2026-04/index.md with published: false
+node scripts/generate-charts.js 2026-04/index.md
+```
+
+**GitHub Actions** (`.github/workflows/generate-report.yml`):
+1. Open the workflow's "Run workflow" page
+2. Enter the report month (YYYY-MM) or leave empty to default to the previous calendar month
+3. The workflow generates the draft + charts and opens a draft PR for review
+
+After generation, fill in the narrative sections (`Summary`, `Recommendations`, `Key Insight`, `Notable Incidents`, `Observations`), flip `published: false` → `true`, and merge.
+
+---
+
 ## About AIWatch
 
 AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 30 major AI services.
