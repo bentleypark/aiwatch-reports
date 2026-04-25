@@ -149,6 +149,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ---
 
+<!-- SECURITY_SECTION -->
+
 ## Notable Incidents
 
 <!-- Top 5-6 notable incidents with raw vs adjusted duration where applicable -->
