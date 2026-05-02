@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 586 938" width="586" height="938">
+  <style>
+    .chart-bg { fill: #0d1117; }
+    .chart-title { fill: #e6edf3; }
+    .chart-text { fill: #e6edf3; }
+    .chart-muted { fill: #8b949e; }
+  </style>
+  <rect class="chart-bg" width="100%" height="100%" fill="#0d1117"/>
+  <text x="16" y="28" fill="#e6edf3" font-size="14" font-weight="600" font-family="ui-monospace,monospace" class="chart-title">AIWatch Score Rankings</text>
+  <line x1="146" y1="40" x2="466" y2="40" stroke="#30363d" stroke-width="1"/>
+  <text x="138" y="68" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Pinecone</text>
+  <rect x="146" y="55" width="320" height="18" rx="3" fill="#22c55e" opacity="0.85"/>
+  <text x="474" y="68" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">100  (Excellent)</text>
+  <text x="138" y="96" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Modal</text>
+  <rect x="146" y="83" width="301" height="18" rx="3" fill="#22c55e" opacity="0.85"/>
+  <text x="455" y="96" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">94  (Excellent)</text>
+  <text x="138" y="124" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Groq Cloud</text>
+  <rect x="146" y="111" width="298" height="18" rx="3" fill="#22c55e" opacity="0.85"/>
+  <text x="452" y="124" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">93  (Excellent)</text>
+  <text x="138" y="152" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Amazon Bedrock</text>
+  <rect x="146" y="139" width="288" height="18" rx="3" fill="#22c55e" opacity="0.85"/>
+  <text x="442" y="152" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">90  (Excellent)</text>
+  <text x="138" y="180" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Azure OpenAI</text>
+  <rect x="146" y="167" width="288" height="18" rx="3" fill="#22c55e" opacity="0.85"/>
+  <text x="442" y="180" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">90  (Excellent)</text>
+  <text x="138" y="208" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Windsurf</text>
+  <rect x="146" y="195" width="285" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="439" y="208" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">89  (Good)</text>
+  <text x="138" y="236" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cursor</text>
+  <rect x="146" y="223" width="282" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="436" y="236" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">88  (Good)</text>
+  <text x="138" y="264" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Fireworks AI</text>
+  <rect x="146" y="251" width="282" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="436" y="264" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">88  (Good)</text>
+  <text x="138" y="292" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Hugging Face</text>
+  <rect x="146" y="279" width="278" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="432" y="292" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">87  (Good)</text>
+  <text x="138" y="320" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Voyage AI</text>
+  <rect x="146" y="307" width="275" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="429" y="320" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">86  (Good)</text>
+  <text x="138" y="348" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Codex</text>
+  <rect x="146" y="335" width="275" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="429" y="348" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">86  (Good)</text>
+  <text x="138" y="376" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cohere API</text>
+  <rect x="146" y="363" width="272" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="426" y="376" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">85  (Good)</text>
+  <text x="138" y="404" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenAI API</text>
+  <rect x="146" y="391" width="269" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="423" y="404" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">84  (Good)</text>
+  <text x="138" y="432" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Together AI</text>
+  <rect x="146" y="419" width="266" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="420" y="432" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">83  (Good)</text>
+  <text x="138" y="460" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">DeepSeek API</text>
+  <rect x="146" y="447" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="416" y="460" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
+  <text x="138" y="488" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenRouter</text>
+  <rect x="146" y="475" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="416" y="488" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
+  <text x="138" y="516" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">AssemblyAI</text>
+  <rect x="146" y="503" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="416" y="516" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
+  <text x="138" y="544" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">xAI (Grok)</text>
+  <rect x="146" y="531" width="246" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="400" y="544" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">77  (Good)</text>
+  <text x="138" y="572" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Stability AI</text>
+  <rect x="146" y="559" width="246" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="400" y="572" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">77  (Good)</text>
+  <text x="138" y="600" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Mistral API</text>
+  <rect x="146" y="587" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="397" y="600" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
+  <text x="138" y="628" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Perplexity</text>
+  <rect x="146" y="615" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="397" y="628" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
+  <text x="138" y="656" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Character.AI</text>
+  <rect x="146" y="643" width="234" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="388" y="656" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">73  (Fair)</text>
+  <text x="138" y="684" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Replicate</text>
+  <rect x="146" y="671" width="227" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="381" y="684" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">71  (Fair)</text>
+  <text x="138" y="712" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">ChatGPT</text>
+  <rect x="146" y="699" width="227" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="381" y="712" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">71  (Fair)</text>
+  <text x="138" y="740" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">GitHub Copilot</text>
+  <rect x="146" y="727" width="221" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="375" y="740" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">69  (Fair)</text>
+  <text x="138" y="768" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Claude Code</text>
+  <rect x="146" y="755" width="211" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="365" y="768" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">66  (Fair)</text>
+  <text x="138" y="796" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">ElevenLabs</text>
+  <rect x="146" y="783" width="208" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="362" y="796" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">65  (Fair)</text>
+  <text x="138" y="824" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Gemini API</text>
+  <rect x="146" y="811" width="198" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="352" y="824" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">62  (Fair)</text>
+  <text x="138" y="852" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Claude API</text>
+  <rect x="146" y="839" width="195" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="349" y="852" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">61  (Fair)</text>
+  <text x="138" y="880" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">claude.ai</text>
+  <rect x="146" y="867" width="195" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="349" y="880" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">61  (Fair)</text>
+  <text x="138" y="908" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Deepgram</text>
+  <rect x="146" y="895" width="176" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="330" y="908" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">55  (Fair)</text>
+
+</svg>
