@@ -1,13 +1,21 @@
 name: Generate Monthly Charts
 
 on:
+  # workflow_dispatch only — charts are normally generated as part of
+  # generate-report.yml when an operator triggers a monthly report draft.
+  # This workflow remains as an opt-in chart-only re-run tool (e.g. when an
+  # operator updates the report frontmatter and needs to regenerate SVGs
+  # without re-running the full report draft pipeline).
+  #
+  # No `schedule:` trigger — that was removed because it ran on the 1st of
+  # the month before the operator had a chance to trigger generate-report.yml,
+  # so the existence check at "Report not found: {prev-month}/index.md" failed
+  # every month (#12).
   workflow_dispatch:
     inputs:
       report_path:
         description: 'Report file path (e.g., 2026-04/index.md)'
         required: true
-  schedule:
-    - cron: '0 0 1 * *'
 
 jobs:
   generate:
