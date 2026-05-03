@@ -38,7 +38,7 @@ published: false
 | **Low latency / cost** | Groq Cloud, Fireworks AI | Groq 100% uptime / zero incidents; Fireworks 99.40% uptime / 7m avg recovery; p75 RTT 213ms / 210ms |
 | **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% full-month uptime. Codex was newly tracked from 22 Apr — 9-day partial data + contamination caveat make a clean monthly comparison unreliable; revisit with full-month May data |
 | **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
-| **General purpose** | OpenAI API, Hugging Face | OpenAI 97.44% uptime / Score 84; Hugging Face 99.97% uptime / Score 87, both with strong ecosystems |
+| **General purpose** | OpenAI API, OpenRouter | OpenAI 97.44% uptime / Score 84 — the only major-LLM general-purpose API that finished April in the Good tier (Claude API 96.46% / Score 61 Fair, Gemini API 80.15% / Score 62 Fair both struggled). OpenRouter 99.84% uptime / Score 82 routes to many of the same model families, useful as a fallback layer when a single upstream wobbles. |
 
 ---
 
