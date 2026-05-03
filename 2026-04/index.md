@@ -16,7 +16,7 @@ published: false
 - **Most reliable**: Pinecone (100/100 — zero incidents, 99.84% uptime), Groq Cloud (93/100 — zero incidents, 100% uptime)
 - **Riskiest this month**: Gemini API (80.15% estimated uptime — Google publishes no official Gemini uptime, so this is AIWatch's poll-based estimate; single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
 - **High incident count, fast recovery**: Together AI (139 incidents, avg 42m), Mistral (97 incidents, avg 8m). The two services run their status pages on different platforms (Together AI on BetterStack, Mistral on Instatus). For Together AI specifically, BetterStack's recovery-period mechanism tends to register short state changes as separate down/resolved pairs — AIWatch deduplicates those, and the count above is already after that filtering. Whether the residual reflects platform-reporting style or genuine micro-instability isn't determinable from counts alone. What's observable: fast recovery kept user-facing impact bounded by client-side retry, not extended unavailability
-- **Watch out**: Codex started monitoring on 22 Apr 2026 — its 9-day poll-based aggregate (84.97%) is not directly comparable with full-month peers and includes cross-contamination from an AIWatch monitoring bug fixed on 30 Apr; OpenAI's official 30-day Codex uptime stays near 99.98%. Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
+- **Watch out**: Codex was newly added on 22 Apr — only 9 days of data this month, not directly comparable with full-month peers (full caveat under Official Uptime). Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
 <details markdown="1">
 <summary><strong>Summary in Korean</strong></summary>
@@ -24,7 +24,7 @@ published: false
 - **가장 안정적**: Pinecone (100점, 인시던트 0건·업타임 99.84%), Groq Cloud (93점, 인시던트 0건·업타임 100%)
 - **이번 달 가장 위험**: Gemini API (추정 업타임 80.15% — Google이 공식 Gemini 업타임을 공개하지 않아 AIWatch의 폴링 기반 추정치이며, 242시간짜리 API 키 장애 하나가 한 달 수치를 끌어내림), Deepgram (점수 55, 최장 74시간 20분·평균 복구 16시간 15분)
 - **잦은 장애, 빠른 복구**: Together AI (139건, 평균 42분에 복구), Mistral (97건·평균 8분). 두 서비스는 서로 다른 status page 플랫폼을 사용합니다 — Together AI는 BetterStack, Mistral은 Instatus. 특히 BetterStack은 짧은 상태 변화를 별개 down/resolved 쌍으로 기록하는 경향이 있어 AIWatch가 자체적으로 중복을 제거하고 있고, 위 139건은 이미 그 보정을 거친 수치입니다. 남은 건수가 보고 방식 영향인지 실제 마이크로 장애인지는 건수만으로 단정하기 어렵습니다. 분명한 건 빠른 복구 덕에 사용자 입장에서는 클라이언트 재시도 수준에서 흡수됐다는 점입니다.
-- **주의 필요**: Codex는 2026년 4월 22일부터 모니터링이 시작돼 이번 달 데이터가 9일치뿐입니다. 그 9일 중 5일이 4월 30일에 수정된 AIWatch 모니터링 버그의 영향권에 들어가 있어, 폴링 기반 추정치인 84.97%는 한 달 전체 수치와 직접 비교하기 어렵습니다. 같은 기간 OpenAI가 공식적으로 발표한 30일 Codex 업타임은 99.98% 수준입니다. Anthropic은 Opus·Sonnet·Haiku를 별도 컴포넌트로 집계하기 때문에, 같은 사건 하나가 Claude API 40건, claude.ai 37건, Claude Code 31건처럼 여러 번 잡힙니다.
+- **주의 필요**: Codex는 4월 22일부터 모니터링이 시작돼 이번 달 데이터가 9일치뿐 — 한 달 전체 수치와 직접 비교하기 어렵습니다(자세한 caveat은 Official Uptime 섹션 참고). Anthropic은 Opus·Sonnet·Haiku를 별도 컴포넌트로 집계해 같은 사건 하나가 Claude API 40건, claude.ai 37건, Claude Code 31건처럼 여러 번 잡힙니다.
 
 </details>
 
@@ -34,7 +34,7 @@ published: false
 |---|---|---|
 | **Production-critical** | Cohere API (LLM), Pinecone (vector DB) | Cohere 99.85% uptime / Score 85 / 3 incidents avg 36m — the strongest April reliability among general-LLM APIs. Pinecone 99.84% / Score 100 / zero incidents — solid choice for the vector DB / RAG layer that production AI apps often depend on alongside their LLM. |
 | **Low latency / cost** | Groq Cloud, Fireworks AI | Groq 100% uptime / zero incidents; Fireworks 99.40% uptime / 7m avg recovery; p75 RTT 213ms / 210ms |
-| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% full-month uptime. Codex was newly tracked from 22 Apr — 9-day partial data + contamination caveat make a clean monthly comparison unreliable; revisit with full-month May data |
+| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% full-month uptime. Codex on 9-day partial data this month (see Official Uptime note) — revisit with May |
 | **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
 | **General purpose** | OpenAI API, OpenRouter | OpenAI 97.44% uptime / Score 84 — the only major-LLM general-purpose API that finished April in the Good tier (Claude API 96.46% / Score 61 Fair, Gemini API estimated 80.15% / Score 62 Fair both struggled). OpenRouter 99.84% uptime / Score 82 routes to many of the same model families, useful as a fallback layer when a single upstream wobbles. |
 
@@ -435,9 +435,8 @@ Together AI's 139 incidents — the highest count of any service — reflect the
 - Monitor per-model components individually if your traffic is concentrated on one tier (Opus / Sonnet / Haiku)
 
 ### If you build on Codex
-- April 2026 is Codex's first month under AIWatch monitoring (added 22 Apr) — only 9 days of poll data. 5 of those 9 days also fell inside an AIWatch monitoring-bug window that was incorrectly registering Codex as down whenever ChatGPT had unrelated incidents on the shared OpenAI status page; that bug was fixed on 30 Apr. The 9-day aggregate of 84.97% is excluded from the Official Uptime table for that reason; OpenAI's published 30-day Codex uptime stayed around 99.98%.
-- The qualitative signal still holds: 7 distinct Codex incidents this month, 1h 23m average resolution, 4h 13m longest. Score 86 (Good, Medium confidence) reflects fast individual recoveries on a small sample.
-- Treat May 2026 as the first apples-to-apples month for comparing Codex against Cursor / Windsurf. Until then, default coding workflows to Cursor or Windsurf; if your team is JetBrains-heavy or otherwise committed to Codex, the partial-window caveat applies and a re-evaluation is worth scheduling once May data lands.
+- April is Codex's first AIWatch-monitored month (only 9 days of data; full caveat under Official Uptime). The qualitative signal still holds: 7 distinct incidents, 1h 23m average resolution, 4h 13m longest. Score 86 (Good, Medium confidence) reflects fast recovery on a small sample.
+- May 2026 will be the first apples-to-apples month for comparing Codex against Cursor / Windsurf. Until then default coding workflows to Cursor or Windsurf; if your team is committed to Codex, plan a re-evaluation once May data lands.
 
 ### If you build on Deepgram
 - Longest incident pattern (74h+) repeated for the second consecutive month
