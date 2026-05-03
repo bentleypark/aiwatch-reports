@@ -17,7 +17,7 @@ published: false
 - **Best balance (stability + ecosystem)**: Cohere API (85/100, only 3 incidents avg 36m, 99.85% uptime), Hugging Face (87/100, 6 incidents avg 9m, 99.97% uptime)
 - **Riskiest this month**: Gemini API (80.15% uptime — single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
 - **High incident noise**: Together AI (139 incidents but avg 42m recovery), Mistral (97 incidents avg 8m) — flap pattern, not systemic instability
-- **Watch out**: Codex had 84.97% uptime — the lowest of every monitored service; Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
+- **Watch out**: Codex had 84.97% uptime — by far the lowest among coding agents (Cursor 99.76%, Windsurf 99.84%); Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
 <details markdown="1">
 <summary><strong>Summary in Korean</strong></summary>
@@ -26,7 +26,7 @@ published: false
 - **안정성 + 생태계 균형**: Cohere API (85점, 인시던트 3건·평균 36분, 업타임 99.85%), Hugging Face (87점, 인시던트 6건·평균 9분, 업타임 99.97%)
 - **이번 달 가장 위험**: Gemini API (업타임 80.15% — 단일 242시간 API 키 장애가 한 달을 좌우), Deepgram (점수 55, 최장 74시간 20분, 평균 복구 16시간 15분)
 - **인시던트 수 주의**: Together AI (139건이지만 평균 복구 42분), Mistral (97건·평균 8분) — 플랩 패턴이지 구조적 불안정은 아님
-- **주의 필요**: Codex 업타임 84.97%로 이번 달 최저; Anthropic은 모델별 개별 리포팅으로 건수 부풀림(Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
+- **주의 필요**: Codex 업타임 84.97% — 코딩 에이전트 중 가장 낮음 (Cursor 99.76%, Windsurf 99.84%); Anthropic은 모델별 개별 리포팅으로 건수 부풀림 (Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
 
 </details>
 
@@ -35,8 +35,8 @@ published: false
 | Use Case | Recommended | Why |
 |---|---|---|
 | **Production-critical** | Pinecone, Cohere API | Zero / 3 incidents, 99.84% / 99.85% uptime, no multi-hour outages |
-| **Low latency / cost** | Groq Cloud, Fireworks AI | 100% / 99.40% uptime, sub-10m avg recovery, p75 RTT 213ms / 210ms |
-| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% uptime; avoid Codex this month (84.97% uptime, lowest of all 31 services) |
+| **Low latency / cost** | Groq Cloud, Fireworks AI | Groq 100% uptime / zero incidents; Fireworks 99.40% uptime / 7m avg recovery; p75 RTT 213ms / 210ms |
+| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% uptime; avoid Codex this month (84.97% uptime, lowest among coding agents) |
 | **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
 | **General purpose** | OpenAI API, Hugging Face | OpenAI 97.44% uptime / Score 84; Hugging Face 99.97% uptime / Score 87, both with strong ecosystems |
 
@@ -46,18 +46,20 @@ published: false
 
 April 2026 split sharply between services that flapped fast and recovered fast versus services that suffered single multi-day outages — the reliability story this month is about *duration*, not *count*.
 
-- **One incident can reshape a month**: Gemini API recorded only 3 incidents — yet its 80.15% uptime was the lowest in the entire dataset. A single 242-hour issue with newly-created API keys (Apr 17–28) dominated the period, dragging Gemini from typical Excellent territory to a Fair grade.
-- **Flap-pattern services compete with stable ones**: Together AI logged 139 incidents and Mistral 97, but both finished in the Good tier (Score 83 and 76) because individual incidents averaged 42m and 8m respectively. Total downtime was modest — the reliability cost is mostly client-side retry pressure, not extended unavailability.
-- **Estimate-only services aren't apples-to-apples**: Bedrock and Azure OpenAI both show 100% uptime, but neither publishes accessible uptime metrics. Their AIWatch Score caps at 90 (5% downward adjustment from the formula's 80→100 redistribution) to reflect the missing observability.
+
+
+- **One incident can reshape a month**: Gemini API recorded only 3 incidents — yet its 80.15% estimated uptime was the second-lowest in the dataset (behind only Deepgram at 57.06%). A single 242-hour issue with newly-created API keys (Apr 17–28) dominated the period, dragging Gemini from a March 2026 Score of 86 (Excellent) down to Fair.
+- **Flap-pattern services compete with stable ones**: Together AI logged 139 incidents and Mistral 97, but both finished in the Good tier (Score 83 and 76) because individual incidents averaged 42m and 8m respectively. Mistral's total downtime stayed modest at 12h 15m (1.7% of the month) — Together AI's 97h 49m (13.6%) is meaningfully larger but still concentrated in short flaps with one 15h 16m outlier; the reliability cost is mostly client-side retry pressure, not extended unavailability.
+- **Estimate-only services aren't apples-to-apples**: Bedrock and Azure OpenAI both show ~100% uptime (100% / 99.99%), but neither publishes accessible uptime metrics. Their AIWatch Score caps at 90 — the formula applies a 10% downward adjustment to the base score before the 80→100 redistribution to reflect the missing observability.
 
 <details markdown="1">
 <summary><strong>Key Insight in Korean</strong></summary>
 
-2026년 4월은 빠르게 플랩하고 빠르게 복구한 서비스와, 단일 다일 장애를 겪은 서비스 사이에서 뚜렷하게 갈렸습니다. 이번 달 신뢰성 이야기는 *건수*가 아니라 *지속 시간*에 관한 것입니다.
+2026년 4월은 빠르게 플랩하고 빠르게 복구한 서비스와, 수일간 지속된 단일 장애를 겪은 서비스 사이에서 뚜렷하게 갈렸습니다. 이번 달 신뢰성의 핵심은 *건수*가 아니라 *지속 시간*에 있었습니다.
 
-- **단일 장애가 한 달을 좌우**: Gemini API는 3건의 인시던트만 발생했지만 업타임 80.15%로 전체 최저였습니다. 4월 17–28일에 발생한 단일 242시간 API 키 장애가 한 달 전체를 지배하며, 평소 Excellent 등급이었던 Gemini를 Fair 등급으로 끌어내렸습니다.
-- **플랩 패턴이 안정적인 서비스와 어깨를 나란히**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만, 평균 복구 시간이 각각 42분과 8분이라 둘 다 Good 등급(83점, 76점)으로 마감했습니다. 총 다운타임은 그리 크지 않으며, 신뢰성 비용은 주로 클라이언트 측 재시도 부담이지 장기 가용성 손실은 아닙니다.
-- **Estimate 서비스는 직접 비교 불가**: Bedrock과 Azure OpenAI는 둘 다 100% 업타임으로 표시되지만, 어느 쪽도 공개 가능한 업타임 지표를 발행하지 않습니다. AIWatch Score는 80→100 재분배 공식의 5% 하향 조정을 통해 두 서비스를 90점으로 캡(cap)하여, 관측 가능성이 부족한 점을 반영합니다.
+- **단일 장애가 한 달을 좌우**: Gemini API는 3건의 인시던트만 발생했지만 추정 업타임 80.15%로 데이터셋 내 두 번째로 낮았습니다 (최저는 Deepgram 57.06%). 4월 17–28일에 발생한 단일 242시간 API 키 장애가 한 달 전체를 지배하며, Gemini를 지난달 86점(Excellent)에서 Fair 등급으로 떨어뜨렸습니다.
+- **플랩 패턴이 안정적인 서비스와 어깨를 나란히**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만, 평균 복구 시간이 각각 42분과 8분이라 둘 다 Good 등급(83점, 76점)으로 마감했습니다. Mistral의 총 다운타임은 12시간 15분(월 대비 1.7%)으로 작게 유지되었고, Together AI의 97시간 49분(13.6%)은 의미 있게 큰 수치이지만 짧은 플랩이 대부분이며 15시간 16분짜리 단일 아웃라이어가 하나 있을 뿐입니다. 신뢰성 비용은 주로 클라이언트 측 재시도 부담이지 장기 가용성 손실은 아닙니다.
+- **Estimate 서비스는 직접 비교 불가**: Bedrock과 Azure OpenAI는 거의 100% 업타임(100% / 99.99%)으로 표시되지만, 어느 쪽도 공개 가능한 업타임 지표를 발행하지 않습니다. AIWatch Score 공식은 기본 점수에 10% 하향 조정을 적용한 뒤 80→100으로 재분배하여 두 서비스를 90점으로 캡(cap)하고, 관측 가능성이 부족한 점을 반영합니다.
 
 </details>
 
@@ -78,8 +80,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 | 1 | Pinecone | 100 | Excellent | High | Zero incidents, 99.84% uptime |
 | 2 | Modal | 94 | Excellent | High | 8 incidents, avg 4h 7m |
 | 3 | Groq Cloud | 93 | Excellent | High | Zero incidents, 100.00% uptime |
-| 4= | Amazon Bedrock | 90 | Excellent | High | Zero incidents, 100.00% uptime |
-| 4= | Azure OpenAI | 90 | Excellent | High | Zero incidents, 99.99% uptime |
+| 4= | Amazon Bedrock | 90 | Excellent | Medium | Zero incidents, 100.00% uptime |
+| 4= | Azure OpenAI | 90 | Excellent | Medium | Zero incidents, 99.99% uptime |
 | 6 | Windsurf | 89 | Good | High | 3 incidents, avg 6h 38m |
 | 7= | Cursor | 88 | Good | High | 20 incidents, avg 1h 11m |
 | 7= | Fireworks AI | 88 | Good | High | 30 incidents, fast recovery (avg 7m) |
@@ -92,22 +94,22 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 | 15= | DeepSeek API | 82 | Good | High | 1 incident, 1h 4m |
 | 15= | OpenRouter | 82 | Good | High | 2 incidents, avg 1h 5m |
 | 15= | AssemblyAI | 82 | Good | High | 3 incidents, fast recovery (avg 22m) |
-| 18= | xAI (Grok) | 77 | Good | High | Zero incidents, 100.00% uptime |
+| 18= | xAI (Grok) | 77 | Good | Medium | Zero incidents, 100.00% uptime |
 | 18= | Stability AI | 77 | Good | High | Zero incidents, 100.00% uptime |
-| 20= | Mistral API | 76 | Good | High | 97 incidents, fast recovery (avg 8m) |
-| 20= | Perplexity | 76 | Good | High | Zero incidents, 100.00% uptime |
+| 20= | Mistral API | 76 | Good | Medium | 97 incidents, fast recovery (avg 8m) |
+| 20= | Perplexity | 76 | Good | Medium | Zero incidents, 100.00% uptime |
 | 22 | Character.AI | 73 | Fair | High | 22 incidents, fast recovery (avg 24m) |
 | 23= | Replicate | 71 | Fair | High | 2 incidents, avg 38m |
 | 23= | ChatGPT | 71 | Fair | High | 15 incidents, avg 2h 28m |
 | 25 | GitHub Copilot | 69 | Fair | High | 26 incidents, avg 3h 15m |
 | 26 | Claude Code | 66 | Fair | High | 31 incidents, avg 1h 13m |
 | 27 | ElevenLabs | 65 | Fair | High | 5 incidents, avg 4h 26m |
-| 28 | Gemini API | 62 | Fair | High | 3 incidents, avg 117h 13m |
+| 28 | Gemini API | 62 | Fair | Medium | 3 incidents, avg 117h 13m |
 | 29= | Claude API | 61 | Fair | High | 40 incidents, avg 1h |
 | 29= | claude.ai | 61 | Fair | High | 37 incidents, avg 1h 6m |
-| 31 | Deepgram | 55 | Fair | High | 5 incidents, avg 16h 15m |
+| 31 | Deepgram | 55 | Fair | Medium | 5 incidents, avg 16h 15m |
 
-**Grade scale**: Excellent (85+) · Good (70+) · Fair (55+) · Degrading (40+) · Unstable (<40)
+**Grade scale**: Excellent (90+) · Good (75+) · Fair (55+) · Degrading (40+) · Unstable (<40)
 
 <!-- Generate with: node scripts/generate-charts.js 2026-04/index.md -->
 ![AIWatch Score Rankings](../assets/2026-04/score-chart.svg)
@@ -236,7 +238,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <!-- Data source: detected:{svcId} KV timestamps vs official incident start times -->
 <!-- Only applicable when probe spike detection fires before status page update -->
 
-*No probe-spike-led detections were logged in April 2026. Detection Lead is recorded only when the probe RTT spike fires before the upstream status page update; in months where status pages publish promptly, this section is intentionally empty.*
+*No probe-spike-led detections were logged in April 2026.* Probe-based detection covers only the 19 probed API services (consumer apps, coding agents, and infrastructure-only services like Pinecone are not probed). For April's biggest incidents — Gemini's 10-day key issue and Together AI's 15h flap-cluster outlier — the upstream status page updates beat AIWatch's probe-spike threshold, so the section reads empty rather than indicating a tracking gap.
 
 > **Detection Lead** measures how much earlier AIWatch detected an issue (via probe RTT spike) compared to the official status page report. Only incidents where probe spike detection fired before the status page update are included.
 
@@ -305,7 +307,7 @@ Together AI's 139 incidents — the highest count of any service — reflect the
 - Monitor per-model components individually if your traffic is concentrated on one tier (Opus / Sonnet / Haiku)
 
 ### If you build on Codex
-- 84.97% uptime is the lowest of every monitored service this month — far below Cursor (99.76%) and Windsurf (99.84%) for the same use case
+- 84.97% uptime — by far the lowest among coding agents this month, well below Cursor (99.76%) and Windsurf (99.84%)
 - Score 86 (Good) reflects fast individual recoveries (avg 1h 23m), but the raw uptime gap is real if you rely on Codex during business hours
 - Treat as secondary tooling for the period; primary coding workflows benefit from Cursor / Windsurf or fallback handling
 
