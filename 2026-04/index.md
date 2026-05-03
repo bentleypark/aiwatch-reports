@@ -14,7 +14,7 @@ published: false
 ## Summary
 
 - **Most reliable**: Pinecone (100/100 — zero incidents, 99.84% uptime), Groq Cloud (93/100 — zero incidents, 100% uptime)
-- **Riskiest this month**: Gemini API (80.15% estimated uptime — Google publishes no official Gemini uptime, so this is AIWatch's poll-based estimate; single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
+- **Riskiest this month**: Gemini API (80.15% estimated uptime — Google publishes no official Gemini uptime, so this is AIWatch's own estimate; single 242h API key incident dominated; methodology under Notable Incidents #1), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
 - **High incident count, fast recovery**: Together AI (139 incidents, avg 42m), Mistral (97 incidents, avg 8m). The two services run their status pages on different platforms (Together AI on BetterStack, Mistral on Instatus). For Together AI specifically, BetterStack's recovery-period mechanism tends to register short state changes as separate down/resolved pairs — AIWatch deduplicates those, and the count above is already after that filtering. Whether the residual reflects platform-reporting style or genuine micro-instability isn't determinable from counts alone. What's observable: fast recovery kept user-facing impact bounded by client-side retry, not extended unavailability
 - **Watch out**: Codex was newly added on 22 Apr — only 9 days of data this month, not directly comparable with full-month peers (full caveat under Official Uptime). Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
@@ -22,7 +22,7 @@ published: false
 <summary><strong>Summary in Korean</strong></summary>
 
 - **가장 안정적**: Pinecone (100점, 인시던트 0건·업타임 99.84%), Groq Cloud (93점, 인시던트 0건·업타임 100%)
-- **이번 달 가장 위험**: Gemini API (추정 업타임 80.15% — Google이 공식 Gemini 업타임을 공개하지 않아 AIWatch의 폴링 기반 추정치이며, 242시간짜리 API 키 장애 하나가 한 달 수치를 끌어내림), Deepgram (점수 55, 최장 74시간 20분·평균 복구 16시간 15분)
+- **이번 달 가장 위험**: Gemini API (추정 업타임 80.15% — Google이 공식 Gemini 업타임을 공개하지 않아 AIWatch 자체 추정치, 242시간짜리 API 키 장애 하나가 한 달 수치를 끌어내림. 산출 방식은 Notable Incidents #1 참고), Deepgram (점수 55, 최장 74시간 20분·평균 복구 16시간 15분)
 - **잦은 장애, 빠른 복구**: Together AI (139건, 평균 42분에 복구), Mistral (97건·평균 8분). 두 서비스는 서로 다른 status page 플랫폼을 사용합니다 — Together AI는 BetterStack, Mistral은 Instatus. 특히 BetterStack은 짧은 상태 변화를 별개 down/resolved 쌍으로 기록하는 경향이 있어 AIWatch가 자체적으로 중복을 제거하고 있고, 위 139건은 이미 그 보정을 거친 수치입니다. 남은 건수가 보고 방식 영향인지 실제 마이크로 장애인지는 건수만으로 단정하기 어렵습니다. 분명한 건 빠른 복구 덕에 사용자 입장에서는 클라이언트 재시도 수준에서 흡수됐다는 점입니다.
 - **주의 필요**: Codex는 4월 22일부터 모니터링이 시작돼 이번 달 데이터가 9일치뿐 — 한 달 전체 수치와 직접 비교하기 어렵습니다(자세한 caveat은 Official Uptime 섹션 참고). Anthropic은 Opus·Sonnet·Haiku를 별도 컴포넌트로 집계해 같은 사건 하나가 Claude API 40건, claude.ai 37건, Claude Code 31건처럼 여러 번 잡힙니다.
 
