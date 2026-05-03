@@ -17,7 +17,7 @@ published: false
 - **Best balance (stability + ecosystem)**: Cohere API (85/100, only 3 incidents avg 36m, 99.85% uptime), Hugging Face (87/100, 6 incidents avg 9m, 99.97% uptime)
 - **Riskiest this month**: Gemini API (80.15% uptime — single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
 - **High incident noise**: Together AI (139 incidents but avg 42m recovery), Mistral (97 incidents avg 8m) — flap pattern, not systemic instability
-- **Watch out**: Codex had 84.97% uptime — by far the lowest among coding agents (Cursor 99.76%, Windsurf 99.84%); Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
+- **Watch out**: Codex started monitoring on 22 Apr 2026 — its 9-day poll-based aggregate (84.97%) is not directly comparable with full-month peers and includes cross-contamination from a now-fixed bug (aiwatch#361, deployed 30 Apr); OpenAI's official 30-day Codex uptime stays near 99.98%. Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
 <details markdown="1">
 <summary><strong>Summary in Korean</strong></summary>
@@ -26,7 +26,7 @@ published: false
 - **안정성 + 생태계 균형**: Cohere API (85점, 인시던트 3건·평균 36분, 업타임 99.85%), Hugging Face (87점, 인시던트 6건·평균 9분, 업타임 99.97%)
 - **이번 달 가장 위험**: Gemini API (업타임 80.15% — 단일 242시간 API 키 장애가 한 달을 좌우), Deepgram (점수 55, 최장 74시간 20분, 평균 복구 16시간 15분)
 - **인시던트 수 주의**: Together AI (139건이지만 평균 복구 42분), Mistral (97건·평균 8분) — 플랩 패턴이지 구조적 불안정은 아님
-- **주의 필요**: Codex 업타임 84.97% — 코딩 에이전트 중 가장 낮음 (Cursor 99.76%, Windsurf 99.84%); Anthropic은 모델별 개별 리포팅으로 건수 부풀림 (Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
+- **주의 필요**: Codex는 2026년 4월 22일부터 모니터링 시작 — 9일짜리 부분 데이터 기반 폴링 추정치(84.97%)는 풀-월 비교가 어렵고, 4월 30일에 수정된 aiwatch#361 버그로 인한 contamination도 포함. OpenAI 공식 30일 Codex 업타임은 99.98% 수준 유지. Anthropic은 모델별 개별 리포팅으로 건수 부풀림 (Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
 
 </details>
 
@@ -36,7 +36,7 @@ published: false
 |---|---|---|
 | **Production-critical** | Pinecone, Cohere API | Zero / 3 incidents, 99.84% / 99.85% uptime, no multi-hour outages |
 | **Low latency / cost** | Groq Cloud, Fireworks AI | Groq 100% uptime / zero incidents; Fireworks 99.40% uptime / 7m avg recovery; p75 RTT 213ms / 210ms |
-| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% uptime; avoid Codex this month (84.97% uptime, lowest among coding agents) |
+| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% full-month uptime. Codex was newly tracked from 22 Apr — 9-day partial data + contamination caveat make a clean monthly comparison unreliable; revisit with full-month May data |
 | **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
 | **General purpose** | OpenAI API, Hugging Face | OpenAI 97.44% uptime / Score 84; Hugging Face 99.97% uptime / Score 87, both with strong ecosystems |
 
@@ -87,7 +87,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 | 7= | Fireworks AI | 88 | Good | High | 30 incidents, fast recovery (avg 7m) |
 | 9 | Hugging Face | 87 | Good | High | 6 incidents, fast recovery (avg 9m) |
 | 10= | Voyage AI | 86 | Good | High | 1 incident, 11m |
-| 10= | Codex | 86 | Good | High | 7 incidents, avg 1h 23m |
+| 10= | Codex | 86 | Good | Medium | 7 incidents, avg 1h 23m (newly tracked from 22 Apr; 9-day window) |
 | 12 | Cohere API | 85 | Good | High | 3 incidents, avg 36m |
 | 13 | OpenAI API | 84 | Good | High | 6 incidents, avg 6h 57m |
 | 14 | Together AI | 83 | Good | High | 139 incidents, avg 42m |
@@ -167,6 +167,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 *Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish accessible uptime metrics on their status pages.*
 
+*Codex was added to monitoring on 22 Apr 2026; only 9 days of data exist for this month and the resulting aggregate is excluded from the table to avoid misleading comparison with full-month services. OpenAI's official 30-day Codex uptime stayed near 99.98% during the same period.*
+
 <table class="uptime-cols">
 <thead><tr><th>Service</th><th>Uptime</th></tr></thead>
 <tbody>
@@ -194,7 +196,6 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <tr><td>Together AI</td><td>96.22%</td></tr>
 <tr><td>claude.ai</td><td>95.66%</td></tr>
 <tr><td>ChatGPT</td><td>91.61%</td></tr>
-<tr><td>Codex</td><td>84.97%</td></tr>
 </tbody>
 </table>
 
@@ -433,9 +434,9 @@ Together AI's 139 incidents — the highest count of any service — reflect the
 - Monitor per-model components individually if your traffic is concentrated on one tier (Opus / Sonnet / Haiku)
 
 ### If you build on Codex
-- 84.97% uptime — by far the lowest among coding agents this month, well below Cursor (99.76%) and Windsurf (99.84%)
-- Score 86 (Good) reflects fast individual recoveries (avg 1h 23m), but the raw uptime gap is real if you rely on Codex during business hours
-- Treat as secondary tooling for the period; primary coding workflows benefit from Cursor / Windsurf or fallback handling
+- April 2026 is Codex's first month under AIWatch monitoring (added 22 Apr) — only 9 days of poll data, plus 5 of those 9 fell inside the cross-contamination window of the now-fixed aiwatch#361 bug (deployed 30 Apr). The 9-day aggregate of 84.97% is excluded from the Official Uptime table for that reason; OpenAI's published 30-day Codex uptime stayed around 99.98%.
+- The qualitative signal still holds: 7 distinct Codex incidents this month, 1h 23m average resolution, 4h 13m longest. Score 86 (Good, Medium confidence) reflects fast individual recoveries on a small sample.
+- Treat May 2026 as the first apples-to-apples month for comparing Codex against Cursor / Windsurf. Until then, default coding workflows to Cursor / Windsurf, or fall back if your team is JetBrains-heavy and uses neither.
 
 ### If you build on Deepgram
 - Longest incident pattern (74h+) repeated for the second consecutive month
