@@ -8,4 +8,5 @@ Monthly AI service incident reports covering 31 AI services monitored by [AIWatc
 
 ## Reports
 
+- [**April 2026**](2026-04/) — 31 services, 30-day monitoring period (Apr 1–30)
 - [**March 2026**](2026-03/) — 27 services, 12-day monitoring period (Mar 20–31)
