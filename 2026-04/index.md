@@ -244,6 +244,132 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ---
 
+## Security Alerts
+
+> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.
+
+**Total alerts:** 8
+
+**By source**
+
+| Source | Count |
+|---|---|
+| OSV.dev | 8 |
+
+**By severity**
+
+| Critical | High | Medium | Low |
+| --- | --- | --- | --- |
+| 0 | 1 | 7 | 0 |
+
+**Most affected services**
+
+| Service | Count |
+|---|---|
+| Anthropic (Claude) | 4 |
+| Hugging Face | 2 |
+| LangChain | 2 |
+
+### Top Findings
+
+#### 1. [LangChain Core has Path Traversal vulnerabilites in legacy `load_prompt` functions](https://github.com/langchain-ai/langchain/security/advisories/GHSA-qh6h-p6c9-ff54) · `high`
+- **Source:** OSV.dev
+- **Affected:** LangChain
+- **Detected:** 2026-04-24
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | high | 1.2.22 |
+
+</details>
+
+#### 2. [Claude SDK for Python has Insecure Default File Permissions in Local Filesystem Memory Tool](https://github.com/anthropics/anthropic-sdk-python/security/advisories/GHSA-q5f5-3gjm-7mfm) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Anthropic (Claude)
+- **Detected:** 2026-04-24
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 0.87.0 |
+
+</details>
+
+#### 3. [Claude SDK for Python: Memory Tool Path Validation Race Condition Allows Sandbox Escape](https://github.com/anthropics/anthropic-sdk-python/security/advisories/GHSA-w828-4qhx-vxx3) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Anthropic (Claude)
+- **Detected:** 2026-04-24
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 0.87.0 |
+
+</details>
+
+#### 4. [LangChain has incomplete f-string validation in prompt templates](https://github.com/langchain-ai/langchain/security/advisories/GHSA-926x-3r5x-gfhw) · `medium`
+- **Source:** OSV.dev
+- **Affected:** LangChain
+- **Detected:** 2026-04-24
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 0.3.84 |
+
+</details>
+
+#### 5. [HuggingFace Transformers allows for arbitrary code execution in the `Trainer` class](https://nvd.nist.gov/vuln/detail/CVE-2026-1839) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Hugging Face
+- **Detected:** 2026-04-24
+
+#### 6. [GHSA-q5f5-3gjm-7mfm: PyPI/anthropic](https://osv.dev/vulnerability/GHSA-q5f5-3gjm-7mfm) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Anthropic (Claude)
+- **Detected:** 2026-04-21
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 0.87.0 |
+
+</details>
+
+#### 7. [GHSA-w828-4qhx-vxx3: PyPI/anthropic](https://osv.dev/vulnerability/GHSA-w828-4qhx-vxx3) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Anthropic (Claude)
+- **Detected:** 2026-04-21
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 0.87.0 |
+
+</details>
+
+#### 8. [GHSA-69w3-r845-3855: PyPI/transformers](https://osv.dev/vulnerability/GHSA-69w3-r845-3855) · `medium`
+- **Source:** OSV.dev
+- **Affected:** Hugging Face
+- **Detected:** 2026-04-20
+<details markdown="1">
+<summary>Timeline</summary>
+
+| Stage | At (UTC) | Severity | Fix Version |
+|---|---|---|---|
+| detected | 2026-04-24 | medium | 5.0.0rc3 |
+
+</details>
+
+---
+
 ## Notable Incidents
 
 ### 1. Gemini API — 10-Day API Key Issue (Apr 17–28)
