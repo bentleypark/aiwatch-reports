@@ -58,7 +58,7 @@ April 2026 split sharply between services that flapped fast and recovered fast v
 2026년 4월은 짧게 플랩하고 빠르게 복구한 서비스와, 며칠씩 이어지는 단일 장애를 만난 서비스로 뚜렷이 갈렸습니다. 이번 달 신뢰성을 가른 건 인시던트 *건수*가 아니라 *지속 시간*입니다.
 
 - **장애 하나가 한 달을 결정**: Gemini API는 인시던트가 3건뿐이었는데도 추정 업타임 80.15%로 31개 서비스 중 두 번째로 낮은 수치를 기록했습니다(최저는 Deepgram의 57.06%). 4월 17일부터 28일까지 10일간 이어진 'API 키' 장애가 한 달 전체 지표를 끌어내려, Gemini는 3월의 86점(Excellent)에서 Fair 등급으로 내려갔습니다.
-- **잦아도 빠른 복구가 안정성을 지킨다**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만 평균 복구 시간이 각각 42분과 8분이라, 두 서비스 모두 Good 등급(83점, 76점)으로 마쳤습니다. Mistral의 총 다운타임은 12시간 15분으로 4월 전체의 1.7%에 그쳤고, Together AI의 97시간 49분(13.6%)도 절대 수치만 보면 큰 편이지만 대부분 짧은 플랩이고 15시간 16분짜리 한 건만 두드러진 outlier였습니다. 사용자 입장에서 부담은 주로 클라이언트 측 재시도이지, 장기적 가용성 손실은 아니었습니다.
+- **잦아도 빠른 복구가 안정성을 지킨다**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만 평균 복구 시간이 각각 42분과 8분이라, 두 서비스 모두 Good 등급(83점, 76점)으로 마쳤습니다. Mistral의 총 다운타임은 12시간 15분으로 4월 전체의 1.7%에 그쳤고, Together AI의 97시간 49분(13.6%)도 절대 수치만 보면 큰 편이지만 대부분 짧은 플랩이고 15시간 16분짜리 한 건만 두드러진 이상치였습니다. 사용자 입장에서 부담은 주로 클라이언트 측 재시도이지, 장기적 가용성 손실은 아니었습니다.
 - **추정치 기반 서비스는 같은 기준으로 비교할 수 없음**: Bedrock과 Azure OpenAI는 거의 100%(각각 100%, 99.99%)로 보이지만, 두 서비스 모두 공개 접근 가능한 업타임 지표를 제공하지 않습니다. AIWatch Score는 이 한계를 반영해 기본 점수에 10% 페널티를 적용한 뒤 80→100 구간으로 재분배하므로, 두 서비스의 점수는 90점에서 멈춥니다.
 
 </details>
@@ -143,7 +143,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <tr><td>Cursor</td><td>20</td><td>23h 39m (6h 23m)</td><td class="hide-mobile">6h 23m</td><td class="hide-mobile">1h 11m</td></tr>
 <tr><td>ChatGPT</td><td>15</td><td>36h 59m (12h 20m)</td><td class="hide-mobile">12h 20m</td><td class="hide-mobile">2h 28m</td></tr>
 <tr><td>Modal</td><td>8</td><td>32h 53m (23h 2m)</td><td class="hide-mobile">23h 2m</td><td class="hide-mobile">4h 7m</td></tr>
-<tr><td>Codex</td><td>7</td><td>9h 38m (4h 13m)</td><td class="hide-mobile">4h 13m</td><td class="hide-mobile">1h 23m</td></tr>
+<tr><td>Codex <em>(9-day window)</em></td><td>7</td><td>9h 38m (4h 13m)</td><td class="hide-mobile">4h 13m</td><td class="hide-mobile">1h 23m</td></tr>
 <tr><td>OpenAI API</td><td>6</td><td>41h 42m (36h 2m)</td><td class="hide-mobile">36h 2m</td><td class="hide-mobile">6h 57m</td></tr>
 <tr><td>Hugging Face</td><td>6</td><td>53m (15m)</td><td class="hide-mobile">15m</td><td class="hide-mobile">9m</td></tr>
 <tr><td>ElevenLabs</td><td>5</td><td>22h 10m (19h 30m)</td><td class="hide-mobile">19h 30m</td><td class="hide-mobile">4h 26m</td></tr>
@@ -439,7 +439,7 @@ Together AI's 139 incidents — the highest count of any service — reflect the
 ### If you build on Codex
 - April 2026 is Codex's first month under AIWatch monitoring (added 22 Apr) — only 9 days of poll data, plus 5 of those 9 fell inside the cross-contamination window of the now-fixed aiwatch#361 bug (deployed 30 Apr). The 9-day aggregate of 84.97% is excluded from the Official Uptime table for that reason; OpenAI's published 30-day Codex uptime stayed around 99.98%.
 - The qualitative signal still holds: 7 distinct Codex incidents this month, 1h 23m average resolution, 4h 13m longest. Score 86 (Good, Medium confidence) reflects fast individual recoveries on a small sample.
-- Treat May 2026 as the first apples-to-apples month for comparing Codex against Cursor / Windsurf. Until then, default coding workflows to Cursor / Windsurf, or fall back if your team is JetBrains-heavy and uses neither.
+- Treat May 2026 as the first apples-to-apples month for comparing Codex against Cursor / Windsurf. Until then, default coding workflows to Cursor or Windsurf; if your team is JetBrains-heavy or otherwise committed to Codex, the partial-window caveat applies and a re-evaluation is worth scheduling once May data lands.
 
 ### If you build on Deepgram
 - Longest incident pattern (74h+) repeated for the second consecutive month
