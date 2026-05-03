@@ -22,11 +22,11 @@ published: false
 <details markdown="1">
 <summary><strong>Summary in Korean</strong></summary>
 
-- **가장 안정적**: Pinecone (100점 — 인시던트 0건, 업타임 99.84%), Groq Cloud (93점 — 인시던트 0건, 업타임 100%)
-- **안정성 + 생태계 균형**: Cohere API (85점, 인시던트 3건·평균 36분, 업타임 99.85%), Hugging Face (87점, 인시던트 6건·평균 9분, 업타임 99.97%)
-- **이번 달 가장 위험**: Gemini API (업타임 80.15% — 단일 242시간 API 키 장애가 한 달을 좌우), Deepgram (점수 55, 최장 74시간 20분, 평균 복구 16시간 15분)
-- **인시던트 수 주의**: Together AI (139건이지만 평균 복구 42분), Mistral (97건·평균 8분) — 플랩 패턴이지 구조적 불안정은 아님
-- **주의 필요**: Codex는 2026년 4월 22일부터 모니터링 시작 — 9일짜리 부분 데이터 기반 폴링 추정치(84.97%)는 풀-월 비교가 어렵고, 4월 30일에 수정된 aiwatch#361 버그로 인한 contamination도 포함. OpenAI 공식 30일 Codex 업타임은 99.98% 수준 유지. Anthropic은 모델별 개별 리포팅으로 건수 부풀림 (Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
+- **가장 안정적**: Pinecone (100점, 인시던트 0건·업타임 99.84%), Groq Cloud (93점, 인시던트 0건·업타임 100%)
+- **안정성과 생태계 모두 좋은 선택**: Cohere API (85점, 3건·평균 36분, 99.85%), Hugging Face (87점, 6건·평균 9분, 99.97%)
+- **이번 달 가장 위험**: Gemini API (업타임 80.15% — 242시간짜리 API 키 장애 하나가 한 달 수치를 끌어내림), Deepgram (점수 55, 최장 74시간 20분·평균 복구 16시간 15분)
+- **잦지만 짧은 플랩**: Together AI (139건이지만 평균 42분에 복구), Mistral (97건·평균 8분) — 짧은 플랩이 반복됐을 뿐 구조적 불안정과는 다름
+- **주의 필요**: Codex는 2026년 4월 22일부터 모니터링이 시작돼 이번 달 데이터가 9일치뿐입니다. 그 9일 중 5일이 4월 30일에 수정된 aiwatch#361 버그 영향권에 들어가 있어, 폴링 기반 추정치인 84.97%는 풀-월 수치와 직접 비교하기 어렵습니다. 같은 기간 OpenAI가 공식적으로 발표한 30일 Codex 업타임은 99.98% 수준입니다. Anthropic은 Opus·Sonnet·Haiku를 별도 컴포넌트로 집계하기 때문에 동일한 한 사건이 Claude API 40건, claude.ai 37건, Claude Code 31건처럼 여러 번 카운트됩니다.
 
 </details>
 
@@ -55,11 +55,11 @@ April 2026 split sharply between services that flapped fast and recovered fast v
 <details markdown="1">
 <summary><strong>Key Insight in Korean</strong></summary>
 
-2026년 4월은 빠르게 플랩하고 빠르게 복구한 서비스와, 수일간 지속된 단일 장애를 겪은 서비스 사이에서 뚜렷하게 갈렸습니다. 이번 달 신뢰성의 핵심은 *건수*가 아니라 *지속 시간*에 있었습니다.
+2026년 4월은 짧게 플랩하고 빠르게 복구한 서비스와, 며칠씩 이어지는 단일 장애를 만난 서비스로 뚜렷이 갈렸습니다. 이번 달 신뢰성을 가른 건 인시던트 *건수*가 아니라 *지속 시간*입니다.
 
-- **단일 장애가 한 달을 좌우**: Gemini API는 3건의 인시던트만 발생했지만 추정 업타임 80.15%로 데이터셋 내 두 번째로 낮았습니다 (최저는 Deepgram 57.06%). 4월 17–28일에 발생한 단일 242시간 API 키 장애가 한 달 전체를 지배하며, Gemini를 지난달 86점(Excellent)에서 Fair 등급으로 떨어뜨렸습니다.
-- **플랩 패턴이 안정적인 서비스와 어깨를 나란히**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만, 평균 복구 시간이 각각 42분과 8분이라 둘 다 Good 등급(83점, 76점)으로 마감했습니다. Mistral의 총 다운타임은 12시간 15분(월 대비 1.7%)으로 작게 유지되었고, Together AI의 97시간 49분(13.6%)은 의미 있게 큰 수치이지만 짧은 플랩이 대부분이며 15시간 16분짜리 단일 아웃라이어가 하나 있을 뿐입니다. 신뢰성 비용은 주로 클라이언트 측 재시도 부담이지 장기 가용성 손실은 아닙니다.
-- **Estimate 서비스는 직접 비교 불가**: Bedrock과 Azure OpenAI는 거의 100% 업타임(100% / 99.99%)으로 표시되지만, 어느 쪽도 공개 가능한 업타임 지표를 발행하지 않습니다. AIWatch Score 공식은 기본 점수에 10% 하향 조정을 적용한 뒤 80→100으로 재분배하여 두 서비스를 90점으로 캡(cap)하고, 관측 가능성이 부족한 점을 반영합니다.
+- **장애 하나가 한 달을 결정**: Gemini API는 인시던트가 3건뿐이었는데도 추정 업타임 80.15%로 31개 서비스 중 두 번째로 낮은 수치를 기록했습니다(최저는 Deepgram의 57.06%). 4월 17일부터 28일까지 10일간 이어진 'API 키' 장애가 한 달 전체 지표를 끌어내려, Gemini는 3월의 86점(Excellent)에서 Fair 등급으로 내려갔습니다.
+- **잦아도 빠른 복구가 안정성을 지킨다**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만 평균 복구 시간이 각각 42분과 8분이라, 두 서비스 모두 Good 등급(83점, 76점)으로 마쳤습니다. Mistral의 총 다운타임은 12시간 15분으로 4월 전체의 1.7%에 그쳤고, Together AI의 97시간 49분(13.6%)도 절대 수치만 보면 큰 편이지만 대부분 짧은 플랩이고 15시간 16분짜리 한 건만 두드러진 outlier였습니다. 사용자 입장에서 부담은 주로 클라이언트 측 재시도이지, 장기적 가용성 손실은 아니었습니다.
+- **추정치 기반 서비스는 같은 기준으로 비교할 수 없음**: Bedrock과 Azure OpenAI는 거의 100%(각각 100%, 99.99%)로 보이지만, 두 서비스 모두 공개 접근 가능한 업타임 지표를 제공하지 않습니다. AIWatch Score는 이 한계를 반영해 기본 점수에 10% 페널티를 적용한 뒤 80→100 구간으로 재분배하므로, 두 서비스의 점수는 90점에서 멈춥니다.
 
 </details>
 
@@ -379,6 +379,8 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 A single status page entry — *"Gemini API is having some issues serving recently created keys"* — remained open for ten days. This was the longest single incident across all 31 monitored services in April and the primary driver of Gemini's 80.15% monthly uptime. New customer onboarding and key-rotation flows would have been the most affected paths; existing keys were not the documented scope. Two further incidents in the same month (65h 17m batch API issue, 44h 22m postpay upgrade disruption) compounded the impact.
 
+This incident also prompted a mid-month change to AIWatch's monitoring setup. The gcloud Vertex feed AIWatch had been polling does not surface direct outages on `generativelanguage.googleapis.com` — exactly the surface affected here — so the issue showed up in our data only as the page-level indicator drifted, days into the event. On Apr 22 a second source was added: `aistudio.google.com/status` (MakerSuite gRPC-web), with incidents from either feed merged under `vertex:` / `aistudio:` ID prefixes (aiwatch#310). Future Gemini-API-direct incidents of this shape should now appear within minutes rather than days.
+
 ---
 
 ### 2. Deepgram — 74h Voice Agent Degradation
@@ -427,6 +429,7 @@ Together AI's 139 incidents — the highest count of any service — reflect the
 - A single API key issue lasted 10 days — set retry / timeout / circuit-breaker policies that survive multi-day partial degradation
 - Newly-created keys were the documented scope; existing keys were less affected — for production, prefer long-lived keys with rotation cadences ≥ monthly
 - Two further multi-hour incidents (Batch API 65h, postpay upgrade 44h) hit different surfaces — broad surface-level monitoring is more useful than relying on the overall page indicator
+- Google publishes Gemini status across two surfaces: gcloud Vertex (used by enterprise / regional consumers) and `aistudio.google.com/status` (the MakerSuite / direct API surface). They do not always agree — direct-API outages, including the April key issue, often show up on the AI Studio surface first. AIWatch added the AI Studio source on 22 Apr (aiwatch#310), so going forward it polls both. If you're rolling your own monitoring, watch both — one feed alone leaves blind spots.
 
 ### If you build on Anthropic
 - High incident count (40 + 37 + 31 across Claude API / claude.ai / Claude Code) is mostly a reporting artifact of per-model components
