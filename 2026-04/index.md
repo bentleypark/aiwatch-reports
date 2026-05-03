@@ -34,7 +34,7 @@ published: false
 
 | Use Case | Recommended | Why |
 |---|---|---|
-| **Production-critical** | Pinecone, Cohere API | Zero / 3 incidents, 99.84% / 99.85% uptime, no multi-hour outages |
+| **Production-critical** | Cohere API (LLM), Pinecone (vector DB) | Cohere 99.85% uptime / Score 85 / 3 incidents avg 36m — the strongest April reliability among general-LLM APIs. Pinecone 99.84% / Score 100 / zero incidents — solid choice for the vector DB / RAG layer that production AI apps often depend on alongside their LLM. |
 | **Low latency / cost** | Groq Cloud, Fireworks AI | Groq 100% uptime / zero incidents; Fireworks 99.40% uptime / 7m avg recovery; p75 RTT 213ms / 210ms |
 | **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% full-month uptime. Codex was newly tracked from 22 Apr — 9-day partial data + contamination caveat make a clean monthly comparison unreliable; revisit with full-month May data |
 | **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
