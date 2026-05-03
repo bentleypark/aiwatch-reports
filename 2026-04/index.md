@@ -13,20 +13,20 @@ published: false
 
 ## Summary
 
-- **Most reliable**:
-- **Best balance (stability + ecosystem)**:
-- **Riskiest this month**:
-- **High incident noise**:
-- **Watch out**:
+- **Most reliable**: Pinecone (100/100 — zero incidents, 99.84% uptime), Groq Cloud (93/100 — zero incidents, 100% uptime)
+- **Best balance (stability + ecosystem)**: Cohere API (85/100, only 3 incidents avg 36m, 99.85% uptime), Hugging Face (87/100, 6 incidents avg 9m, 99.97% uptime)
+- **Riskiest this month**: Gemini API (80.15% uptime — single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
+- **High incident noise**: Together AI (139 incidents but avg 42m recovery), Mistral (97 incidents avg 8m) — flap pattern, not systemic instability
+- **Watch out**: Codex had 84.97% uptime — the lowest of every monitored service; Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
 <details markdown="1">
 <summary><strong>Summary in Korean</strong></summary>
 
-- **가장 안정적**:
-- **안정성 + 생태계 균형**:
-- **이번 달 가장 위험**:
-- **인시던트 수 주의**:
-- **주의 필요**:
+- **가장 안정적**: Pinecone (100점 — 인시던트 0건, 업타임 99.84%), Groq Cloud (93점 — 인시던트 0건, 업타임 100%)
+- **안정성 + 생태계 균형**: Cohere API (85점, 인시던트 3건·평균 36분, 업타임 99.85%), Hugging Face (87점, 인시던트 6건·평균 9분, 업타임 99.97%)
+- **이번 달 가장 위험**: Gemini API (업타임 80.15% — 단일 242시간 API 키 장애가 한 달을 좌우), Deepgram (점수 55, 최장 74시간 20분, 평균 복구 16시간 15분)
+- **인시던트 수 주의**: Together AI (139건이지만 평균 복구 42분), Mistral (97건·평균 8분) — 플랩 패턴이지 구조적 불안정은 아님
+- **주의 필요**: Codex 업타임 84.97%로 이번 달 최저; Anthropic은 모델별 개별 리포팅으로 건수 부풀림(Claude API 40 + claude.ai 37 + Claude Code 31, 동일 근본 사건이 다중 집계)
 
 </details>
 
@@ -34,28 +34,30 @@ published: false
 
 | Use Case | Recommended | Why |
 |---|---|---|
-| **Production-critical** | | |
-| **Low latency / cost** | | |
-| **Coding workflows** | | |
-| **Voice / audio** | | |
-| **General purpose** | | |
+| **Production-critical** | Pinecone, Cohere API | Zero / 3 incidents, 99.84% / 99.85% uptime, no multi-hour outages |
+| **Low latency / cost** | Groq Cloud, Fireworks AI | 100% / 99.40% uptime, sub-10m avg recovery, p75 RTT 213ms / 210ms |
+| **Coding workflows** | Cursor, Windsurf | 99.76% / 99.84% uptime; avoid Codex this month (84.97% uptime, lowest of all 31 services) |
+| **Voice / audio** | AssemblyAI (with fallback) | 22m avg recovery; ElevenLabs (19h 30m longest) and Deepgram (74h 20m longest) had multi-hour outages |
+| **General purpose** | OpenAI API, Hugging Face | OpenAI 97.44% uptime / Score 84; Hugging Face 99.97% uptime / Score 87, both with strong ecosystems |
 
 ---
 
 ## Key Insight
 
-<!-- Opening narrative: 1 sentence summarizing the month, then 3 patterns -->
+April 2026 split sharply between services that flapped fast and recovered fast versus services that suffered single multi-day outages — the reliability story this month is about *duration*, not *count*.
 
-- **Pattern 1**:
-- **Pattern 2**:
-- **Pattern 3**:
+- **One incident can reshape a month**: Gemini API recorded only 3 incidents — yet its 80.15% uptime was the lowest in the entire dataset. A single 242-hour issue with newly-created API keys (Apr 17–28) dominated the period, dragging Gemini from typical Excellent territory to a Fair grade.
+- **Flap-pattern services compete with stable ones**: Together AI logged 139 incidents and Mistral 97, but both finished in the Good tier (Score 83 and 76) because individual incidents averaged 42m and 8m respectively. Total downtime was modest — the reliability cost is mostly client-side retry pressure, not extended unavailability.
+- **Estimate-only services aren't apples-to-apples**: Bedrock and Azure OpenAI both show 100% uptime, but neither publishes accessible uptime metrics. Their AIWatch Score caps at 90 (5% downward adjustment from the formula's 80→100 redistribution) to reflect the missing observability.
 
 <details markdown="1">
 <summary><strong>Key Insight in Korean</strong></summary>
 
-- **패턴 1**:
-- **패턴 2**:
-- **패턴 3**:
+2026년 4월은 빠르게 플랩하고 빠르게 복구한 서비스와, 단일 다일 장애를 겪은 서비스 사이에서 뚜렷하게 갈렸습니다. 이번 달 신뢰성 이야기는 *건수*가 아니라 *지속 시간*에 관한 것입니다.
+
+- **단일 장애가 한 달을 좌우**: Gemini API는 3건의 인시던트만 발생했지만 업타임 80.15%로 전체 최저였습니다. 4월 17–28일에 발생한 단일 242시간 API 키 장애가 한 달 전체를 지배하며, 평소 Excellent 등급이었던 Gemini를 Fair 등급으로 끌어내렸습니다.
+- **플랩 패턴이 안정적인 서비스와 어깨를 나란히**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만, 평균 복구 시간이 각각 42분과 8분이라 둘 다 Good 등급(83점, 76점)으로 마감했습니다. 총 다운타임은 그리 크지 않으며, 신뢰성 비용은 주로 클라이언트 측 재시도 부담이지 장기 가용성 손실은 아닙니다.
+- **Estimate 서비스는 직접 비교 불가**: Bedrock과 Azure OpenAI는 둘 다 100% 업타임으로 표시되지만, 어느 쪽도 공개 가능한 업타임 지표를 발행하지 않습니다. AIWatch Score는 80→100 재분배 공식의 5% 하향 조정을 통해 두 서비스를 90점으로 캡(cap)하여, 관측 가능성이 부족한 점을 반영합니다.
 
 </details>
 
@@ -234,11 +236,7 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 <!-- Data source: detected:{svcId} KV timestamps vs official incident start times -->
 <!-- Only applicable when probe spike detection fires before status page update -->
 
-| Incident | Service | Detected At (UTC) | Official Report (UTC) | Lead Time |
-|---|---|---|---|---|
-| | | | | |
-
-**Average Detection Lead**: <!-- X min --> (across N incidents with probe spike detection)
+*No probe-spike-led detections were logged in April 2026. Detection Lead is recorded only when the probe RTT spike fires before the upstream status page update; in months where status pages publish promptly, this section is intentionally empty.*
 
 > **Detection Lead** measures how much earlier AIWatch detected an issue (via probe RTT spike) compared to the official status page report. Only incidents where probe spike detection fired before the status page update are included.
 
@@ -246,23 +244,85 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ## Notable Incidents
 
-<!-- Top 5-6 notable incidents with raw vs adjusted duration where applicable -->
+### 1. Gemini API — 10-Day API Key Issue (Apr 17–28)
+**Affected**: Gemini API (newly-created keys)
+**Duration**: 242h 0m
 
-### 1. [Title]
-**Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
-**Duration**:
+A single status page entry — *"Gemini API is having some issues serving recently created keys"* — remained open for ten days. This was the longest single incident across all 31 monitored services in April and the primary driver of Gemini's 80.15% monthly uptime. New customer onboarding and key-rotation flows would have been the most affected paths; existing keys were not the documented scope. Two further incidents in the same month (65h 17m batch API issue, 44h 22m postpay upgrade disruption) compounded the impact.
 
-<!-- Description -->
+---
+
+### 2. Deepgram — 74h Voice Agent Degradation
+**Affected**: Voice Agent component
+**Duration**: 74h 20m
+
+Deepgram's longest April incident lasted just over three days, mirroring the same pattern as March 2026. Per the prior month's writeup, Deepgram's Voice Agent depends on upstream LLM providers — when one degrades, this surface degrades with it. Core STT/TTS APIs remained available. Multi-LLM fallback at the application layer is the documented mitigation.
+
+---
+
+### 3. Anthropic — Per-Model Reporting Inflated April Counts
+**Affected**: Claude API (40), claude.ai (37), Claude Code (31)
+**Longest**: 5h 57m (across the bundle)
+
+Anthropic's high incident totals reflect granular per-model reporting (Opus / Sonnet / Haiku tracked as separate components). A single platform event registers as multiple simultaneous incidents across claude.ai, Claude API, and Claude Code. The longest single bundle this month was 5h 57m. The aggregate count overstates the practical impact on any one model.
+
+---
+
+### 4. OpenAI — 36h ChatGPT Disruption (Apr 20)
+**Affected**: ChatGPT (15 incidents total, 36h 59m total downtime)
+**Longest**: 12h 20m
+
+ChatGPT's longest incident this month was a 12h 20m window during the April 20 cluster. ChatGPT finished at 91.61% uptime — markedly worse than OpenAI API's 97.44% — reflecting that consumer surfaces saw a different reliability profile than the developer API. The OpenAI API itself recorded only 6 incidents but with a 36h 2m longest single duration, giving it a 6h 57m average resolution time.
+
+---
+
+### 5. GitHub Copilot — 26 Incidents, 84h 32m Total Downtime
+**Affected**: Copilot Chat, Webhooks, Codespaces, Actions
+**Longest**: 15h 37m
+
+Copilot continued its March 2026 pattern of frequent multi-component incidents. CI/CD pipelines and developer workflows that depend on full GitHub integration (not just AI completion) bore the brunt — Webhooks and Codespaces disruptions are the recurring failure mode. Average resolution was 3h 15m.
+
+---
+
+### 6. Together AI — 139 Incidents, 97h 49m Total
+**Affected**: Multiple model surfaces
+**Longest**: 15h 16m
+
+Together AI's 139 incidents — the highest count of any service — reflect the same flap pattern as Mistral: many short events rather than fewer long ones. Average resolution was 42m. The 15h 16m longest incident is the outlier; most events were sub-hour and fully resolved before they would impact a typical retry-with-backoff client. Score finished at 83 (Good) despite the count.
 
 ---
 
 ## Observations
 
-### If you build on [Service]
--
+### If you build on Gemini
+- A single API key issue lasted 10 days — set retry / timeout / circuit-breaker policies that survive multi-day partial degradation
+- Newly-created keys were the documented scope; existing keys were less affected — for production, prefer long-lived keys with rotation cadences ≥ monthly
+- Two further multi-hour incidents (Batch API 65h, postpay upgrade 44h) hit different surfaces — broad surface-level monitoring is more useful than relying on the overall page indicator
+
+### If you build on Anthropic
+- High incident count (40 + 37 + 31 across Claude API / claude.ai / Claude Code) is mostly a reporting artifact of per-model components
+- Practical impact on a single model is closer to the per-incident longest figure (5h 57m) than the aggregated total
+- Monitor per-model components individually if your traffic is concentrated on one tier (Opus / Sonnet / Haiku)
+
+### If you build on Codex
+- 84.97% uptime is the lowest of every monitored service this month — far below Cursor (99.76%) and Windsurf (99.84%) for the same use case
+- Score 86 (Good) reflects fast individual recoveries (avg 1h 23m), but the raw uptime gap is real if you rely on Codex during business hours
+- Treat as secondary tooling for the period; primary coding workflows benefit from Cursor / Windsurf or fallback handling
+
+### If you build on Deepgram
+- Longest incident pattern (74h+) repeated for the second consecutive month
+- Voice Agent degradations consistently trace to upstream LLM dependency, not Deepgram core
+- Define multiple LLM providers in your Voice Agent config to fail over
+
+### If you build on Together AI or Mistral
+- High incident counts (139 / 97) but fast average recovery (42m / 8m) — reliability cost is mostly retry-pressure, not extended unavailability
+- Standard exponential backoff with sub-minute initial retry handles the flap pattern for both
+- Watch the *longest* duration column (15h 16m for Together AI, 1h 14m for Mistral) — that's the worst case your client-side timeout policy needs to survive
 
 ### Generally stable this month
-<!-- List stable services with downtime figures -->
+**Zero incidents (7 services)**: Amazon Bedrock, Azure OpenAI, Groq Cloud, Pinecone, Stability AI, Perplexity, xAI (Grok). Of these, Pinecone (99.84% official uptime) and Groq Cloud (100%) publish real uptime data. Bedrock / Azure OpenAI / Perplexity / xAI do not — interpret their zero-incident status with that caveat.
+
+**Low incident count + fast recovery**: Hugging Face (6 incidents · 9m avg), Modal (8 incidents · 4h 7m avg, but 99.95% uptime), Cohere API (3 incidents · 36m avg). Strong candidates for primary or fallback providers in production setups.
 
 ---
 
