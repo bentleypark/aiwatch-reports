@@ -230,17 +230,6 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 
 ---
 
-## Detection Lead
-
-<!-- Data source: detected:{svcId} KV timestamps vs official incident start times -->
-<!-- Only applicable when probe spike detection fires before status page update -->
-
-*No probe-spike-led detections were logged in April 2026.* Probe-based detection covers only the 19 probed API services (consumer apps, coding agents, and infrastructure-only services like Pinecone are not probed). For April's biggest incidents — Gemini's 10-day key issue and Together AI's 15h flap-cluster outlier — the upstream status page updates beat AIWatch's probe-spike threshold, so the section reads empty rather than indicating a tracking gap.
-
-> **Detection Lead** measures how much earlier AIWatch detected an issue (via probe RTT spike) compared to the official status page report. Only incidents where probe spike detection fired before the status page update are included.
-
----
-
 ## Security Alerts
 
 > **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.
