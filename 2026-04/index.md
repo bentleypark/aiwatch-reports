@@ -202,33 +202,31 @@ Unlike raw uptime %, it incorporates incident frequency (how often things break)
 ## API Response Time — Monthly p75
 
 <!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
-<!-- 17 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
+<!-- 19 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
 
-| Rank | Service | p75 (ms) | p95 (ms) | Spikes | vs Last Month |
-|---|---|---|---|---|---|
-| 1 | Gemini API | 140 | — | — | — |
-| 2 | Claude API | 173 | — | — | — |
-| 3 | Fireworks AI | 210 | — | — | — |
-| 4 | Groq Cloud | 213 | — | — | — |
-| 5 | OpenAI API | 223 | — | — | — |
-| 6= | Mistral API | 234 | — | — | — |
-| 6= | Cohere API | 234 | — | — | — |
-| 8 | Together AI | 261 | — | — | — |
-| 9 | Perplexity | 398 | — | — | — |
-| 10 | Hugging Face | 414 | — | — | — |
-| 11 | OpenRouter | 442 | — | — | — |
-| 12 | Replicate | 480 | — | — | — |
-| 13 | xAI (Grok) | 490 | — | — | — |
-| 14 | ElevenLabs | 492 | — | — | — |
-| 15 | DeepSeek API | 569 | — | — | — |
-| 16 | Voyage AI | 699 | — | — | — |
-| 17 | Stability AI | 741 | — | — | — |
-| 18 | AssemblyAI | 885 | — | — | — |
-| 19 | Deepgram | 2193 | — | — | — |
+| Rank | Service | p75 (ms) |
+|---|---|---|
+| 1 | Gemini API | 140 |
+| 2 | Claude API | 173 |
+| 3 | Fireworks AI | 210 |
+| 4 | Groq Cloud | 213 |
+| 5 | OpenAI API | 223 |
+| 6= | Mistral API | 234 |
+| 6= | Cohere API | 234 |
+| 8 | Together AI | 261 |
+| 9 | Perplexity | 398 |
+| 10 | Hugging Face | 414 |
+| 11 | OpenRouter | 442 |
+| 12 | Replicate | 480 |
+| 13 | xAI (Grok) | 490 |
+| 14 | ElevenLabs | 492 |
+| 15 | DeepSeek API | 569 |
+| 16 | Voyage AI | 699 |
+| 17 | Stability AI | 741 |
+| 18 | AssemblyAI | 885 |
+| 19 | Deepgram | 2193 |
 
-**Spike definition**: RTT > 3× daily median or connection failure (rtt = -1).
-
-> **Note**: Probe RTT measures direct API endpoint response time from Cloudflare Workers edge (5-min intervals). Values reflect network round-trip time, not inference latency. Services without probe coverage (Bedrock, Azure OpenAI, Pinecone) are excluded from rankings.
+> **Note**: Probe RTT measures direct API endpoint response time from Cloudflare Workers edge (5-min intervals). Values reflect network round-trip time, not inference latency. Services without probe coverage (Bedrock, Azure OpenAI, Pinecone) are excluded from rankings. p95 / spike-count / month-over-month columns will return once the underlying archive schema carries those fields.
 
 ---
 
