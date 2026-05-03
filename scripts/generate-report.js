@@ -221,6 +221,131 @@ function buildUptimeTable(services, meta) {
   ).join('\n')
 }
 
+// ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
+//
+// Schema: archive.security shape from MonthlySecuritySummary in worker/src/monthly-archive.ts:
+//   { totalAlerts, bySource: { osv, hackernews }, bySeverity: { critical, high, medium, low },
+//     byService: { [serviceName]: count },
+//     topFindings: { title, url, source, severity?, service?, detectedAt, timeline? }[] }
+// `timeline` only present on OSV findings whose security:timeline:osv:{id} key existed at
+// archive build time (#291). HN findings never carry a timeline.
+//
+// Returns the full markdown block (heading included) or '' when there's nothing to surface.
+
+const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low']
+
+function fmtIso(d) {
+  if (!d) return '—'
+  // Sanitize: only emit a recognizable YYYY-MM-DD prefix. Falling through to `String(d)` would
+  // leak unescaped pipes / newlines into a markdown table cell on a malformed `at` field.
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(d))
+  return m ? m[1] : '—'
+}
+
+function buildBySourceTable(bySource) {
+  const rows = []
+  if (bySource.osv > 0) rows.push(`| OSV.dev | ${bySource.osv} |`)
+  if (bySource.hackernews > 0) rows.push(`| Hacker News | ${bySource.hackernews} |`)
+  if (rows.length === 0) return ''
+  return ['| Source | Count |', '|---|---|', ...rows].join('\n')
+}
+
+function buildBySeverityTable(bySeverity) {
+  // Always render all four buckets — readers can scan severity at a glance even when zero.
+  const headers = SEVERITY_ORDER.map(s => s.charAt(0).toUpperCase() + s.slice(1))
+  const counts = SEVERITY_ORDER.map(s => bySeverity[s] ?? 0)
+  if (counts.every(c => c === 0)) return ''
+  return [
+    `| ${headers.join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    `| ${counts.join(' | ')} |`,
+  ].join('\n')
+}
+
+function buildByServiceTable(byService, limit = 5) {
+  const entries = Object.entries(byService || {})
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+  if (entries.length === 0) return ''
+  const rows = entries.map(([name, count]) => `| ${name} | ${count} |`)
+  return ['| Service | Count |', '|---|---|', ...rows].join('\n')
+}
+
+function buildTimelineDetails(timeline) {
+  if (!Array.isArray(timeline) || timeline.length === 0) return ''
+  const rows = timeline.map(e =>
+    `| ${e.stage ?? '—'} | ${fmtIso(e.at)} | ${e.severity ?? '—'} | ${e.fixedVersion ?? '—'} |`,
+  )
+  return [
+    '<details markdown="1">',
+    '<summary>Timeline</summary>',
+    '',
+    '| Stage | At (UTC) | Severity | Fix Version |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+    '</details>',
+  ].join('\n')
+}
+
+function buildTopFindings(findings) {
+  if (!Array.isArray(findings) || findings.length === 0) return ''
+  const sections = findings.map((f, i) => {
+    const sev = f.severity ? `\`${f.severity}\`` : '`unrated`'
+    const sourceLabel = f.source === 'osv' ? 'OSV.dev' : f.source === 'hackernews' ? 'Hacker News' : f.source
+    const titleLink = f.url ? `[${f.title}](${f.url})` : f.title
+    const heading = `#### ${i + 1}. ${titleLink} · ${sev}`
+    const meta = [
+      `- **Source:** ${sourceLabel}`,
+      `- **Detected:** ${fmtIso(f.detectedAt)}`,
+    ]
+    if (f.service) meta.splice(1, 0, `- **Affected:** ${f.service}`)
+    const timelineBlock = f.source === 'osv' ? buildTimelineDetails(f.timeline) : ''
+    return [heading, '', meta.join('\n'), timelineBlock].filter(Boolean).join('\n')
+  })
+  return ['### Top Findings', '', ...sections].join('\n\n')
+}
+
+function buildSecuritySection(security) {
+  // Schema-aligned fast paths — surface nothing when there's nothing to report.
+  if (!security) return ''
+  // Distinguish "no alerts this month" from "malformed archive". The worker writer
+  // (summarizeSecurityAlerts) always sets totalAlerts; if it's missing while other fields
+  // are populated, log so build-time CI / operators notice rather than silently dropping.
+  if (typeof security.totalAlerts !== 'number') {
+    if (security.topFindings?.length || security.bySource || security.bySeverity) {
+      console.warn('[security] archive present but totalAlerts missing — section omitted')
+    }
+    return ''
+  }
+  if (security.totalAlerts <= 0) return ''
+
+  const parts = [
+    '## Security Alerts',
+    '',
+    `> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.`,
+    '',
+    `**Total alerts:** ${security.totalAlerts}`,
+    '',
+  ]
+
+  const bySrc = buildBySourceTable(security.bySource || { osv: 0, hackernews: 0 })
+  if (bySrc) parts.push('**By source**', '', bySrc, '')
+
+  const bySev = buildBySeverityTable(security.bySeverity || {})
+  if (bySev) parts.push('**By severity**', '', bySev, '')
+
+  const bySvc = buildByServiceTable(security.byService || {})
+  if (bySvc) parts.push('**Most affected services**', '', bySvc, '')
+
+  const top = buildTopFindings(security.topFindings || [])
+  if (top) parts.push(top, '')
+
+  parts.push('---', '')
+  return parts.join('\n')
+}
+
 function buildLatencyTable(services, meta) {
   const withLatency = services.filter(s => s.data.avgLatencyMs !== null && !NO_PROBE.has(s.id))
   // Competition rank with ascending sort: negate avgLatencyMs so competitionRank's
@@ -350,6 +475,16 @@ function fillTemplate(template, month, archive, meta) {
     zeroIncLine,
   )
 
+  // Security section — when archive.security is null/empty, collapse the placeholder + its
+  // surrounding blank lines down to a single blank line so the preceding `---` separator
+  // doesn't end up adjacent to a second one (would render as two horizontal rules).
+  const securityBlock = buildSecuritySection(archive.security)
+  if (securityBlock) {
+    out = out.replace(/<!-- SECURITY_SECTION -->/, securityBlock)
+  } else {
+    out = out.replace(/\n*<!-- SECURITY_SECTION -->\n*/, '\n\n')
+  }
+
   return out
 }
 
@@ -400,6 +535,13 @@ module.exports = {
   buildIncidentTable,
   buildUptimeTable,
   buildLatencyTable,
+  buildBySourceTable,
+  buildBySeverityTable,
+  buildByServiceTable,
+  buildTimelineDetails,
+  buildTopFindings,
+  buildSecuritySection,
+  fmtIso,
   monthName,
   lastDayOfMonth,
   nextMonthName,
