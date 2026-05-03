@@ -16,7 +16,7 @@ published: false
 - **Most reliable**: Pinecone (100/100 — zero incidents, 99.84% uptime), Groq Cloud (93/100 — zero incidents, 100% uptime)
 - **Best balance (stability + ecosystem)**: Cohere API (85/100, only 3 incidents avg 36m, 99.85% uptime), Hugging Face (87/100, 6 incidents avg 9m, 99.97% uptime)
 - **Riskiest this month**: Gemini API (80.15% estimated uptime — Google publishes no official Gemini uptime, so this is AIWatch's poll-based estimate; single 242h API key incident dominated), Deepgram (Score 55, 74h 20m longest, 16h 15m avg resolution)
-- **High incident noise**: Together AI (139 incidents but avg 42m recovery), Mistral (97 incidents avg 8m) — flap pattern, not systemic instability
+- **High incident count, fast recovery**: Together AI (139 incidents, avg 42m), Mistral (97 incidents, avg 8m) — whether the high count reflects BetterStack/RSS reporting granularity or genuine micro-instability isn't determinable from incident counts alone. What's observable is that user-facing impact stayed bounded by client-side retry, not extended unavailability
 - **Watch out**: Codex started monitoring on 22 Apr 2026 — its 9-day poll-based aggregate (84.97%) is not directly comparable with full-month peers and includes cross-contamination from a now-fixed bug (aiwatch#361, deployed 30 Apr); OpenAI's official 30-day Codex uptime stays near 99.98%. Anthropic per-model reporting inflated counts (Claude API 40 + claude.ai 37 + Claude Code 31 often share the same root event)
 
 <details markdown="1">
@@ -25,7 +25,7 @@ published: false
 - **가장 안정적**: Pinecone (100점, 인시던트 0건·업타임 99.84%), Groq Cloud (93점, 인시던트 0건·업타임 100%)
 - **안정적이면서 도구·라이브러리도 풍부**: Cohere API (85점, 3건·평균 36분, 99.85%), Hugging Face (87점, 6건·평균 9분, 99.97%)
 - **이번 달 가장 위험**: Gemini API (추정 업타임 80.15% — Google이 공식 Gemini 업타임을 공개하지 않아 AIWatch의 폴링 기반 추정치이며, 242시간짜리 API 키 장애 하나가 한 달 수치를 끌어내림), Deepgram (점수 55, 최장 74시간 20분·평균 복구 16시간 15분)
-- **잦지만 짧게 끝나는 장애**: Together AI (139건이지만 평균 42분에 복구), Mistral (97건·평균 8분) — 짧은 장애가 반복됐을 뿐 구조적 불안정과는 다름
+- **잦은 장애, 빠른 복구**: Together AI (139건, 평균 42분에 복구), Mistral (97건·평균 8분) — 건수가 많은 게 BetterStack/RSS의 보고 단위 차이인지 실제 마이크로 장애인지는 건수만으로 단정하기 어려움. 다만 빠른 복구 덕에 사용자 입장에서는 클라이언트 재시도 수준에서 흡수됨
 - **주의 필요**: Codex는 2026년 4월 22일부터 모니터링이 시작돼 이번 달 데이터가 9일치뿐입니다. 그 9일 중 5일이 4월 30일에 수정된 aiwatch#361 버그 영향권에 들어가 있어, 폴링 기반 추정치인 84.97%는 한 달 전체 수치와 직접 비교하기 어렵습니다. 같은 기간 OpenAI가 공식적으로 발표한 30일 Codex 업타임은 99.98% 수준입니다. Anthropic은 Opus·Sonnet·Haiku를 별도 컴포넌트로 집계하기 때문에, 같은 사건 하나가 Claude API 40건, claude.ai 37건, Claude Code 31건처럼 여러 번 잡힙니다.
 
 </details>
@@ -49,7 +49,7 @@ April 2026 split sharply between services that flapped fast and recovered fast v
 
 
 - **One incident can reshape a month**: Gemini API recorded only 3 incidents — yet its 80.15% estimated uptime was the second-lowest in the dataset (behind only Deepgram at 57.06%). A single 242-hour issue with newly-created API keys (Apr 17–28) dominated the period, dragging Gemini from a March 2026 Score of 86 (Excellent) down to Fair.
-- **Flap-pattern services compete with stable ones**: Together AI logged 139 incidents and Mistral 97, but both finished in the Good tier (Score 83 and 76) because individual incidents averaged 42m and 8m respectively. Mistral's total downtime stayed modest at 12h 15m (1.7% of the month) — Together AI's 97h 49m (13.6%) is meaningfully larger but still concentrated in short flaps with one 15h 16m outlier; the reliability cost is mostly client-side retry pressure, not extended unavailability.
+- **Frequent short incidents — interpret with care**: Together AI logged 139 incidents and Mistral 97 — by far the highest counts of the month. Both still finished in the Good tier (Score 83 and 76) because individual incidents averaged 42m and 8m respectively. Mistral's total downtime stayed at 12h 15m (1.7% of the month); Together AI's was 97h 49m (13.6%), driven mostly by short events with one 15h 16m outlier. Whether the high counts reflect BetterStack / RSS reporting granularity (auto-recovery flap notifications inflating the tally) or genuine micro-instability is not determinable from counts alone — both services have published this pattern across multiple months, which leans toward the reporting-artifact reading, but it's an open question rather than a settled one. What is observable: fast recovery kept user-facing impact bounded by client-side retry pressure rather than extended unavailability.
 - **Estimate-only services aren't apples-to-apples**: Bedrock and Azure OpenAI both show ~100% uptime (100% / 99.99%), but neither publishes accessible uptime metrics. Their AIWatch Score caps at 90 — the formula applies a 10% downward adjustment to the base score before the 80→100 redistribution to reflect the missing observability.
 
 <details markdown="1">
@@ -58,7 +58,7 @@ April 2026 split sharply between services that flapped fast and recovered fast v
 2026년 4월은 짧게 흔들리고 빠르게 복구한 서비스와, 며칠씩 이어지는 단일 장애를 만난 서비스로 뚜렷이 갈렸습니다. 이번 달 신뢰성을 가른 건 인시던트 *건수*가 아니라 *지속 시간*입니다.
 
 - **장애 하나가 한 달을 결정**: Gemini API는 인시던트가 3건뿐이었는데도 추정 업타임 80.15%로 31개 서비스 중 두 번째로 낮은 수치를 기록했습니다(최저는 Deepgram의 57.06%). 4월 17일부터 28일까지 10일간 이어진 'API 키' 장애가 한 달 전체 지표를 끌어내려, Gemini는 3월의 86점(Excellent)에서 Fair 등급으로 내려갔습니다.
-- **잦아도 빠른 복구가 안정성을 지킨다**: Together AI는 139건, Mistral은 97건의 인시던트를 기록했지만 평균 복구 시간이 각각 42분과 8분이라, 두 서비스 모두 Good 등급(83점, 76점)으로 마쳤습니다. Mistral의 총 다운타임은 12시간 15분으로 4월 전체의 1.7%에 그쳤고, Together AI의 97시간 49분(13.6%)도 절대 수치만 보면 큰 편이지만 대부분 짧은 장애였고 15시간 16분짜리 한 건만 두드러진 이상치였습니다. 사용자 입장에서 부담은 주로 클라이언트 측 재시도이지, 장기적 가용성 손실은 아니었습니다.
+- **건수가 많은 짧은 장애 — 해석에 주의**: Together AI는 139건, Mistral은 97건으로 이번 달 최다 인시던트를 기록했습니다. 두 서비스 모두 평균 복구 시간이 각각 42분과 8분이라 Good 등급(83점, 76점)으로 마쳤고, 총 다운타임도 Mistral 12시간 15분(1.7%), Together AI 97시간 49분(13.6%)으로 대부분 짧은 장애였으며 15시간 16분짜리 한 건만 두드러진 이상치였습니다. 다만 이 높은 건수가 BetterStack/RSS의 보고 방식(자동 복구 알림이 별개 인시던트로 카운트됨)에서 비롯된 잡음인지, 실제 마이크로 단위의 불안정인지는 건수만으로는 판단할 수 없습니다. 두 서비스가 여러 달 같은 패턴을 반복해 왔다는 점은 보고 방식 영향에 무게를 두게 하지만, 단정할 수 있는 문제는 아닙니다. 분명한 건 빠른 복구 덕분에 사용자 영향이 클라이언트 재시도 수준에서 흡수됐다는 점입니다.
 - **추정치 기반 서비스는 같은 기준으로 비교할 수 없음**: Bedrock과 Azure OpenAI는 거의 100%(각각 100%, 99.99%)로 보이지만, 두 서비스 모두 공개적으로 확인할 수 있는 업타임 지표를 내놓지 않습니다. AIWatch Score는 이 한계를 반영해 기본 점수에 10% 페널티를 매긴 뒤 80→100 구간으로 재분배하기 때문에, 두 서비스가 받을 수 있는 최고 점수는 90점입니다.
 
 </details>
