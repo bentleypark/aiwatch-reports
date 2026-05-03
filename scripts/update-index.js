@@ -65,7 +65,14 @@ function readArchiveSnapshot(period) {
   if (!fs.existsSync(snapshotPath)) {
     throw new Error(`Snapshot not found: ${snapshotPath}. Run scripts/fetch-archive.sh ${period} first.`)
   }
-  const raw = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
+  let raw
+  try {
+    raw = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
+  } catch (err) {
+    // Re-throw with the file path so the workflow log identifies the bad snapshot
+    // directly instead of just "Unexpected token …".
+    throw new Error(`Snapshot ${snapshotPath} is not valid JSON: ${err.message}`)
+  }
   // The Worker archive shape (MonthlyArchive in worker/src/monthly-archive.ts)
   // has `services` as a Record<svcId, MonthlyServiceData>. Count keys, not array length.
   const services = raw.services && typeof raw.services === 'object'
