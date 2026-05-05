@@ -1,0 +1,318 @@
+{
+    "period": "2026-03",
+    "generatedAt": "2026-05-03T05:44:57.649Z",
+    "daysCollected": 12,
+    "services": {
+        "claude": {
+            "uptime": 81.5,
+            "score": 61,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "openai": {
+            "uptime": 96.38,
+            "score": 83,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "gemini": {
+            "uptime": 99.84,
+            "score": 62,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "mistral": {
+            "uptime": 99.37,
+            "score": 77,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "cohere": {
+            "uptime": 99.97,
+            "score": 85,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "groq": {
+            "uptime": 100,
+            "score": 92,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "together": {
+            "uptime": 93.85,
+            "score": 83,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "perplexity": {
+            "uptime": 99.87,
+            "score": 76,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "huggingface": {
+            "uptime": 99.79,
+            "score": 87,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "replicate": {
+            "uptime": 94.25,
+            "score": 71,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "elevenlabs": {
+            "uptime": 97.41,
+            "score": 65,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "xai": {
+            "uptime": 99.97,
+            "score": 76,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "deepseek": {
+            "uptime": 99.74,
+            "score": 83,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "claudeai": {
+            "uptime": 79.1,
+            "score": 61,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "chatgpt": {
+            "uptime": 86.8,
+            "score": 71,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "claudecode": {
+            "uptime": 81.53,
+            "score": 66,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "copilot": {
+            "uptime": 99.95,
+            "score": 69,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "cursor": {
+            "uptime": 99.79,
+            "score": 88,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "windsurf": {
+            "uptime": 98.76,
+            "score": 89,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "openrouter": {
+            "uptime": 99.88,
+            "score": 81,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "bedrock": {
+            "uptime": 100,
+            "score": 90,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "pinecone": {
+            "uptime": 100,
+            "score": 100,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "azureopenai": {
+            "uptime": 99.84,
+            "score": 90,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "stability": {
+            "uptime": 99.96,
+            "score": 77,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "characterai": {
+            "uptime": 99.88,
+            "score": 74,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "assemblyai": {
+            "uptime": 89.04,
+            "score": 81,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "deepgram": {
+            "uptime": 100,
+            "score": 55,
+            "grade": "fair",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "fireworks": {
+            "uptime": null,
+            "score": 88,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "voyageai": {
+            "uptime": null,
+            "score": 85,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "modal": {
+            "uptime": null,
+            "score": 94,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "codex": {
+            "uptime": null,
+            "score": 86,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        }
+    },
+    "security": null
+}

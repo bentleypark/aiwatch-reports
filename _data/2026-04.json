@@ -1,0 +1,457 @@
+{
+    "period": "2026-04",
+    "generatedAt": "2026-05-02T06:03:57.017Z",
+    "daysCollected": 30,
+    "services": {
+        "claude": {
+            "uptime": 96.46,
+            "score": 61,
+            "grade": "fair",
+            "incidents": 40,
+            "avgResolutionMin": 60,
+            "totalDowntimeMin": 2380,
+            "longestIncidentMin": 357,
+            "avgLatencyMs": 173
+        },
+        "openai": {
+            "uptime": 97.44,
+            "score": 84,
+            "grade": "good",
+            "incidents": 6,
+            "avgResolutionMin": 417,
+            "totalDowntimeMin": 2502,
+            "longestIncidentMin": 2162,
+            "avgLatencyMs": 223
+        },
+        "gemini": {
+            "uptime": 80.15,
+            "score": 62,
+            "grade": "fair",
+            "incidents": 3,
+            "avgResolutionMin": 7033,
+            "totalDowntimeMin": 21099,
+            "longestIncidentMin": 14520,
+            "avgLatencyMs": 140
+        },
+        "bedrock": {
+            "uptime": 100,
+            "score": 90,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "azureopenai": {
+            "uptime": 99.99,
+            "score": 90,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "mistral": {
+            "uptime": 86.77,
+            "score": 76,
+            "grade": "good",
+            "incidents": 97,
+            "avgResolutionMin": 8,
+            "totalDowntimeMin": 735,
+            "longestIncidentMin": 74,
+            "avgLatencyMs": 234
+        },
+        "cohere": {
+            "uptime": 99.85,
+            "score": 85,
+            "grade": "good",
+            "incidents": 3,
+            "avgResolutionMin": 36,
+            "totalDowntimeMin": 107,
+            "longestIncidentMin": 85,
+            "avgLatencyMs": 234
+        },
+        "groq": {
+            "uptime": 100,
+            "score": 93,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": 213
+        },
+        "together": {
+            "uptime": 96.22,
+            "score": 83,
+            "grade": "good",
+            "incidents": 139,
+            "avgResolutionMin": 42,
+            "totalDowntimeMin": 5869,
+            "longestIncidentMin": 916,
+            "avgLatencyMs": 261
+        },
+        "perplexity": {
+            "uptime": 100,
+            "score": 76,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": 398
+        },
+        "xai": {
+            "uptime": 100,
+            "score": 77,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": 490
+        },
+        "deepseek": {
+            "uptime": 99.54,
+            "score": 82,
+            "grade": "good",
+            "incidents": 1,
+            "avgResolutionMin": 64,
+            "totalDowntimeMin": 64,
+            "longestIncidentMin": 64,
+            "avgLatencyMs": 569
+        },
+        "openrouter": {
+            "uptime": 99.84,
+            "score": 82,
+            "grade": "good",
+            "incidents": 2,
+            "avgResolutionMin": 65,
+            "totalDowntimeMin": 130,
+            "longestIncidentMin": 65,
+            "avgLatencyMs": 442
+        },
+        "elevenlabs": {
+            "uptime": 97.27,
+            "score": 65,
+            "grade": "fair",
+            "incidents": 5,
+            "avgResolutionMin": 266,
+            "totalDowntimeMin": 1330,
+            "longestIncidentMin": 1170,
+            "avgLatencyMs": 492
+        },
+        "assemblyai": {
+            "uptime": 99.77,
+            "score": 82,
+            "grade": "good",
+            "incidents": 3,
+            "avgResolutionMin": 22,
+            "totalDowntimeMin": 65,
+            "longestIncidentMin": 48,
+            "avgLatencyMs": 885
+        },
+        "deepgram": {
+            "uptime": 57.06,
+            "score": 55,
+            "grade": "fair",
+            "incidents": 5,
+            "avgResolutionMin": 975,
+            "totalDowntimeMin": 4874,
+            "longestIncidentMin": 4460,
+            "avgLatencyMs": 2193
+        },
+        "huggingface": {
+            "uptime": 99.97,
+            "score": 87,
+            "grade": "good",
+            "incidents": 6,
+            "avgResolutionMin": 9,
+            "totalDowntimeMin": 53,
+            "longestIncidentMin": 15,
+            "avgLatencyMs": 414
+        },
+        "replicate": {
+            "uptime": 99.76,
+            "score": 71,
+            "grade": "fair",
+            "incidents": 2,
+            "avgResolutionMin": 38,
+            "totalDowntimeMin": 75,
+            "longestIncidentMin": 48,
+            "avgLatencyMs": 480
+        },
+        "pinecone": {
+            "uptime": 99.84,
+            "score": 100,
+            "grade": "excellent",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": null
+        },
+        "stability": {
+            "uptime": 100,
+            "score": 77,
+            "grade": "good",
+            "incidents": 0,
+            "avgResolutionMin": null,
+            "totalDowntimeMin": null,
+            "longestIncidentMin": null,
+            "avgLatencyMs": 741
+        },
+        "claudeai": {
+            "uptime": 95.66,
+            "score": 61,
+            "grade": "fair",
+            "incidents": 37,
+            "avgResolutionMin": 66,
+            "totalDowntimeMin": 2440,
+            "longestIncidentMin": 357,
+            "avgLatencyMs": null
+        },
+        "characterai": {
+            "uptime": 98.86,
+            "score": 73,
+            "grade": "fair",
+            "incidents": 22,
+            "avgResolutionMin": 24,
+            "totalDowntimeMin": 527,
+            "longestIncidentMin": 250,
+            "avgLatencyMs": null
+        },
+        "chatgpt": {
+            "uptime": 91.61,
+            "score": 71,
+            "grade": "fair",
+            "incidents": 15,
+            "avgResolutionMin": 148,
+            "totalDowntimeMin": 2219,
+            "longestIncidentMin": 740,
+            "avgLatencyMs": null
+        },
+        "claudecode": {
+            "uptime": 96.85,
+            "score": 66,
+            "grade": "fair",
+            "incidents": 31,
+            "avgResolutionMin": 73,
+            "totalDowntimeMin": 2276,
+            "longestIncidentMin": 357,
+            "avgLatencyMs": null
+        },
+        "copilot": {
+            "uptime": 99.73,
+            "score": 69,
+            "grade": "fair",
+            "incidents": 26,
+            "avgResolutionMin": 195,
+            "totalDowntimeMin": 5072,
+            "longestIncidentMin": 937,
+            "avgLatencyMs": null
+        },
+        "cursor": {
+            "uptime": 99.76,
+            "score": 88,
+            "grade": "good",
+            "incidents": 20,
+            "avgResolutionMin": 71,
+            "totalDowntimeMin": 1419,
+            "longestIncidentMin": 383,
+            "avgLatencyMs": null
+        },
+        "windsurf": {
+            "uptime": 99.84,
+            "score": 89,
+            "grade": "good",
+            "incidents": 3,
+            "avgResolutionMin": 398,
+            "totalDowntimeMin": 1193,
+            "longestIncidentMin": 887,
+            "avgLatencyMs": null
+        },
+        "fireworks": {
+            "uptime": 99.4,
+            "score": 88,
+            "grade": "good",
+            "incidents": 30,
+            "avgResolutionMin": 7,
+            "totalDowntimeMin": 199,
+            "longestIncidentMin": 17,
+            "avgLatencyMs": 210
+        },
+        "voyageai": {
+            "uptime": 99.77,
+            "score": 86,
+            "grade": "good",
+            "incidents": 1,
+            "avgResolutionMin": 11,
+            "totalDowntimeMin": 11,
+            "longestIncidentMin": 11,
+            "avgLatencyMs": 699
+        },
+        "modal": {
+            "uptime": 99.95,
+            "score": 94,
+            "grade": "excellent",
+            "incidents": 8,
+            "avgResolutionMin": 247,
+            "totalDowntimeMin": 1973,
+            "longestIncidentMin": 1382,
+            "avgLatencyMs": null
+        },
+        "codex": {
+            "uptime": 84.97,
+            "score": 86,
+            "grade": "good",
+            "incidents": 7,
+            "avgResolutionMin": 83,
+            "totalDowntimeMin": 578,
+            "longestIncidentMin": 253,
+            "avgLatencyMs": null
+        }
+    },
+    "security": {
+        "totalAlerts": 8,
+        "bySource": {
+            "osv": 8,
+            "hackernews": 0
+        },
+        "bySeverity": {
+            "critical": 0,
+            "high": 1,
+            "medium": 7,
+            "low": 0
+        },
+        "byService": {
+            "Hugging Face": 2,
+            "Anthropic (Claude)": 4,
+            "LangChain": 2
+        },
+        "topFindings": [
+            {
+                "title": "LangChain Core has Path Traversal vulnerabilites in legacy `load_prompt` functions",
+                "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-qh6h-p6c9-ff54",
+                "source": "osv",
+                "severity": "high",
+                "service": "LangChain",
+                "detectedAt": "2026-04-24T01:01:06.841Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "high",
+                        "fixedVersion": "1.2.22"
+                    }
+                ]
+            },
+            {
+                "title": "Claude SDK for Python has Insecure Default File Permissions in Local Filesystem Memory Tool",
+                "url": "https://github.com/anthropics/anthropic-sdk-python/security/advisories/GHSA-q5f5-3gjm-7mfm",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Anthropic (Claude)",
+                "detectedAt": "2026-04-24T01:01:06.841Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "0.87.0"
+                    }
+                ]
+            },
+            {
+                "title": "Claude SDK for Python: Memory Tool Path Validation Race Condition Allows Sandbox Escape",
+                "url": "https://github.com/anthropics/anthropic-sdk-python/security/advisories/GHSA-w828-4qhx-vxx3",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Anthropic (Claude)",
+                "detectedAt": "2026-04-24T01:01:06.841Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "0.87.0"
+                    }
+                ]
+            },
+            {
+                "title": "LangChain has incomplete f-string validation in prompt templates",
+                "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-926x-3r5x-gfhw",
+                "source": "osv",
+                "severity": "medium",
+                "service": "LangChain",
+                "detectedAt": "2026-04-24T01:01:06.841Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "0.3.84"
+                    }
+                ]
+            },
+            {
+                "title": "HuggingFace Transformers allows for arbitrary code execution in the `Trainer` class",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-1839",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Hugging Face",
+                "detectedAt": "2026-04-24T01:01:06.841Z"
+            },
+            {
+                "title": "GHSA-q5f5-3gjm-7mfm: PyPI/anthropic",
+                "url": "https://osv.dev/vulnerability/GHSA-q5f5-3gjm-7mfm",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Anthropic (Claude)",
+                "detectedAt": "2026-04-21T14:01:19.838Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "0.87.0"
+                    }
+                ]
+            },
+            {
+                "title": "GHSA-w828-4qhx-vxx3: PyPI/anthropic",
+                "url": "https://osv.dev/vulnerability/GHSA-w828-4qhx-vxx3",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Anthropic (Claude)",
+                "detectedAt": "2026-04-21T14:01:19.838Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "0.87.0"
+                    }
+                ]
+            },
+            {
+                "title": "GHSA-69w3-r845-3855: PyPI/transformers",
+                "url": "https://osv.dev/vulnerability/GHSA-69w3-r845-3855",
+                "source": "osv",
+                "severity": "medium",
+                "service": "Hugging Face",
+                "detectedAt": "2026-04-20T18:04:57.884Z",
+                "timeline": [
+                    {
+                        "stage": "detected",
+                        "at": "2026-04-24T01:01:07.849Z",
+                        "severity": "medium",
+                        "fixedVersion": "5.0.0rc3"
+                    }
+                ]
+            }
+        ]
+    }
+}
