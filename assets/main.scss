@@ -72,6 +72,64 @@ tr:nth-child(odd) { background: transparent !important; }
   .hide-mobile { display: none !important; }
 }
 
+/* Recommendations table — desktop: fixed-layout so long Why-column text wraps
+   instead of horizontal-scrolling. Mobile (<768px): stacked-card layout, see
+   media query below. The `display: table` override is necessary because the
+   global `.post-content table { display: block }` rule (line 35) would otherwise
+   suppress `table-layout: fixed` (which only takes effect on display:table). */
+.recommendations {
+  display: table !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+.recommendations th,
+.recommendations td {
+  white-space: normal !important;
+  vertical-align: top !important;
+  word-break: break-word !important;
+}
+.recommendations th:nth-child(1), .recommendations td:nth-child(1) { width: 18%; }
+.recommendations th:nth-child(2), .recommendations td:nth-child(2) { width: 24%; }
+.recommendations th:nth-child(3), .recommendations td:nth-child(3) { width: 58%; }
+@media (max-width: 768px) {
+  /* Mobile: stack each row vertically as a card so all three cells get the
+     full row width — table-layout balancing tends to crush Use Case + Recommended
+     when Why has paragraph-length content. */
+  .recommendations,
+  .recommendations thead,
+  .recommendations tbody,
+  .recommendations tr,
+  .recommendations td {
+    display: block !important;
+    width: 100% !important;
+  }
+  .recommendations { border: none !important; }
+  .recommendations thead { display: none !important; }
+  .recommendations tr {
+    margin-bottom: 12px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    background: var(--bg1) !important;
+    overflow: hidden !important;
+  }
+  .recommendations td {
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 8px 12px !important;
+    min-width: 0 !important;
+  }
+  .recommendations tr td:last-child { border-bottom: none !important; }
+  .recommendations tr td:first-child {
+    background: var(--bg2) !important;
+    color: var(--text0) !important;
+    font-size: 13px !important;
+  }
+  .recommendations tr td:nth-child(2) {
+    color: var(--text2) !important;
+    font-size: 13px !important;
+  }
+}
+
 /* Uptime table: 2-column flow on desktop, 1 on mobile */
 .uptime-cols tbody {
   columns: 2;
