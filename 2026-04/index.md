@@ -3,7 +3,7 @@ layout: page
 title: "April 2026 AI Reliability Report"
 description: "Monthly reliability report for 31 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: 2026-05-04
-published: false
+published: true
 ---
 
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
