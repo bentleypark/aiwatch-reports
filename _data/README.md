@@ -9,8 +9,8 @@ Files are named `{YYYY-MM}.json` (e.g., `2026-03.json`).
 
 Two paths produce these files:
 
-1. **Cron-time snapshot (preferred, future months)**: the AIWatch Worker monthly archive cron runs at 00:00 UTC on the 1st of each month and writes `archive:monthly:{YYYY-MM}` to KV. The report-generation workflow then fetches that archive via `/api/report?month=…` and commits the JSON here. Score and incident data reflect the actual end-of-month rolling window.
-2. **Retrospective rebuild**: when an archive is missing (e.g., the period predated the system, or the cron was buggy — see aiwatch#363) it can be regenerated via `POST /api/admin/rebuild-archive`. Two drift sources to be aware of:
+1. **Cron-time snapshot (preferred, future months)**: the AIWatch Worker monthly archive cron runs at 00:00 UTC on the 1st of each month and writes `archive:monthly:{YYYY-MM}` to KV. The report-generation workflow (`.github/workflows/generate-report.yml`, #15) fetches that archive via `/api/report?month=…` during monthly draft generation and auto-commits the JSON here. Score and incident data reflect the actual end-of-month rolling window.
+2. **Retrospective rebuild**: when an archive is missing (e.g., the period predated the system, or the cron was buggy — see aiwatch#363) it can be regenerated via `POST /api/admin/rebuild-archive`. For one-off backfills or manual refreshes, run `bash scripts/fetch-archive.sh {YYYY-MM}` and commit the result. Two drift sources to be aware of:
    - **Score drift**: the rebuild uses the **current** 7-day rolling probe window as a proxy for the rebuild month's score, so the further the rebuild runs from the original month, the more the score field diverges from a true period-end snapshot.
    - **Roster drift**: the service set in the rebuilt JSON is the *current* monitoring roster, not the period's roster. Services added between the period close and the rebuild date appear with `uptime: null` and `incidents: 0` (no historical data to compute) but still carry a current-window `score`. Treat such rows as not-monitored-in-period when doing trend analysis.
 

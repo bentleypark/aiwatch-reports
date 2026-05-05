@@ -57,6 +57,21 @@ jobs:
           MONTH: ${{ steps.month.outputs.month }}
         run: node scripts/generate-charts.js "${MONTH}/index.md"
 
+      - name: Snapshot archive JSON to _data/ (#15)
+        # Persists /api/report?month=YYYY-MM as _data/{MONTH}.json for long-term
+        # git preservation alongside the KV archive — see _data/README.md for
+        # provenance + rebuild caveats.
+        env:
+          MONTH: ${{ steps.month.outputs.month }}
+        run: bash scripts/fetch-archive.sh "$MONTH"
+
+      - name: Update top-level index.md (#15)
+        # Inserts/refreshes the entry for $MONTH in the front-page Reports list
+        # using services count + daysCollected from the snapshot above. Idempotent.
+        env:
+          MONTH: ${{ steps.month.outputs.month }}
+        run: node scripts/update-index.js "$MONTH"
+
       - name: Create branch + draft PR
         env:
           MONTH: ${{ steps.month.outputs.month }}
@@ -76,7 +91,9 @@ jobs:
             git checkout -b "$BRANCH"
           fi
 
-          git add "${MONTH}/" "assets/${MONTH}/" 2>/dev/null || true
+          # _data/${MONTH}.json (snapshot) and index.md (Reports list entry) are added
+          # alongside the report file + assets so the draft PR is self-contained — #15.
+          git add "${MONTH}/" "assets/${MONTH}/" "_data/${MONTH}.json" index.md 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "::notice::No changes vs previous draft — skipping commit"
