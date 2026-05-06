@@ -15,7 +15,15 @@
   <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
   {%- feed_meta -%}
   <link rel="icon" type="image/png" href="{{ '/assets/logo.png' | relative_url }}">
-  <!-- GA4 -->
+  <!-- GA4 — Hand-synced byte-for-byte with CONSENT_INIT_SCRIPT from
+       api/_shared/consent-init.ts in the main repo (Jekyll cannot import TS). Honors prior
+       consent set on the SPA via the aiwatch-cookie-consent localStorage key (#352). When
+       the value is anything other than 'granted', also clears any legacy `_ga`/`_gid`/`_gcl_au`
+       cookies left over from before this gate landed. Cookieless pings still flow for
+       aggregate measurement, but no analytics or ad cookies persist. The
+       `bentleypark.github.io/aiwatch-reports/*` direct-access path runs on a different origin
+       so SPA-set consent isn't readable there; that surface stays cookieless until first
+       consent is given on the GH Pages origin itself. -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-D4ZWVHQ7JK"></script>
-  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-D4ZWVHQ7JK');</script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});var c='';try{c=localStorage.getItem('aiwatch-cookie-consent');}catch(err){}if(c==='granted'){gtag('consent','update',{analytics_storage:'granted'});}else{var h=location.hostname,EXP='expires=Thu, 01 Jan 1970 00:00:00 GMT';document.cookie.split(';').forEach(function(x){var n=x.split('=')[0].trim();if(n.indexOf('_ga')===0||n.indexOf('_gid')===0||n.indexOf('_gcl_au')===0){document.cookie=n+'=;'+EXP+';path=/;domain=.'+h+';SameSite=Lax';document.cookie=n+'=;'+EXP+';path=/;domain='+h+';SameSite=Lax';document.cookie=n+'=;'+EXP+';path=/;SameSite=Lax';}});}gtag('config','G-D4ZWVHQ7JK');</script>
 </head>
