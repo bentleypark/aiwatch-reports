@@ -55,7 +55,7 @@ const ID_TO_NAME = {
   voyageai: 'Voyage AI', modal: 'Modal',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI',
   claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
-  copilot: 'GitHub Copilot', windsurf: 'Windsurf',
+  copilot: 'GitHub Copilot', windsurf: 'Windsurf', junie: 'Junie',
   assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
 }
 
@@ -70,7 +70,7 @@ const CATEGORY_ORDER = [
   'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone',
   'stability', 'voyageai', 'modal',
   // Coding Agents
-  'claudecode', 'codex', 'cursor', 'copilot', 'windsurf',
+  'claudecode', 'codex', 'cursor', 'copilot', 'windsurf', 'junie',
 ]
 
 function nameToId(name) {
@@ -304,7 +304,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 31 services in category order (not just incident table)
+      // Use all 32 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
