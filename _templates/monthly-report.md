@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MON] [YEAR] AI Reliability Report"
-description: "Monthly reliability report for 32 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for 33 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 published: true
 ---
@@ -9,7 +9,7 @@ published: true
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 32 — 23 API services, 6 coding agents, 3 AI apps
+> **Services monitored**: 33 — 24 API services, 6 coding agents, 3 AI apps
 
 ## Summary
 
@@ -121,7 +121,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 These p75 figures are the input to the **Responsiveness** component (20% weight) of [AIWatch Score](#aiwatch-score--[month]-[year]-reliability-rankings). Lower is better. The two tables answer different questions: Score Rankings sorts by *which service is safest to rely on* (combining uptime, incidents, recovery, and responsiveness); this table sorts by *which service is fastest at the network layer*.
 
 <!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
-<!-- 19 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
+<!-- 20 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
 <!-- p95 + Spikes are present in probe:daily:{date} (CLAUDE.md KV schema) but not yet
      surfaced by /api/report. vs-Last-Month additionally requires reading the previous
      month's archive:monthly:* and computing deltas. Re-add the columns once the
@@ -258,7 +258,7 @@ Actionable takeaways per service. Descriptive context for each event lives in ea
 ## About This Report
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
-* **Monitoring Frequency:** All 32 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
+* **Monitoring Frequency:** All 33 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
 * **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). Services without probe data use 80→100 score redistribution **plus a 5% penalty** to reflect the missing responsiveness signal. Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
 * **Uptime Source:** *Official* = service publishes a rolling 30-day uptime metric AIWatch reads directly. *Estimate* = no official metric; AIWatch substitutes an industry-average assumption (99.5%) or its own poll-derived figure for the Score's Uptime input. *Partial (Nd)* = an official source exists but AIWatch's measurement window is shorter than the full month (e.g. service newly tracked mid-month). The label only describes the Uptime input quality — the Score itself is computed identically across all services.
 * **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.

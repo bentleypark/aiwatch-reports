@@ -47,7 +47,7 @@ function escapeXml(s) {
 const ID_TO_NAME = {
   claude: 'Claude API', openai: 'OpenAI API', gemini: 'Gemini API',
   mistral: 'Mistral API', cohere: 'Cohere API', groq: 'Groq Cloud',
-  together: 'Together AI', fireworks: 'Fireworks AI',
+  together: 'Together AI', fireworks: 'Fireworks AI', cerebras: 'Cerebras Inference',
   perplexity: 'Perplexity', huggingface: 'Hugging Face',
   replicate: 'Replicate', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
   deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
@@ -65,7 +65,7 @@ const CATEGORY_ORDER = [
   'claudeai', 'chatgpt', 'characterai',
   // LLM API
   'claude', 'openai', 'gemini', 'bedrock', 'azureopenai', 'mistral', 'cohere', 'groq',
-  'together', 'fireworks', 'perplexity', 'xai', 'deepseek', 'openrouter',
+  'together', 'fireworks', 'cerebras', 'perplexity', 'xai', 'deepseek', 'openrouter',
   // Voice & Inference
   'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone',
   'stability', 'voyageai', 'modal',
@@ -304,7 +304,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 32 services in category order (not just incident table)
+      // Use all 33 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
