@@ -537,6 +537,320 @@ test('strips the placeholder cleanly when archive.security is missing entirely',
   assert.ok(!out.includes('## Security Alerts'))
 })
 
-// ── Summary ──────────────────────────────────────────────
+// ── injectAutoDraft (refs aiwatch-reports#4) ─────────────────────────
+//
+// Contract: replaces the Key Insight opening-narrative comment with the
+// generated opening; fences the TL;DR with BEGIN/END markers inside `## Summary`
+// without touching the placeholder bullets that the operator will fill.
+
+const { injectAutoDraft, archiveToAnalysisRows, applyAutoDraft, SUMMARY_OPEN_MARKER, SUMMARY_CLOSE_MARKER } = require('./generate-report')
+
+console.log('\narchiveToAnalysisRows')
+
+test('emits one incidents row per service (including zero-incident services)', () => {
+  // Critical to NOT use the rendered Incident Summary table as the source: that
+  // table only contains incident-bearing services. Feeding the analyzer from
+  // the table would collapse `totalServices` and `zeroIncidents` to the bearing
+  // subset and the Opening would say "0 services recorded zero incidents" on
+  // an actually-calm month. archiveToAnalysisRows must surface ALL services.
+  const archive = {
+    services: {
+      claude:  { score: 90, grade: 'excellent', incidents: 2, totalDowntimeMin: 30, avgResolutionMin: 15, uptime: 99.9 },
+      openai:  { score: 80, grade: 'good', incidents: 0, totalDowntimeMin: 0, avgResolutionMin: 0, uptime: 100 },
+      gemini:  { score: 70, grade: 'fair', incidents: 0, totalDowntimeMin: 0, avgResolutionMin: 0, uptime: 100 },
+    },
+  }
+  const meta = { claude: { name: 'Claude' }, openai: { name: 'OpenAI' }, gemini: { name: 'Gemini' } }
+  const { scores, incidents } = archiveToAnalysisRows(archive, meta)
+  assert.strictEqual(incidents.length, 3, 'all 3 services in incidents rows')
+  assert.strictEqual(scores.length, 3, 'all 3 services in score rows')
+  const zeroes = incidents.filter(r => r.Incidents === '0')
+  assert.strictEqual(zeroes.length, 2, `2 zero-incident services expected, got ${zeroes.length}`)
+})
+
+test('scores are sorted descending (so analyzer.top / bottom slicing works)', () => {
+  const archive = {
+    services: {
+      a: { score: 55, grade: 'fair', incidents: 5 },
+      b: { score: 95, grade: 'excellent', incidents: 0 },
+      c: { score: 75, grade: 'good', incidents: 1 },
+    },
+  }
+  const { scores } = archiveToAnalysisRows(archive, {})
+  assert.deepStrictEqual(scores.map(s => s.Score), ['95', '75', '55'])
+})
+
+test('omits services without a score from scores rows but keeps them in incidents', () => {
+  // Estimate-only services have `score: null` — they should not anchor rankings,
+  // but their incident count (typically 0 by definition) still feeds totals.
+  const archive = {
+    services: {
+      bedrock:    { score: null, incidents: 0 },
+      azureoai:   { score: null, incidents: 0 },
+      claude:     { score: 90, incidents: 1, totalDowntimeMin: 5, avgResolutionMin: 5 },
+    },
+  }
+  const { scores, incidents } = archiveToAnalysisRows(archive, {})
+  assert.strictEqual(scores.length, 1, 'only scored service appears in scores')
+  assert.strictEqual(scores[0].Service, 'claude')
+  assert.strictEqual(incidents.length, 3, 'all 3 services contribute to total / zero counts')
+})
+
+test('row shape matches generate-summary.analyze() expectations exactly', () => {
+  // Coupling check — if generate-summary's analyze adds a new column read in the
+  // future (e.g. r['Longest']), this test won't catch it, but at least we pin
+  // the columns that today's analyze() reads: Service, Score, Confidence,
+  // Incidents, Total Downtime, Avg Resolution.
+  const archive = { services: { claude: { score: 100, grade: 'excellent', incidents: 0, uptime: 100 } } }
+  const { scores, incidents } = archiveToAnalysisRows(archive, { claude: { name: 'Claude' } })
+  const scoreKeys = Object.keys(scores[0]).sort()
+  const incKeys = Object.keys(incidents[0]).sort()
+  assert.deepStrictEqual(scoreKeys, ['Confidence', 'Grade', 'Score', 'Service'])
+  assert.deepStrictEqual(incKeys, ['Avg Resolution', 'Incidents', 'Service', 'Total Downtime'])
+})
+
+console.log('\ninjectAutoDraft')
+
+const SAMPLE_FILLED = [
+  '---',
+  'published: false',
+  '---',
+  '',
+  '## Summary',
+  '',
+  '- **Most reliable**:',
+  '- **Riskiest this month**:',
+  '',
+  '## Recommendations',
+  '',
+  'placeholder',
+  '',
+  '## Key Insight',
+  '',
+  '<!-- Opening narrative: 1 sentence summarizing the month, then 3 patterns -->',
+  '',
+  '- **Pattern 1**:',
+  '',
+  '## Incident Summary',
+  '',
+  'unrelated section the regex must not splice into',
+].join('\n')
+
+test('Opening replaces the Key Insight placeholder comment exactly once', () => {
+  const out = injectAutoDraft(SAMPLE_FILLED, 'OPENING_TEXT_HERE', '- **TLDR bullet**')
+  assert.ok(out.includes('OPENING_TEXT_HERE'), 'opening text injected')
+  assert.ok(!out.includes('<!-- Opening narrative: 1 sentence summarizing the month, then 3 patterns -->'),
+    'original placeholder comment removed')
+  // Opening must land inside Key Insight, not Summary.
+  const summaryIdx = out.indexOf('## Summary')
+  const recsIdx = out.indexOf('## Recommendations')
+  const openingIdx = out.indexOf('OPENING_TEXT_HERE')
+  assert.ok(openingIdx > recsIdx, `opening must follow Recommendations; got idx=${openingIdx} vs recs=${recsIdx}`)
+  assert.ok(openingIdx < out.indexOf('## Incident Summary'), 'opening must precede Incident Summary')
+  assert.ok(openingIdx > summaryIdx, 'opening must be after Summary heading')
+})
+
+test('TL;DR fence lands inside `## Summary` only', () => {
+  const tldr = '- **Most reliable**: ClaudeAI (100/100 — perfect uptime)'
+  const out = injectAutoDraft(SAMPLE_FILLED, 'opening', tldr)
+  assert.ok(out.includes(SUMMARY_OPEN_MARKER), 'open marker present')
+  assert.ok(out.includes(SUMMARY_CLOSE_MARKER), 'close marker present')
+  assert.ok(out.includes(tldr), 'tldr body present')
+  // Both markers must sit strictly between `## Summary` and `## Recommendations`.
+  const summaryIdx = out.indexOf('## Summary')
+  const recsIdx = out.indexOf('## Recommendations')
+  const openIdx = out.indexOf(SUMMARY_OPEN_MARKER)
+  const closeIdx = out.indexOf(SUMMARY_CLOSE_MARKER)
+  assert.ok(openIdx > summaryIdx && openIdx < recsIdx, `open marker position: ${openIdx} (summary=${summaryIdx}, recs=${recsIdx})`)
+  assert.ok(closeIdx > openIdx && closeIdx < recsIdx, `close marker position: ${closeIdx}`)
+})
+
+test('does NOT touch sections whose heading contains "Summary" but is not `## Summary`', () => {
+  // `## Incident Summary` shares the substring; the regex must use the line anchor `^...$`
+  // to skip it. Inject + verify Incident Summary block is byte-identical to input.
+  const out = injectAutoDraft(SAMPLE_FILLED, 'opening', 'tldr')
+  const incBlock = out.slice(out.indexOf('## Incident Summary'))
+  assert.ok(incBlock.startsWith('## Incident Summary\n\nunrelated section'),
+    `Incident Summary block was mutated. Got: ${incBlock.slice(0, 80)}`)
+  // Sanity: only ONE auto-draft fence in the whole document
+  const openCount = (out.match(new RegExp(SUMMARY_OPEN_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+  assert.strictEqual(openCount, 1, `expected 1 open marker, got ${openCount}`)
+})
+
+test('placeholder bullets inside `## Summary` are preserved (operator fills them)', () => {
+  const out = injectAutoDraft(SAMPLE_FILLED, 'opening', 'tldr')
+  assert.ok(out.includes('- **Most reliable**:'), 'placeholder #1 retained')
+  assert.ok(out.includes('- **Riskiest this month**:'), 'placeholder #2 retained')
+})
+
+test('multi-line TL;DR with nested markdown survives interpolation unchanged', () => {
+  const tldr = [
+    '- **Most reliable**: ClaudeAI (100/100)',
+    '- **Riskiest this month**: Gemini (61/100, 5h downtime)',
+    '',
+    '**Recommendations**',
+    '- **Primary**: ClaudeAI or OpenAI',
+    '',
+    '**Recovery performance**: Fastest — Cohere (12m avg). Slowest — Gemini (5h avg).',
+  ].join('\n')
+  const out = injectAutoDraft(SAMPLE_FILLED, 'opening', tldr)
+  // Every non-blank line of tldr must appear between the markers in order.
+  const between = out.slice(out.indexOf(SUMMARY_OPEN_MARKER), out.indexOf(SUMMARY_CLOSE_MARKER))
+  for (const line of tldr.split('\n')) {
+    if (line === '') continue
+    assert.ok(between.includes(line), `TL;DR line lost: "${line}"`)
+  }
+})
+
+test('double-inject is idempotent — exactly ONE Summary fence and the first injection wins', () => {
+  // Workflow uses force-with-lease + branch reset (generate-report.yml) so a
+  // double-call shouldn't happen in CI. But an operator re-running the script
+  // locally on an already-injected PR branch must not stack two AUTO-DRAFT
+  // fences inside `## Summary` — that would publish a confusing diff. The
+  // injectAutoDraft idempotency guard (presence check on SUMMARY_OPEN_MARKER)
+  // makes the second call a no-op for both halves: Opening's placeholder
+  // comment is gone after first call (regex misses), and the marker presence
+  // check short-circuits the Summary fence insert.
+  const once = injectAutoDraft(SAMPLE_FILLED, 'first-opening', 'first-tldr')
+  const twice = injectAutoDraft(once, 'second-opening', 'second-tldr')
+
+  // First Opening survives (placeholder already consumed → second is a no-op).
+  assert.ok(twice.includes('first-opening'), 'first opening preserved')
+  assert.ok(!twice.includes('second-opening'), 'second opening did NOT overwrite')
+
+  // First TL;DR body survives; second was rejected by the marker guard.
+  assert.ok(twice.includes('first-tldr'), 'first tldr preserved')
+  assert.ok(!twice.includes('second-tldr'), 'second tldr did NOT replace or stack')
+
+  // Exactly one fence — not zero, not two.
+  const markerRe = new RegExp(SUMMARY_OPEN_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+  const openCount = (twice.match(markerRe) || []).length
+  assert.strictEqual(openCount, 1, `expected exactly 1 SUMMARY_OPEN_MARKER after double-inject, got ${openCount}`)
+})
+
+// ── applyAutoDraft (failure-isolation contract) ──────────────────────
+//
+// Pins the "narrative-generation failure never blocks the deterministic data
+// pipeline" promise documented in generate-report.js. The catch arm exists in
+// case generate-summary's analyze() ever becomes strict and throws; today the
+// analyzer is lenient, so the catch is dead code. These tests lock the
+// non-throwing contract in place so a future analyzer rewrite that adds
+// validation doesn't silently fail the workflow.
+
+console.log('\napplyAutoDraft')
+
+const SAMPLE_ARCHIVE = {
+  services: {
+    claude: { score: 92, grade: 'excellent', incidents: 1, totalDowntimeMin: 20, avgResolutionMin: 20, uptime: 99.95 },
+    openai: { score: 80, grade: 'good', incidents: 0, totalDowntimeMin: 0, avgResolutionMin: 0, uptime: 100 },
+    gemini: { score: 55, grade: 'fair', incidents: 5, totalDowntimeMin: 300, avgResolutionMin: 60, uptime: 98.5 },
+  },
+}
+const SAMPLE_META = {
+  claude: { name: 'Claude' }, openai: { name: 'OpenAI' }, gemini: { name: 'Gemini' },
+}
+
+test('happy path — applies opening + fence on a normal archive', () => {
+  const out = applyAutoDraft(SAMPLE_FILLED, SAMPLE_ARCHIVE, SAMPLE_META, '2026-04')
+  assert.ok(out !== SAMPLE_FILLED, 'output must differ from input on happy path')
+  assert.ok(out.includes(SUMMARY_OPEN_MARKER), 'fence injected')
+  assert.ok(!out.includes('<!-- Opening narrative: 1 sentence summarizing'), 'opening placeholder consumed')
+})
+
+test('returns filled unchanged when archive.services is empty (skip guard)', () => {
+  const out = applyAutoDraft(SAMPLE_FILLED, { services: {} }, {}, '2026-04')
+  assert.strictEqual(out, SAMPLE_FILLED, 'no-op when nothing to summarize')
+})
+
+test('returns filled unchanged when archive has no services key', () => {
+  const out = applyAutoDraft(SAMPLE_FILLED, {}, {}, '2026-04')
+  assert.strictEqual(out, SAMPLE_FILLED, 'no-op when archive.services missing')
+})
+
+test('returns filled unchanged when archive.services is null (defensive read)', () => {
+  const out = applyAutoDraft(SAMPLE_FILLED, { services: null }, {}, '2026-04')
+  assert.strictEqual(out, SAMPLE_FILLED, 'no-op when archive.services is null')
+})
+
+test('catches analyzer throw and returns filled unchanged (failure isolation)', () => {
+  // Stub a throwing analyzer. Today analyze() is lenient by construction; this
+  // test locks the contract so a future strict-validating rewrite doesn't quietly
+  // start failing the workflow step.
+  const throwingStub = {
+    analyze() { throw new Error('synthetic analyzer failure') },
+    generateOpening() { throw new Error('should not be called') },
+    generateTldr() { throw new Error('should not be called') },
+  }
+  const out = applyAutoDraft(SAMPLE_FILLED, SAMPLE_ARCHIVE, SAMPLE_META, '2026-04', throwingStub)
+  assert.strictEqual(out, SAMPLE_FILLED, 'analyzer throw must not corrupt the deterministic draft')
+})
+
+test('catches generateOpening throw and returns filled unchanged', () => {
+  const stub = {
+    analyze() { return { /* shape unused by stub */ } },
+    generateOpening() { throw new Error('opening failure') },
+    generateTldr() { return 'tldr' },
+  }
+  const out = applyAutoDraft(SAMPLE_FILLED, SAMPLE_ARCHIVE, SAMPLE_META, '2026-04', stub)
+  assert.strictEqual(out, SAMPLE_FILLED)
+})
+
+// ── Integration: real 2026-04 archive end-to-end ─────────────────────
+//
+// Catches worker-side schema drift (MonthlyServiceData column changes) at the
+// consumer level without depending on a live `/api/report` fetch. `_data/2026-04.json`
+// is a long-lived snapshot committed for exactly this reason (see _data/README.md).
+// The assertions are specific enough that a column rename or null-handling change
+// would surface as a numerical mismatch rather than a vague flake.
+
+console.log('\nintegration: 2026-04 archive end-to-end')
+
+const fs = require('fs')
+const path = require('path')
+
+test('archiveToAnalysisRows on the real April snapshot yields expected counts', () => {
+  const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+  const { scores, incidents } = archiveToAnalysisRows(archive, {})
+  // 31 total services in the April archive (per its own `Object.keys(services).length`)
+  assert.strictEqual(incidents.length, 31, `expected 31 services in incidents rows, got ${incidents.length}`)
+  // 7 services recorded zero incidents that month
+  const zeroes = incidents.filter(r => r.Incidents === '0').length
+  assert.strictEqual(zeroes, 7, `expected 7 zero-incident services in April, got ${zeroes}`)
+  // Score column passes through as a numeric string the analyzer can parseInt
+  for (const s of scores) assert.ok(/^\d+$/.test(s.Score), `non-integer Score leaked: ${s.Score}`)
+})
+
+test('full pipeline against real April archive — Opening reflects 24 of 31, no "undefined" leakage', () => {
+  const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const meta = {}
+  for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+  const { fillTemplate } = require('./generate-report')
+  const filled = fillTemplate(tmpl, '2026-04', archive, meta)
+  const out = applyAutoDraft(filled, archive, meta, '2026-04')
+
+  // Fence sits inside `## Summary` (the regex correctly skips `## Incident Summary`).
+  const sumIdx = out.indexOf('## Summary')
+  const recsIdx = out.indexOf('## Recommendations')
+  const incSumIdx = out.indexOf('## Incident Summary')
+  const fenceIdx = out.indexOf(SUMMARY_OPEN_MARKER)
+  assert.ok(fenceIdx > sumIdx && fenceIdx < recsIdx, `fence must be inside ## Summary; got ${fenceIdx}`)
+  assert.ok(fenceIdx < incSumIdx, 'fence must precede ## Incident Summary')
+
+  // Sanity on the analyzer output landing in the document.
+  assert.ok(/24 out of 31/.test(out), 'opening should mention "24 out of 31 services recorded ... incident"')
+
+  // The load-bearing failure mode the integration test exists for — Critical Gap #2
+  // (regress the skip guard or break archive shape → analyzer emits "undefined"
+  // literals into the published narrative). Pin its absence.
+  const fenceBlock = out.slice(out.indexOf(SUMMARY_OPEN_MARKER), out.indexOf(SUMMARY_CLOSE_MARKER) + SUMMARY_CLOSE_MARKER.length)
+  assert.ok(!/undefined/.test(fenceBlock), `auto-draft must not contain literal "undefined"; got: ${fenceBlock.slice(0, 300)}`)
+
+  // The security-section placeholder (or its rendered block) lives at a different
+  // location and is not stripped or broken by injectAutoDraft.
+  assert.ok(!out.includes('<!-- SECURITY_SECTION -->'),
+    'fillTemplate should have consumed the security placeholder; injectAutoDraft must leave that intact')
+})
+
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)
