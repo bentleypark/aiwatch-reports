@@ -1,0 +1,67 @@
+name: Tests
+
+# Guard the scripts/ test suite on every PR + push to main. The tests are plain
+# Node + assert (no test framework, no node_modules) — each scripts/*.test.js
+# file exits 1 on any failure, so we run them all and exit non-zero if any did.
+# Path filter scopes runs to PRs that actually touch scripts/ (or this workflow);
+# docs-only / Jekyll-content PRs don't burn CI minutes here.
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/test.yml'
+
+# Cancel in-flight runs when a newer commit lands on the same ref — saves CI
+# minutes on rapid push sequences (rebase / force-with-lease re-runs).
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: scripts/*.test.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify no node_modules dependency drift
+        # The repo intentionally has no package.json — tests are pure Node + assert.
+        # Catch a future "let's add jest" accident at the CI layer so the no-deps
+        # constraint stays explicit.
+        run: |
+          if [ -f package.json ]; then
+            echo "::error::package.json present — this repo is dependency-free by design (refs aiwatch-reports#4 review). Drop it or update this workflow."
+            exit 1
+          fi
+
+      - name: Run all scripts/*.test.js
+        # Loop so every file reports independently in the log; track the worst
+        # exit code so a failure in any file fails the job. `::group::` puts each
+        # file's output in a collapsible block on the Actions UI.
+        run: |
+          set +e
+          worst=0
+          for t in scripts/*.test.js; do
+            echo "::group::$t"
+            node "$t"
+            code=$?
+            echo "::endgroup::"
+            if [ "$code" -ne 0 ]; then
+              echo "::error file=$t::tests failed (exit $code)"
+              worst=$code
+            fi
+          done
+          exit "$worst"

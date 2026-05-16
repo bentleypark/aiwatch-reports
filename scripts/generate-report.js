@@ -25,6 +25,7 @@
 
 const fs = require('fs')
 const path = require('path')
+const summary = require('./generate-summary')
 
 const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf.workers.dev'
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
@@ -488,6 +489,132 @@ function fillTemplate(template, month, archive, meta) {
   return out
 }
 
+// ── Auto-draft narrative injection (refs aiwatch-reports#4) ──────────
+//
+// Closes the last "operator runs a local script and copy-pastes the output" gap
+// in the Phase 1 pipeline. We reuse generate-summary.js's analyzer as a library,
+// but feed it row-shape data derived DIRECTLY from `archive.services` rather
+// than re-parsing the just-rendered markdown tables. Why direct: buildIncidentTable
+// emits ONLY services with `incidents > 0` (zero-incident services are surfaced
+// separately on a `**Zero incidents (N services):** …` prose line). If we re-parsed,
+// the analyzer's `totalServices` and `zeroIncidents` counts would collapse to the
+// incident-bearing subset and the Opening would report things like "0 services
+// recorded zero incidents" on a calm month — silently wrong.
+//
+// Output placement:
+//
+//   • Opening narrative replaces the `<!-- Opening narrative ... -->` placeholder
+//     in Key Insight — it's a single-paragraph summary that fits that slot 1:1.
+//
+//   • TL;DR (multiline: 4 bullets + Recommendations subsection + Recovery line)
+//     is wrapped in a BEGIN/END HTML-comment fence and inserted right after the
+//     `## Summary` heading, BEFORE the existing placeholder bullets. The operator
+//     sees the auto-draft in the PR diff, adapts what they want into the bullets
+//     below, then DELETES the fenced block before merge. The placeholder bullets
+//     are left untouched so the operator's final form-factor never depends on
+//     our generator's bullet labels matching the template's.
+//
+// Failure mode: if `archive.services` is empty/missing or the analyzer throws,
+// we LOG and CONTINUE with the un-injected draft. The deterministic data pipeline
+// (Score/Incident/Uptime/Latency tables + Security section) is the critical path;
+// the narrative draft is a nice-to-have on top. Failing the workflow over a
+// narrative-generation hiccup would block the data the operator does need.
+
+// Synthesize analyzer-compatible row shapes from raw archive data. Mirrors the
+// vocabulary that generate-summary.analyze() expects (see its `parseTable()`
+// output keys), so the analyzer can't tell apart these rows from CLI-parsed
+// ones. Including services without incidents lets `zeroIncidents.length` and
+// `totalServices` reflect reality rather than the filtered table.
+function archiveToAnalysisRows(archive, meta) {
+  const scores = []
+  const incidents = []
+  for (const [id, data] of Object.entries(archive.services || {})) {
+    const name = meta[id]?.name || id
+    if (data.score !== null && data.score !== undefined) {
+      scores.push({
+        Service: name,
+        Score: String(data.score),
+        Grade: gradeLabel(data.grade),
+        Confidence: confidence({ data }),
+      })
+    }
+    incidents.push({
+      Service: name,
+      Incidents: String(data.incidents ?? 0),
+      'Total Downtime': fmtDurationMin(data.totalDowntimeMin ?? null),
+      'Avg Resolution': fmtDurationMin(data.avgResolutionMin ?? null),
+    })
+  }
+  scores.sort((a, b) => parseInt(b.Score) - parseInt(a.Score))
+  return { scores, incidents }
+}
+
+const SUMMARY_OPEN_MARKER = '<!-- BEGIN AUTO-DRAFT — review, then DELETE this entire block before merge -->'
+const SUMMARY_CLOSE_MARKER = '<!-- END AUTO-DRAFT -->'
+
+function injectAutoDraft(filled, opening, tldr) {
+  let out = filled
+
+  // 1. Key Insight: replace the opening-narrative comment with the generated text.
+  //    The placeholder is verbatim from _templates/monthly-report.md — if a future
+  //    template tweak changes the wording, the regex misses and Key Insight just
+  //    keeps its placeholder. That's a soft-fail (visible in PR review) rather
+  //    than a silent corruption. Naturally idempotent: a second call finds no
+  //    placeholder and is a no-op.
+  out = out.replace(
+    /<!-- Opening narrative: 1 sentence summarizing the month, then 3 patterns -->/,
+    opening,
+  )
+
+  // 2. Summary: insert the fenced auto-draft block right after the heading.
+  //    Idempotent guard — if the document already carries an open marker, skip
+  //    re-injection. CI's force-with-lease + branch reset (generate-report.yml)
+  //    makes the double-call path unreachable in practice, but the guard pins
+  //    "operator re-runs generate-report.js locally on an injected PR branch"
+  //    to a no-op rather than stacking two fences.
+  if (out.includes(SUMMARY_OPEN_MARKER)) return out
+
+  //    Using `^## Summary$` with the `m` flag instead of a broader regex so we
+  //    don't accidentally splice into any other heading that happens to contain
+  //    the word "Summary" (e.g. `## Incident Summary` is the next ## section
+  //    further down the page — we must NOT touch it).
+  const draftBlock = [
+    '',
+    SUMMARY_OPEN_MARKER,
+    '_Auto-generated narrative draft — English only; translate for the KO `<details>` block below._',
+    '',
+    tldr,
+    '',
+    SUMMARY_CLOSE_MARKER,
+  ].join('\n')
+
+  out = out.replace(/^## Summary$/m, `## Summary${draftBlock}`)
+
+  return out
+}
+
+// Extracted helper that wraps the full auto-draft path (archive→rows→analyze→inject)
+// behind a single seam. Lets tests exercise both the happy path AND the catch arm
+// (by passing a stub `summaryMod` whose `analyze` throws). main() routes through
+// this so the failure-isolation contract — "narrative-generation failure never
+// blocks the deterministic data pipeline" — is testable, not just documented.
+function applyAutoDraft(filled, archive, meta, month, summaryMod = summary) {
+  try {
+    const { scores, incidents } = archiveToAnalysisRows(archive, meta)
+    if (scores.length === 0 || incidents.length === 0) {
+      console.warn(`[generate-report] Auto-draft skipped: no archive rows (scores=${scores.length}, incidents=${incidents.length}).`)
+      return filled
+    }
+    const a = summaryMod.analyze(scores, incidents)
+    const opening = summaryMod.generateOpening(`${monthName(month)} ${month.split('-')[0]}`, a)
+    const tldr = summaryMod.generateTldr(a, incidents)
+    return injectAutoDraft(filled, opening, tldr)
+  } catch (err) {
+    console.warn('[generate-report] Auto-draft injection failed (continuing with un-injected draft):', err instanceof Error ? err.message : err)
+    return filled
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 async function main() {
   const month = parseCliMonth(process.argv)
@@ -506,13 +633,21 @@ async function main() {
   }
   const filled = fillTemplate(template, month, archive, meta)
 
+  // Auto-draft narrative is best-effort — never blocks the deterministic data pipeline.
+  // applyAutoDraft swallows analyzer/parsing failures (logs `console.warn`, returns
+  // `filled` unchanged); see its docstring above for the contract.
+  const withDraft = applyAutoDraft(filled, archive, meta, month)
+  if (withDraft !== filled) {
+    console.log('[generate-report] Injected auto-draft narrative (Opening → Key Insight; TL;DR → Summary).')
+  }
+
   const outDir = path.join(OUT_DIR_ROOT, month)
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'index.md')
-  fs.writeFileSync(outPath, filled)
+  fs.writeFileSync(outPath, withDraft)
 
   console.log(`[generate-report] ✓ Wrote ${month}/index.md (published: false)`)
-  console.log(`[generate-report]   Review narrative sections, then flip published: true and merge.`)
+  console.log(`[generate-report]   Review narrative sections (including AUTO-DRAFT), then flip published: true and merge.`)
 }
 
 if (require.main === module) {
@@ -547,4 +682,9 @@ module.exports = {
   nextMonthName,
   replaceTableBody,
   fillTemplate,
+  injectAutoDraft,
+  archiveToAnalysisRows,
+  applyAutoDraft,
+  SUMMARY_OPEN_MARKER,
+  SUMMARY_CLOSE_MARKER,
 }
