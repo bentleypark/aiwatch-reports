@@ -615,6 +615,104 @@ function applyAutoDraft(filled, archive, meta, month, summaryMod = summary) {
   }
 }
 
+// ── AI retrospective narrative injection (refs aiwatch-reports#4 Phase 3) ──
+//
+// The Worker bakes an AI-generated retrospective draft into the archive at
+// build time — `archive.narrative` (shape: MonthlyNarrativeDraft from
+// worker/src/monthly-narrative.ts, refs aiwatch#426). This renders it into the
+// Notable Incidents + Observations sections as fenced auto-draft blocks, the
+// same operator-review pattern as the Summary/Key Insight injection above.
+//
+// Forward-compatible: archives written before aiwatch#426 (or months where AI
+// generation failed) carry no `narrative` / `narrative: null` — injection is a
+// no-op and the report keeps its hand-written placeholders.
+//
+// Each section gets its own marker pair so the idempotency guard is per-block
+// and an operator deleting one fence doesn't disturb the other.
+
+const NOTABLE_OPEN_MARKER = '<!-- BEGIN AUTO-DRAFT (Notable Incidents) — review, adapt into the entries below, then DELETE this entire block before merge -->'
+const NOTABLE_CLOSE_MARKER = '<!-- END AUTO-DRAFT (Notable Incidents) -->'
+const OBSERVATIONS_OPEN_MARKER = '<!-- BEGIN AUTO-DRAFT (Observations) — review, adapt into the bullets below, then DELETE this entire block before merge -->'
+const OBSERVATIONS_CLOSE_MARKER = '<!-- END AUTO-DRAFT (Observations) -->'
+
+// Render the Notable Incidents draft body: each AI-drafted incident as a ready
+// `### N.` entry matching the template's structure, so the operator can lift
+// entries directly. `e` fields come straight from MonthlyNarrativeDraft.
+//
+// Defensive against malformed elements: the Worker's parseMonthlyNarrative
+// already validates incident rows, but the data crosses a KV JSON round-trip
+// and a manual workflow_dispatch — a hand-edited / partially-written archive is
+// reachable. Skip rows missing the load-bearing `title` / `narrative` fields
+// (same rule as the Worker's own validator) rather than emitting the literal
+// string "undefined" into the published report. Returns null when nothing
+// valid remains — the caller treats null as "skip this section".
+function buildNotableIncidentsDraft(notableIncidents, model) {
+  const valid = notableIncidents.filter(
+    e => e && typeof e.title === 'string' && typeof e.narrative === 'string',
+  )
+  if (valid.length === 0) return null
+  const entries = valid.map((e, i) => [
+    `### ${i + 1}. ${e.title}`,
+    `**Affected**: ${typeof e.affected === 'string' && e.affected ? e.affected : '—'}`,
+    `**Duration**: ${typeof e.durationLabel === 'string' && e.durationLabel ? e.durationLabel : '—'}`,
+    '',
+    e.narrative,
+  ].join('\n'))
+  return [
+    NOTABLE_OPEN_MARKER,
+    `_Auto-generated retrospective draft (${model}) — review for accuracy, adapt, then delete this block._`,
+    '',
+    entries.join('\n\n'),
+    '',
+    NOTABLE_CLOSE_MARKER,
+  ].join('\n')
+}
+
+// Same defensive contract as buildNotableIncidentsDraft — keep only string
+// observations, return null when none remain.
+function buildObservationsDraft(observations, model) {
+  const valid = observations.filter(o => typeof o === 'string' && o.trim().length > 0)
+  if (valid.length === 0) return null
+  return [
+    OBSERVATIONS_OPEN_MARKER,
+    `_Auto-generated retrospective draft (${model}) — review, adapt into prescriptive bullets, then delete this block._`,
+    '',
+    valid.map(o => `- ${o}`).join('\n'),
+    '',
+    OBSERVATIONS_CLOSE_MARKER,
+  ].join('\n')
+}
+
+// Inject the archive's AI narrative into Notable Incidents + Observations.
+// Returns `filled` unchanged when there's nothing to inject (no narrative,
+// malformed narrative, or empty sections) — never throws.
+function injectNarrativeDraft(filled, narrative) {
+  // Forward-compat + failure isolation: null/absent/malformed → no-op.
+  if (!narrative || typeof narrative !== 'object') return filled
+  const model = typeof narrative.model === 'string' ? narrative.model : 'AI'
+  let out = filled
+
+  // Notable Incidents — insert the fenced block right after the heading.
+  // `^## Notable Incidents$` (m flag) anchors the line so we don't splice into
+  // any other heading. Idempotency: skip if the block is already present.
+  const incidents = Array.isArray(narrative.notableIncidents) ? narrative.notableIncidents : []
+  if (incidents.length > 0 && !out.includes(NOTABLE_OPEN_MARKER)) {
+    const block = buildNotableIncidentsDraft(incidents, model)
+    // block is null when every candidate row was malformed — skip rather than
+    // splice an empty fence.
+    if (block) out = out.replace(/^## Notable Incidents$/m, `## Notable Incidents\n\n${block}`)
+  }
+
+  // Observations — same pattern.
+  const observations = Array.isArray(narrative.observations) ? narrative.observations : []
+  if (observations.length > 0 && !out.includes(OBSERVATIONS_OPEN_MARKER)) {
+    const block = buildObservationsDraft(observations, model)
+    if (block) out = out.replace(/^## Observations$/m, `## Observations\n\n${block}`)
+  }
+
+  return out
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 async function main() {
   const month = parseCliMonth(process.argv)
@@ -636,9 +734,30 @@ async function main() {
   // Auto-draft narrative is best-effort — never blocks the deterministic data pipeline.
   // applyAutoDraft swallows analyzer/parsing failures (logs `console.warn`, returns
   // `filled` unchanged); see its docstring above for the contract.
-  const withDraft = applyAutoDraft(filled, archive, meta, month)
+  let withDraft = applyAutoDraft(filled, archive, meta, month)
   if (withDraft !== filled) {
     console.log('[generate-report] Injected auto-draft narrative (Opening → Key Insight; TL;DR → Summary).')
+  }
+
+  // AI retrospective narrative (aiwatch#426) — render archive.narrative into the
+  // Notable Incidents + Observations sections. No-op when the archive carries no
+  // narrative (pre-feature months / AI-failed builds). Wrapped defensively so a
+  // malformed narrative can't break the report write.
+  try {
+    const beforeNarrative = withDraft
+    withDraft = injectNarrativeDraft(withDraft, archive.narrative)
+    if (withDraft !== beforeNarrative) {
+      console.log('[generate-report] Injected AI retrospective draft (Notable Incidents + Observations).')
+    } else if (!archive.narrative) {
+      console.log('[generate-report] No archive.narrative — Notable Incidents / Observations keep their placeholders.')
+    } else {
+      // narrative is a truthy object but produced no injection — empty sections,
+      // non-array fields, or every candidate row malformed. Surface it: a garbage
+      // narrative from the Worker should be visible, not silently swallowed.
+      console.warn('[generate-report] archive.narrative present but yielded no injection (empty or malformed) — sections keep their placeholders.')
+    }
+  } catch (err) {
+    console.warn('[generate-report] Narrative injection failed (continuing without it):', err instanceof Error ? err.message : err)
   }
 
   const outDir = path.join(OUT_DIR_ROOT, month)
@@ -685,6 +804,13 @@ module.exports = {
   injectAutoDraft,
   archiveToAnalysisRows,
   applyAutoDraft,
+  injectNarrativeDraft,
+  buildNotableIncidentsDraft,
+  buildObservationsDraft,
   SUMMARY_OPEN_MARKER,
   SUMMARY_CLOSE_MARKER,
+  NOTABLE_OPEN_MARKER,
+  NOTABLE_CLOSE_MARKER,
+  OBSERVATIONS_OPEN_MARKER,
+  OBSERVATIONS_CLOSE_MARKER,
 }

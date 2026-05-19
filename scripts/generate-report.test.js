@@ -852,5 +852,185 @@ test('full pipeline against real April archive — Opening reflects 24 of 31, no
     'fillTemplate should have consumed the security placeholder; injectAutoDraft must leave that intact')
 })
 
+// ── injectNarrativeDraft (refs aiwatch-reports#4 Phase 3 / aiwatch#426) ──
+//
+// Renders archive.narrative (AI retrospective draft baked in by the Worker)
+// into the Notable Incidents + Observations sections as fenced auto-draft
+// blocks. Must be forward-compatible: archives without `narrative` keep their
+// placeholders untouched.
+
+const {
+  injectNarrativeDraft,
+  buildNotableIncidentsDraft,
+  buildObservationsDraft,
+  NOTABLE_OPEN_MARKER,
+  NOTABLE_CLOSE_MARKER,
+  OBSERVATIONS_OPEN_MARKER,
+  OBSERVATIONS_CLOSE_MARKER,
+} = require('./generate-report')
+
+console.log('\ninjectNarrativeDraft')
+
+const NARRATIVE_FILLED = [
+  '## Incident Summary',
+  '',
+  '<tbody></tbody>',
+  '',
+  '## Notable Incidents',
+  '',
+  '<!-- Top 5-6 notable incidents -->',
+  '',
+  '### 1. [Title]',
+  '',
+  '## Observations',
+  '',
+  'Actionable takeaways per service.',
+  '',
+  '- **If you build on [Service]**:',
+  '',
+  '## Security Alerts',
+].join('\n')
+
+const SAMPLE_NARRATIVE = {
+  model: 'gemma',
+  generatedAt: '2026-06-01T00:05:00Z',
+  notableIncidents: [
+    { service: 'Gemini API', title: 'Vertex API key issue', affected: 'Gemini API — EU', durationLabel: '10 days', narrative: 'A key-rotation bug degraded Vertex auth.' },
+    { service: 'Deepgram', title: 'Voice agent degradation', affected: 'Deepgram streaming', durationLabel: '74h', narrative: 'Streaming endpoints saw elevated latency.' },
+  ],
+  observations: [
+    'Prefer Claude for latency-sensitive workloads this month.',
+    'Treat Deepgram streaming as fallback-only until the fix is confirmed.',
+  ],
+}
+
+test('returns filled unchanged when narrative is null/undefined (forward-compat)', () => {
+  eq(injectNarrativeDraft(NARRATIVE_FILLED, null), NARRATIVE_FILLED)
+  eq(injectNarrativeDraft(NARRATIVE_FILLED, undefined), NARRATIVE_FILLED)
+})
+
+test('returns filled unchanged when narrative is not an object (malformed)', () => {
+  eq(injectNarrativeDraft(NARRATIVE_FILLED, 'oops'), NARRATIVE_FILLED)
+  eq(injectNarrativeDraft(NARRATIVE_FILLED, 42), NARRATIVE_FILLED)
+})
+
+test('injects Notable Incidents block after the heading with each incident as a ### entry', () => {
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  assert.ok(out.includes(NOTABLE_OPEN_MARKER), 'notable open marker present')
+  assert.ok(out.includes(NOTABLE_CLOSE_MARKER), 'notable close marker present')
+  // Both incidents rendered, with their fields.
+  assert.ok(out.includes('### 1. Vertex API key issue'), 'incident 1 heading')
+  assert.ok(out.includes('### 2. Voice agent degradation'), 'incident 2 heading')
+  assert.ok(out.includes('**Affected**: Gemini API — EU'))
+  assert.ok(out.includes('**Duration**: 10 days'))
+  assert.ok(out.includes('A key-rotation bug degraded Vertex auth.'))
+  // Block sits inside ## Notable Incidents — before ## Observations.
+  const notableIdx = out.indexOf(NOTABLE_OPEN_MARKER)
+  const obsHeadingIdx = out.indexOf('## Observations')
+  const notableHeadingIdx = out.indexOf('## Notable Incidents')
+  assert.ok(notableIdx > notableHeadingIdx && notableIdx < obsHeadingIdx, 'block is inside Notable Incidents section')
+})
+
+test('injects Observations block after the heading with each observation as a bullet', () => {
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  assert.ok(out.includes(OBSERVATIONS_OPEN_MARKER), 'observations open marker present')
+  assert.ok(out.includes(OBSERVATIONS_CLOSE_MARKER), 'observations close marker present')
+  assert.ok(out.includes('- Prefer Claude for latency-sensitive workloads this month.'))
+  assert.ok(out.includes('- Treat Deepgram streaming as fallback-only until the fix is confirmed.'))
+})
+
+test('does not touch ## Incident Summary (substring overlap with "Incidents")', () => {
+  // `^## Notable Incidents$` line-anchored — must NOT splice into `## Incident Summary`.
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  const incSummaryBlock = out.slice(out.indexOf('## Incident Summary'), out.indexOf('## Notable Incidents'))
+  assert.ok(!incSummaryBlock.includes(NOTABLE_OPEN_MARKER), 'Incident Summary section untouched')
+})
+
+test('preserves the template placeholders below each injected block (operator fills them)', () => {
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  assert.ok(out.includes('### 1. [Title]'), 'Notable Incidents placeholder retained')
+  assert.ok(out.includes('- **If you build on [Service]**:'), 'Observations placeholder retained')
+})
+
+test('model label appears in the draft attribution line', () => {
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  assert.ok(out.includes('(gemma)'), 'gemma model attribution shown')
+})
+
+test('injects only Observations when notableIncidents is empty', () => {
+  const obsOnly = { model: 'sonnet', notableIncidents: [], observations: ['Use X.'] }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, obsOnly)
+  assert.ok(!out.includes(NOTABLE_OPEN_MARKER), 'no notable block when incidents empty')
+  assert.ok(out.includes(OBSERVATIONS_OPEN_MARKER), 'observations block present')
+})
+
+test('injects only Notable Incidents when observations is empty', () => {
+  const incOnly = { model: 'gemma', notableIncidents: SAMPLE_NARRATIVE.notableIncidents, observations: [] }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, incOnly)
+  assert.ok(out.includes(NOTABLE_OPEN_MARKER), 'notable block present')
+  assert.ok(!out.includes(OBSERVATIONS_OPEN_MARKER), 'no observations block when empty')
+})
+
+test('handles non-array notableIncidents / observations without crashing', () => {
+  const bad = { model: 'gemma', notableIncidents: 'nope', observations: null }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, bad)
+  eq(out, NARRATIVE_FILLED, 'malformed arrays → no-op')
+})
+
+test('skips malformed incident elements rather than emitting the string "undefined"', () => {
+  // The Worker's parseMonthlyNarrative validates rows, but a KV round-trip +
+  // manual workflow_dispatch makes a hand-edited / partial archive reachable.
+  // Rows missing the load-bearing title / narrative fields must be dropped, not
+  // rendered as "### 1. undefined".
+  const mixed = {
+    model: 'gemma',
+    notableIncidents: [
+      {},                                                            // all missing → skip
+      { title: 'Has title only' },                                   // missing narrative → skip
+      { service: 'X', title: 'Good one', narrative: 'Real prose.' },  // valid
+    ],
+    observations: [],
+  }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, mixed)
+  assert.ok(out.includes(NOTABLE_OPEN_MARKER), 'block injected (one valid row remains)')
+  assert.ok(out.includes('### 1. Good one'), 'valid row rendered')
+  assert.ok(!out.includes('undefined'), 'no literal "undefined" leaked into the report')
+  // Soft fields absent on the valid row → em-dash fallback, not "undefined".
+  assert.ok(out.includes('**Affected**: —'), 'missing affected falls back to em-dash')
+  assert.ok(out.includes('**Duration**: —'), 'missing durationLabel falls back to em-dash')
+})
+
+test('skips the Notable Incidents section entirely when every incident row is malformed', () => {
+  const allBad = { model: 'gemma', notableIncidents: [{}, { title: 'no narrative' }], observations: [] }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, allBad)
+  assert.ok(!out.includes(NOTABLE_OPEN_MARKER), 'no fence when zero valid rows')
+  assert.ok(!out.includes('undefined'), 'no "undefined" leak')
+  eq(out, NARRATIVE_FILLED, 'whole-doc no-op when nothing valid')
+})
+
+test('filters non-string / empty observations rather than rendering "- null" / "- 42"', () => {
+  const noisy = { model: 'sonnet', notableIncidents: [], observations: ['real bullet', null, 42, '', '  '] }
+  const out = injectNarrativeDraft(NARRATIVE_FILLED, noisy)
+  assert.ok(out.includes('- real bullet'), 'valid observation rendered')
+  assert.ok(!out.includes('- null') && !out.includes('- 42'), 'non-string observations dropped')
+})
+
+test('idempotent — a second injection does not stack a duplicate fence', () => {
+  const once = injectNarrativeDraft(NARRATIVE_FILLED, SAMPLE_NARRATIVE)
+  const twice = injectNarrativeDraft(once, SAMPLE_NARRATIVE)
+  const notableMarkers = (twice.match(new RegExp(NOTABLE_OPEN_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+  const obsMarkers = (twice.match(new RegExp(OBSERVATIONS_OPEN_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+  eq(notableMarkers, 1, 'exactly one Notable Incidents fence after double-inject')
+  eq(obsMarkers, 1, 'exactly one Observations fence after double-inject')
+})
+
+test('buildNotableIncidentsDraft / buildObservationsDraft are fenced + carry the model label', () => {
+  const nb = buildNotableIncidentsDraft(SAMPLE_NARRATIVE.notableIncidents, 'sonnet')
+  assert.ok(nb.startsWith(NOTABLE_OPEN_MARKER) && nb.endsWith(NOTABLE_CLOSE_MARKER), 'notable draft fenced')
+  assert.ok(nb.includes('(sonnet)'))
+  const ob = buildObservationsDraft(SAMPLE_NARRATIVE.observations, 'sonnet')
+  assert.ok(ob.startsWith(OBSERVATIONS_OPEN_MARKER) && ob.endsWith(OBSERVATIONS_CLOSE_MARKER), 'observations draft fenced')
+})
+
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)
