@@ -135,24 +135,62 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 
 ---
 
-## Detection Lead
+## Detection & RTT Degradation
 
-<!-- Include this section ONLY when archive:monthly:{YYYY-MM}.detectionLead is non-null
-     (i.e., topExamples has entries). Omit the entire section for months with zero
-     qualifying detections — April 2026 was omitted because the pre-aiwatch#369 daily
-     keys (7d TTL) had already expired by archive time, so no rows were available. -->
-<!-- Data source: GET /api/report?month=YYYY-MM → detectionLead.{count, avgLeadMs,
-     medianLeadMs, maxLeadMs, byService, topExamples}. Backed by archive:monthly:*
-     after aiwatch#369 (the 60d-TTL detection:lead:monthly:* accumulator). The older
-     daily detected:{svcId} keys remain 7d TTL and are not month-complete. -->
+<!-- #464 redefinition: AIWatch does NOT claim to detect "before the official status page."
+     Diagnostic data showed status-page-based detection is structurally bounded by polling lag
+     (always at/after the official publish), and genuine probe-first leads are rare. The two
+     honest, verifiable framings are detection latency (MTTD) and RTT degradation detection.
+     Do NOT reinstate any "X minutes ahead of the official status page" headline claim. -->
 
-| Incident | Service | Detected At (UTC) | Official Report (UTC) | Lead Time |
+### Detection Latency
+
+AIWatch independently detects incidents and alerts within **~5 minutes** — the probe/poll cadence, the upper bound on how long an issue can go unnoticed by our monitoring. This is independent, low-latency awareness across all monitored services, not a timing comparison against any provider's status page.
+
+### RTT Degradation Detection
+
+<!-- Include this subsection ONLY when archive:monthly:{YYYY-MM}.degradation is non-null
+     (aiwatch#511). Omit for months before aiwatch#512 deployed (no probe-degradation:monthly
+     accumulator existed — e.g. any month ≤ 2026-05) or with zero degradations.
+     Data source: GET /api/report?month=YYYY-MM → degradation.{total, noStatusTotal,
+     byService, noStatusByService}. Backed by probe-degradation:monthly:* (60d TTL). -->
+
+AIWatch's direct RTT probes flagged **<!-- N -->** latency degradations this month, of which **<!-- M -->** were **not reflected on the providers' official status pages** — slowdowns status pages typically don't report, only hard outages.
+
+| Service | RTT Degradations | Not on Status Page |
+|---|---|---|
+| | | |
+
+> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages (which report hard-down, not slowness) often omit entirely.
+
+### Early RTT Detections
+
+<!-- Include this subsection ONLY when archive:monthly:{YYYY-MM}.detectionLead is non-null
+     (topExamples has entries). These are the RARE genuine cases where a probe RTT spike was
+     flagged before the official update — honest per-event evidence, NOT a headline metric.
+     Data source: detectionLead.{count, avgLeadMs, medianLeadMs, maxLeadMs, byService, topExamples},
+     backed by detection:lead:monthly:* (60d TTL, aiwatch#369). Omit the whole subsection when
+     topExamples is empty (the common case — #464 showed in_window events are rare).
+     COLUMN → SOURCE (each row from a detectionLead.topExamples entry {svcId, incId, leadMs, detectedAt}):
+       • Incident       = incId
+       • Service        = svcId (→ display name)
+       • Probe Flagged  = detectedAt (the ISO timestamp, rendered UTC)
+       • Official Update= NOT in the payload — compute as detectedAt + leadMs (the official publish
+                          is leadMs *after* the probe flagged it). Drop this column if you'd rather
+                          not derive it.
+       • Earlier By     = leadMs (format as "Nm") -->
+
+| Incident | Service | Probe Flagged (UTC) | Official Update (UTC) | Earlier By |
 |---|---|---|---|---|
 | | | | | |
 
-**Average Detection Lead**: <!-- X min --> (across N incidents with probe spike detection)
+<!-- "Average early detection" line: include ONLY when detectionLead.count >= 5, mirroring the
+     worker canPresentLeadAverage / MIN_LEAD_SAMPLE_SIZE gate (aiwatch#464). Below 5 samples the
+     average is statistically thin — show the per-event rows above but DROP this averaged line so
+     no marketing-grade figure rests on a handful of samples. -->
+**Average early detection**: <!-- X min --> (across N events) <!-- ONLY when count ≥ 5 -->
 
-> **Detection Lead** measures how much earlier AIWatch detected an issue (via probe RTT spike) compared to the official status page report. Only incidents where probe spike detection fired before the status page update are included.
+> Occasional cases where AIWatch's RTT probe flagged degradation before the official status update. Rare by design — the headline metrics are detection latency and degradation detection above, not a "faster than official" average.
 
 ---
 
@@ -180,7 +218,7 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 <!-- Top 5-6 notable incidents — the report's main narrative content. Place this
      section in the narrative cluster (Incident Summary → Notable Incidents →
      Observations) that follows the metrics cluster (Score → Official Uptime →
-     API Response Time → Detection Lead). Each entry: title with key duration,
+     API Response Time → Detection & RTT Degradation). Each entry: title with key duration,
      affected component(s), and a short prose paragraph that explains scope +
      remediation/mitigation. -->
 
