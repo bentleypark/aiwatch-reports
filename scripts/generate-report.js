@@ -353,12 +353,19 @@ function buildLatencyTable(services, meta) {
   // descending comparator yields "faster = higher rank" and ties get "N=" suffix.
   const ranked = competitionRank(withLatency, s => -s.data.avgLatencyMs)
 
+  // Only p75 (avgLatencyMs) exists in the archive today. The p95 / Spikes / vs-Last-Month
+  // columns were dropped (#17) — they rendered as a literal "—" in every cell, every month.
+  // To re-enable a column: add its field to MonthlyServiceData in the aiwatch worker
+  // (worker/src/monthly-archive.ts), surface it via /api/report, then append it here:
+  //   p95 (ms)      ← s.data.p95LatencyMs
+  //   Spikes        ← s.data.latencySpikes
+  //   vs Last Month ← delta from s.data.prevMonthLatencyMs (or read the prior archive)
   const header = [
-    '| Rank | Service | p75 (ms) | p95 (ms) | Spikes | vs Last Month |',
-    '|---|---|---|---|---|---|',
+    '| Rank | Service | p75 (ms) |',
+    '|---|---|---|',
   ]
   const rows = ranked.map(r =>
-    `| ${r.rankLabel} | ${serviceName(r.item.id, meta)} | ${Math.round(r.item.data.avgLatencyMs)} | — | — | — |`,
+    `| ${r.rankLabel} | ${serviceName(r.item.id, meta)} | ${Math.round(r.item.data.avgLatencyMs)} |`,
   )
   return [...header, ...rows].join('\n')
 }

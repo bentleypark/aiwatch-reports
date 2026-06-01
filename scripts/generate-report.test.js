@@ -200,6 +200,19 @@ test('sorts by latency asc (fastest first)', () => {
   eq(dataRows.length, 3)
   assert.ok(dataRows[0].includes('Cohere API'), `fastest should be Cohere (230ms): ${dataRows[0]}`)
 })
+test('emits only the p75 column — no empty p95/Spikes/vs-Last-Month placeholders (#17)', () => {
+  const table = buildLatencyTable(sampleServices, sampleMeta)
+  const lines = table.split('\n')
+  eq(lines[0], '| Rank | Service | p75 (ms) |')
+  eq(lines[1], '|---|---|---|')
+  // No row may carry the old 6-column placeholder dashes.
+  assert.ok(!table.includes('| — | — | — |'), 'must not emit empty placeholder columns')
+  // Every data row has exactly 3 cells (4 pipes).
+  const dataRows = lines.filter(l => /^\| \d+/.test(l))
+  for (const row of dataRows) {
+    eq((row.match(/\|/g) || []).length, 4, `row should have 3 columns (4 pipes): ${row}`)
+  }
+})
 test('excludes NO_PROBE services', () => {
   const services = [
     { id: 'bedrock', data: { score: 90, grade: 'excellent', uptime: null, incidents: 0, avgResolutionMin: null, avgLatencyMs: 999 } },
