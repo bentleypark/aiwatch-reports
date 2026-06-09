@@ -249,49 +249,9 @@ Actionable takeaways per service. Descriptive context for each event lives in ea
 
 ---
 
-## Security Alerts
-
-<!-- Include this section ONLY when the month had security detections. Sources:
-     OSV.dev (AI SDK package vulnerabilities), Hacker News (security posts
-     mentioning monitored services). Section omitted entirely for months
-     without detections. -->
-
-> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.
-
-**Total alerts:** <!-- N -->
-
-**By source**
-
-| Source | Count |
-|---|---|
-| OSV.dev | |
-| Hacker News | |
-
-**By severity**
-
-| Critical | High | Medium | Low |
-| --- | --- | --- | --- |
-| | | | |
-
-**Most affected services**
-
-| Service | Count |
-|---|---|
-| | |
-
-### Top Findings
-
-<!-- One block per finding. Surface only Fix Version inline — Stage / At / Severity
-     are already in the heading + Detected line, so a Timeline <details> block
-     would be pure duplication (April 2026 dropped them for that reason). -->
-
-#### 1. [Title with link to advisory] · `severity`
-- **Source:** OSV.dev
-- **Affected:** [Service]
-- **Detected:** [YYYY-MM-DD]
-- **Fix Version:** [version]
-
----
+<!-- SECURITY_SECTION -->
+<!-- ^ Auto-rendered by generate-report.js (buildSecuritySection), which emits the section
+     ending in its own `---` separator (or nothing when there are no detections). Do not hand-author. -->
 
 ## About This Report
 

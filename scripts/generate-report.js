@@ -483,14 +483,18 @@ function fillTemplate(template, month, archive, meta) {
     zeroIncLine,
   )
 
-  // Security section — when archive.security is null/empty, collapse the placeholder + its
-  // surrounding blank lines down to a single blank line so the preceding `---` separator
-  // doesn't end up adjacent to a second one (would render as two horizontal rules).
+  // Security section — the template carries `<!-- SECURITY_SECTION -->` plus a one-line
+  // "do not hand-author" comment, placed right after the Observations `---` separator (and
+  // with NO `---` of its own after it). buildSecuritySection emits the whole "## Security
+  // Alerts" section *ending in its own trailing `---`* when archive.security has detections;
+  // when empty it emits nothing, so we strip the marker + comment and let the preceding `---`
+  // stand as the single separator before About. The `(?:---\n*)?` is a guard only — it would
+  // absorb a literal `---` if one were ever placed after the marker (none is today).
   const securityBlock = buildSecuritySection(archive.security)
   if (securityBlock) {
-    out = out.replace(/<!-- SECURITY_SECTION -->/, securityBlock)
+    out = out.replace(/<!-- SECURITY_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, securityBlock)
   } else {
-    out = out.replace(/\n*<!-- SECURITY_SECTION -->\n*/, '\n\n')
+    out = out.replace(/\n*<!-- SECURITY_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
   }
 
   return out

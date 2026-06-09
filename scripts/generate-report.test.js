@@ -859,10 +859,33 @@ test('full pipeline against real April archive — Opening reflects 24 of 31, no
   const fenceBlock = out.slice(out.indexOf(SUMMARY_OPEN_MARKER), out.indexOf(SUMMARY_CLOSE_MARKER) + SUMMARY_CLOSE_MARKER.length)
   assert.ok(!/undefined/.test(fenceBlock), `auto-draft must not contain literal "undefined"; got: ${fenceBlock.slice(0, 300)}`)
 
-  // The security-section placeholder (or its rendered block) lives at a different
-  // location and is not stripped or broken by injectAutoDraft.
+  // #27 — the Security Alerts section auto-renders from archive.security via the
+  // SECURITY_SECTION marker. (Previously the template shipped a hand-authored block and
+  // NO marker, so buildSecuritySection never fired and every month was filled by hand.)
   assert.ok(!out.includes('<!-- SECURITY_SECTION -->'),
-    'fillTemplate should have consumed the security placeholder; injectAutoDraft must leave that intact')
+    'fillTemplate should consume the SECURITY_SECTION marker')
+  assert.ok(!out.includes('Do not hand-author'),
+    'the marker explainer comment must not leak into the rendered report')
+  assert.ok(out.includes('## Security Alerts'),
+    'April archive has detections → the Security Alerts section must render')
+  assert.ok(new RegExp(`\\*\\*Total alerts:\\*\\* ${archive.security.totalAlerts}\\b`).test(out),
+    'rendered Total alerts must match archive.security.totalAlerts')
+  assert.ok(!/---\s*\n\s*---/.test(out),
+    'no double horizontal rule around the auto-rendered security section')
+})
+
+test('security section omitted with no double `---` when archive.security is null — real template', () => {
+  const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+  archive.security = null
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const meta = {}
+  for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+  const { fillTemplate } = require('./generate-report')
+  const out = fillTemplate(tmpl, '2026-04', archive, meta)
+  assert.ok(!out.includes('## Security Alerts'), 'no Security section when archive.security is null')
+  assert.ok(!out.includes('<!-- SECURITY_SECTION -->'), 'marker removed on omission')
+  assert.ok(!out.includes('Do not hand-author'), 'explainer comment removed on omission')
+  assert.ok(!/---\s*\n\s*---/.test(out), 'the marker + its separator collapse without leaving a double rule')
 })
 
 // ── injectNarrativeDraft (refs aiwatch-reports#4 Phase 3 / aiwatch#426) ──
