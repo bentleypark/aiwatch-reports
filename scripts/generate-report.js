@@ -50,6 +50,18 @@ const NO_PUBLIC_UPTIME = new Set([
 // report's "29 of 31 ranked — Bedrock/Azure excluded" handling.
 const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
 
+// Services whose status page migrated to a platform AIWatch can't reach server-side, so the
+// feed is FROZEN at the last reachable fetch — the incident count, uptime and Score reflect only
+// data up to that cutoff, NOT the full month. Unlike NO_INCIDENT_FEED these DO carry an "official"
+// uptime + an incident history, but both are STALE, which is more insidious: a partial-month count
+// reads as a verified low number and the frozen uptime reads as current. The guard surfaces a
+// caveat every report and stops a frozen zero-count from being labelled a "confirmed zero".
+//   • deepseek — migrated Atlassian Statuspage → Flashduty (~May 2026); the old mirror froze at
+//     2026-05-08 and Flashduty blocks AIWatch's server-side fetches (Workers/Edge), so 5/21+
+//     incidents are unreachable.
+// Maintained constant — REMOVE a service here once its feed is reachable again (aiwatch#507).
+const STALE_SOURCE = new Set(['deepseek'])
+
 // Services without direct probe coverage (excluded from API Response Time ranking).
 // Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
 const NO_PROBE = new Set(['bedrock', 'azureopenai', 'pinecone'])
@@ -236,6 +248,15 @@ function buildScoreTable(services, meta) {
   ].join('\n')
 }
 
+// aiwatch#507 — caveat line for STALE_SOURCE services (frozen status feed). Pure + exported so the
+// singular/plural agreement is unit-testable without mutating the maintained set. '' for empty input.
+function buildStaleSourceCaveat(names) {
+  if (!names.length) return ''
+  const n = names.length
+  const verb = n === 1 ? 'is' : 'are'
+  return `**Stale source (${n} service${n === 1 ? '' : 's'}):** ${names.join(', ')} ${verb} served from a status page that migrated to a platform AIWatch can't reach server-side, so the feed is frozen at the last reachable fetch. The incident count, uptime, and Score reflect only data up to that cutoff — not the full month — so treat the figures as a floor, not a verified picture.`
+}
+
 function buildIncidentTable(services, meta) {
   const withIncidents = services.filter(s => s.data.incidents > 0)
   withIncidents.sort((a, b) => b.data.incidents - a.data.incidents)
@@ -249,12 +270,21 @@ function buildIncidentTable(services, meta) {
     return `<tr><td>${serviceName(s.id, meta)}</td><td>${inc}</td><td>${totalWithLongest}</td><td class="hide-mobile">${longest}</td><td class="hide-mobile">${avg}</td></tr>`
   })
 
-  // Zero-incident services split (#29): a "confirmed zero" needs a real incident feed.
+  // Zero-incident services split (#29): a "confirmed zero" needs a real, CURRENT incident feed.
   // Estimate-uptime services (NO_PUBLIC_UPTIME) with zero incidents are coverage-limited —
-  // a blank count reflects what AIWatch can see, not verified incident-free operation.
+  // a blank count reflects what AIWatch can see, not verified incident-free operation. STALE_SOURCE
+  // services (aiwatch#507) are also excluded from "confirmed": their feed is frozen, so a zero count
+  // is "nothing since the cutoff," not a verified incident-free month.
   const zero = services.filter(s => s.data.incidents === 0)
-  const confirmed = zero.filter(s => !NO_PUBLIC_UPTIME.has(s.id)).map(s => serviceName(s.id, meta))
-  const noFeed = zero.filter(s => NO_PUBLIC_UPTIME.has(s.id)).map(s => serviceName(s.id, meta))
+  const confirmed = zero
+    .filter(s => !NO_PUBLIC_UPTIME.has(s.id) && !STALE_SOURCE.has(s.id))
+    .map(s => serviceName(s.id, meta))
+  // STALE_SOURCE is excluded from noFeed too (defensive — deepseek ∉ NO_PUBLIC_UPTIME today, but
+  // both sets are hand-maintained; a future stale service that also lacks a public uptime feed must
+  // get the more-specific Stale-source line, not a double caveat).
+  const noFeed = zero
+    .filter(s => NO_PUBLIC_UPTIME.has(s.id) && !STALE_SOURCE.has(s.id))
+    .map(s => serviceName(s.id, meta))
   const zeroLines = []
   if (confirmed.length) {
     zeroLines.push(`**Zero incidents (${confirmed.length} services):** ${confirmed.join(', ')} — confirmed via their status-page incident feeds.`)
@@ -262,6 +292,11 @@ function buildIncidentTable(services, meta) {
   if (noFeed.length) {
     zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
   }
+  // Stale-source caveat (aiwatch#507) — rendered whenever a STALE_SOURCE service is in the report,
+  // regardless of its incident count (DeepSeek's May count is 3 but partial; its June count is 0 but
+  // not verified). Frozen feed → count + uptime + Score are not current.
+  const staleLine = buildStaleSourceCaveat(services.filter(s => STALE_SOURCE.has(s.id)).map(s => serviceName(s.id, meta)))
+  if (staleLine) zeroLines.push(staleLine)
   const zeroIncLine = zeroLines.join('\n\n')
 
   return {
@@ -968,6 +1003,7 @@ module.exports = {
   buildRankingNote,
   buildScoreTable,
   buildIncidentTable,
+  buildStaleSourceCaveat,
   buildUptimeTable,
   buildLatencyTable,
   buildBySourceTable,
