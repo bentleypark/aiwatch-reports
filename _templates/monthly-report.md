@@ -77,6 +77,8 @@ published: true
 
 Combines four components — Uptime (40%), Incident affected days (25%), Recovery speed (15%), Responsiveness (20%, derived from p75 probe RTT). The per-service p75 RTT figures feeding Responsiveness are listed in the [API Response Time — Monthly p75](#api-response-time--monthly-p75) section below; full breakdown of weights, fallbacks, and penalties is in [About This Report](#about-this-report). [How it's calculated →](https://ai-watch.dev/#about-score)
 
+<!-- SCORE_RANKING_NOTE -->
+
 | Rank | Service | Score | Grade | Uptime Source | Why |
 |---|---|---|---|---|---|
 | 1 | | | | | |
@@ -85,13 +87,6 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 
 <!-- Generate with: node scripts/generate-charts.js [YYYY-MM]/index.md -->
 ![AIWatch Score Rankings](../assets/[YYYY-MM]/score-chart.svg)
-
-<!-- Add this footnote only when the Score table has rows ending with " *" — a trailing
-     asterisk marker for estimate-only services (services that do not publish a rolling
-     30-day uptime metric and instead use an industry-average assumption).
-     Footnote line begins with an escaped asterisk so it doesn't render as a list item:
-*\* Estimate-based services* — [Service A] and [Service B] do not publish accessible uptime metrics; the Uptime component of their score uses an industry-average assumption (99.5%). Score reflects zero observed incidents, not measured availability.
--->
 
 > **Uptime Source column**: **Official** (read directly from the service's status page) · **Estimate** (no official metric; only the Score input is computed — the % itself is not surfaced) · **Partial (Nd)** (service newly tracked mid-month). Full definitions: [About This Report → Uptime Source](#about-this-report).
 > <!-- Cycle-specific notes (e.g. "Codex was added on 22 Apr, mid-month") can be appended after the Partial label. Keep this caption short — full definitions live in the About This Report methodology section to avoid duplication. -->

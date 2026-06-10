@@ -31,11 +31,24 @@ const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
 const OUT_DIR_ROOT = path.join(__dirname, '..')
 
-// Services that do NOT publish an accessible uptime metric — their archive.uptime is null.
-// Keep in sync with the note in _templates/monthly-report.md (Official Uptime section).
+// Services whose uptime is an estimate, not an official rolling-30-day metric read directly
+// from a status page — either no published metric (industry-average assumption) or a
+// poll/incident-derived figure. Marked "Estimate" in the Score table's Uptime Source column
+// and excluded from the Official Uptime table. (#29 — `bedrock` was previously missing here,
+// so it leaked a stray "100.00%" row into the Official Uptime table.)
+// TODO(#29): drive this from an archive `uptimeSource` field once the Worker exposes it
+// (it would also fold in chatgpt's group-aggregate case, tracked separately as aiwatch#586),
+// instead of this maintained constant.
 const NO_PUBLIC_UPTIME = new Set([
-  'azureopenai', 'deepgram', 'gemini', 'mistral', 'perplexity', 'xai',
+  'bedrock', 'azureopenai', 'deepgram', 'gemini', 'mistral', 'perplexity', 'xai',
 ])
+
+// Estimate-uptime services that ALSO have no reliable incident feed (RSS-only — a blank
+// incident count is monitoring coverage, not a verified zero). With neither an accessible
+// uptime metric nor trustworthy incident data there's nothing to score fairly, so they're
+// dropped from the Score ranking entirely. Subset of NO_PUBLIC_UPTIME; matches the 2026-04
+// report's "29 of 31 ranked — Bedrock/Azure excluded" handling.
+const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
 
 // Services without direct probe coverage (excluded from API Response Time ranking).
 // Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
@@ -146,10 +159,13 @@ function competitionRank(items, valueFn) {
 
 // ── "Why" text generation for Score Ranking ──────────────────────────
 // Formulaic — intentional. Human editors refine as needed.
-function buildWhy(svc) {
+function buildWhy(svc, id) {
   const { incidents, uptime, avgResolutionMin } = svc.data
   const pieces = []
   if (incidents === 0) {
+    // Estimate-uptime service with zero incidents: there's no comparable 30-day % to cite,
+    // and "Zero incidents, 100% uptime" would overstate what we can actually measure (#29).
+    if (NO_PUBLIC_UPTIME.has(id)) return 'Zero incidents (no published 30-day uptime)'
     pieces.push('Zero incidents')
     if (uptime !== null && uptime !== undefined) pieces.push(`${Number(uptime).toFixed(2)}% uptime`)
   } else if (incidents === 1) {
@@ -171,22 +187,50 @@ function gradeLabel(grade) {
   return grade.charAt(0).toUpperCase() + grade.slice(1)
 }
 
-// Confidence heuristic: High when uptime AND incident data both present; Medium otherwise.
+// Confidence heuristic — High when uptime AND incident data are both present, Medium otherwise.
+// NOTE: no longer shown in the Score table (#29 replaced that column with Uptime Source), but
+// still used by the auto-draft analyzer (generate-summary) to pick high-confidence candidates
+// for the Summary narrative (`r.Confidence === 'High'`). Kept for archiveToAnalysisRows.
 function confidence(svc) {
   if (svc.data.uptime !== null && svc.data.incidents !== null) return 'High'
   return 'Medium'
 }
 
+// Uptime Source label for the Score table: Official (read directly from a status page) vs
+// Estimate (no published 30-day metric; industry-average or poll-derived). #29 replaced the
+// prior "Confidence" column here — it marked estimate-uptime services as "High" and hid that
+// their score rests on an assumed uptime. ("Partial (Nd)" for mid-month additions stays a
+// manual edit; not derivable from the archive yet.)
+function uptimeSourceLabel(id) {
+  return NO_PUBLIC_UPTIME.has(id) ? 'Estimate' : 'Official'
+}
+
+// Ranking-exclusion note (#29). NO_INCIDENT_FEED services have neither an accessible uptime
+// metric nor a reliable incident feed, so they're dropped from the Score ranking and called
+// out above the table. Returns '' when none are excluded (the marker then collapses).
+function buildRankingNote(services, meta) {
+  const scored = services.filter(s => s.data.score !== null)
+  const excluded = scored.filter(s => NO_INCIDENT_FEED.has(s.id))
+  if (excluded.length === 0) return ''
+  const ranked = scored.length - excluded.length
+  const names = excluded.map(s => serviceName(s.id, meta))
+  const nameList = names.length === 2 ? names.join(' and ') : names.join(', ')
+  const verb = excluded.length === 1 ? 'is' : 'are'
+  return `*${ranked} of ${scored.length} services ranked. **${nameList} ${verb} excluded from this ranking** — neither publishes an accessible uptime metric, so their Score would otherwise inherit an industry-average assumption rather than a measured value, and AIWatch has no reliable incident feed for them (see "No incident feed" under [Incident Summary](#incident-summary)).*`
+}
+
 // ── Table builders ───────────────────────────────────────────────────
 function buildScoreTable(services, meta) {
-  const withScore = services.filter(s => s.data.score !== null)
+  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents) from the ranking;
+  // they're surfaced in the ranking-exclusion note + the Incident Summary "No incident feed" line.
+  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id))
   const ranked = competitionRank(withScore, s => s.data.score)
   const rows = ranked.map(r => {
     const s = r.item
-    return `| ${r.rankLabel} | ${serviceName(s.id, meta)} | ${s.data.score} | ${gradeLabel(s.data.grade)} | ${confidence(s)} | ${buildWhy(s)} |`
+    return `| ${r.rankLabel} | ${serviceName(s.id, meta)} | ${s.data.score} | ${gradeLabel(s.data.grade)} | ${uptimeSourceLabel(s.id)} | ${buildWhy(s, s.id)} |`
   })
   return [
-    '| Rank | Service | Score | Grade | Confidence | Why |',
+    '| Rank | Service | Score | Grade | Uptime Source | Why |',
     '|---|---|---|---|---|---|',
     ...rows,
   ].join('\n')
@@ -205,8 +249,20 @@ function buildIncidentTable(services, meta) {
     return `<tr><td>${serviceName(s.id, meta)}</td><td>${inc}</td><td>${totalWithLongest}</td><td class="hide-mobile">${longest}</td><td class="hide-mobile">${avg}</td></tr>`
   })
 
-  const zeroInc = services.filter(s => s.data.incidents === 0).map(s => serviceName(s.id, meta))
-  const zeroIncLine = `**Zero incidents (${zeroInc.length} services):** ${zeroInc.join(', ')}`
+  // Zero-incident services split (#29): a "confirmed zero" needs a real incident feed.
+  // Estimate-uptime services (NO_PUBLIC_UPTIME) with zero incidents are coverage-limited —
+  // a blank count reflects what AIWatch can see, not verified incident-free operation.
+  const zero = services.filter(s => s.data.incidents === 0)
+  const confirmed = zero.filter(s => !NO_PUBLIC_UPTIME.has(s.id)).map(s => serviceName(s.id, meta))
+  const noFeed = zero.filter(s => NO_PUBLIC_UPTIME.has(s.id)).map(s => serviceName(s.id, meta))
+  const zeroLines = []
+  if (confirmed.length) {
+    zeroLines.push(`**Zero incidents (${confirmed.length} services):** ${confirmed.join(', ')} — confirmed via their status-page incident feeds.`)
+  }
+  if (noFeed.length) {
+    zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
+  }
+  const zeroIncLine = zeroLines.join('\n\n')
 
   return {
     tableRows: rows.join('\n'),
@@ -451,6 +507,7 @@ function fillTemplate(template, month, archive, meta) {
 
   // Build tables
   const scoreTable = buildScoreTable(services, meta)
+  const rankingNote = buildRankingNote(services, meta)
   const { tableRows: incidentRows, zeroIncLine } = buildIncidentTable(services, meta)
   const uptimeRows = buildUptimeTable(services, meta)
   const latencyTable = buildLatencyTable(services, meta)
@@ -472,6 +529,13 @@ function fillTemplate(template, month, archive, meta) {
 
   // Tables
   out = replaceTableBody(out, 'AIWatch Score', scoreTable)
+  // Ranking-exclusion note (#29) — sits above the Score table; collapse the marker when
+  // nothing is excluded so no stray blank line / double rule is left behind.
+  if (rankingNote) {
+    out = out.replace(/<!-- SCORE_RANKING_NOTE -->/, rankingNote)
+  } else {
+    out = out.replace(/\n*<!-- SCORE_RANKING_NOTE -->\n*/, '\n\n')
+  }
   out = replaceTableBody(out, 'API Response Time', latencyTable)
   // Incident Summary + Official Uptime use HTML <tbody>
   out = replaceTableBody(out, 'Incident Summary', incidentRows)
@@ -796,6 +860,8 @@ module.exports = {
   buildWhy,
   gradeLabel,
   confidence,
+  uptimeSourceLabel,
+  buildRankingNote,
   buildScoreTable,
   buildIncidentTable,
   buildUptimeTable,
