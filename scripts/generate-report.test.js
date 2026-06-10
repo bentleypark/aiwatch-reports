@@ -6,6 +6,8 @@ const {
   buildWhy,
   gradeLabel,
   confidence,
+  uptimeSourceLabel,
+  buildRankingNote,
   buildScoreTable,
   buildIncidentTable,
   buildUptimeTable,
@@ -85,13 +87,18 @@ test('three-way tie', () => {
 
 // ── Why text ─────────────────────────────────────────────
 console.log('\nbuildWhy')
-test('zero incidents with uptime', () => {
-  const w = buildWhy({ data: { incidents: 0, uptime: 100, avgResolutionMin: null } })
+test('zero incidents with uptime (official service)', () => {
+  const w = buildWhy({ data: { incidents: 0, uptime: 100, avgResolutionMin: null } }, 'cohere')
   eq(w, 'Zero incidents, 100.00% uptime')
 })
 test('zero incidents no uptime data', () => {
-  const w = buildWhy({ data: { incidents: 0, uptime: null, avgResolutionMin: null } })
+  const w = buildWhy({ data: { incidents: 0, uptime: null, avgResolutionMin: null } }, 'cohere')
   eq(w, 'Zero incidents')
+})
+test('zero incidents, estimate-uptime service → "(no published 30-day uptime)" (#29)', () => {
+  // perplexity is in NO_PUBLIC_UPTIME — must NOT assert "Zero incidents, X% uptime"
+  const w = buildWhy({ data: { incidents: 0, uptime: 99.5, avgResolutionMin: null } }, 'perplexity')
+  eq(w, 'Zero incidents (no published 30-day uptime)')
 })
 test('many incidents with fast recovery', () => {
   const w = buildWhy({ data: { incidents: 20, uptime: 99.5, avgResolutionMin: 25 } })
@@ -104,12 +111,39 @@ console.log('\ngradeLabel')
 test('capitalizes grade', () => eq(gradeLabel('excellent'), 'Excellent'))
 test('handles null', () => eq(gradeLabel(null), '—'))
 
-console.log('\nconfidence')
+console.log('\nconfidence (analyzer signal — still used by generate-summary)')
 test('High when uptime + incidents present', () => {
   eq(confidence({ data: { uptime: 99.5, incidents: 3 } }), 'High')
 })
 test('Medium when uptime null', () => {
   eq(confidence({ data: { uptime: null, incidents: 3 } }), 'Medium')
+})
+
+console.log('\nuptimeSourceLabel (#29)')
+test('Official for a status-page-read service', () => {
+  eq(uptimeSourceLabel('cohere'), 'Official')
+})
+test('Estimate for a NO_PUBLIC_UPTIME service', () => {
+  eq(uptimeSourceLabel('perplexity'), 'Estimate')
+  eq(uptimeSourceLabel('bedrock'), 'Estimate')
+})
+
+console.log('\nbuildRankingNote (#29)')
+test('names the NO_INCIDENT_FEED services excluded from the ranking', () => {
+  const services = [
+    { id: 'modal', data: { score: 97 } },
+    { id: 'bedrock', data: { score: 90 } },
+    { id: 'azureopenai', data: { score: 90 } },
+  ]
+  const meta = { modal: { name: 'Modal' }, bedrock: { name: 'Amazon Bedrock' }, azureopenai: { name: 'Azure OpenAI' } }
+  const note = buildRankingNote(services, meta)
+  assert.ok(note.includes('1 of 3 services ranked'), `got: ${note}`)
+  assert.ok(note.includes('Amazon Bedrock and Azure OpenAI'), `got: ${note}`)
+  assert.ok(note.includes('excluded from this ranking'), `got: ${note}`)
+})
+test('returns empty string when nothing is excluded', () => {
+  const services = [{ id: 'modal', data: { score: 97 } }, { id: 'cohere', data: { score: 89 } }]
+  eq(buildRankingNote(services, { modal: { name: 'Modal' }, cohere: { name: 'Cohere API' } }), '')
 })
 
 // ── Date helpers ─────────────────────────────────────────
@@ -155,6 +189,32 @@ test('renders rows sorted by score desc', () => {
   assert.ok(rows[2].includes('100'), `score 100 missing: ${rows[2]}`)
   assert.ok(rows[4].includes('Claude API'), `last row not Claude: ${rows[4]}`)
 })
+test('header is "Uptime Source" (not "Confidence") and marks the estimate cohort (#29)', () => {
+  const services = [
+    { id: 'modal', data: { score: 97, grade: 'excellent', uptime: 99.4, incidents: 5, avgResolutionMin: 65 } },
+    { id: 'perplexity', data: { score: 68, grade: 'fair', uptime: 99.6, incidents: 1, avgResolutionMin: 240 } },
+  ]
+  const meta = { modal: { name: 'Modal' }, perplexity: { name: 'Perplexity' } }
+  const table = buildScoreTable(services, meta)
+  assert.ok(table.includes('| Rank | Service | Score | Grade | Uptime Source | Why |'), 'header must use Uptime Source')
+  assert.ok(!table.includes('Confidence'), 'Confidence column must be gone')
+  const perplexityRow = table.split('\n').find(r => r.includes('Perplexity'))
+  assert.ok(/\| Estimate \|/.test(perplexityRow), `estimate cohort must be marked Estimate: ${perplexityRow}`)
+  const modalRow = table.split('\n').find(r => r.includes('Modal'))
+  assert.ok(/\| Official \|/.test(modalRow), `status-page service must be Official: ${modalRow}`)
+})
+test('excludes NO_INCIDENT_FEED services (Bedrock/Azure) from the ranking (#29)', () => {
+  const services = [
+    { id: 'modal', data: { score: 97, grade: 'excellent', uptime: 99.4, incidents: 5, avgResolutionMin: 65 } },
+    { id: 'bedrock', data: { score: 90, grade: 'excellent', uptime: 100, incidents: 0, avgResolutionMin: null } },
+    { id: 'azureopenai', data: { score: 90, grade: 'excellent', uptime: 99.9, incidents: 0, avgResolutionMin: null } },
+  ]
+  const meta = { modal: { name: 'Modal' }, bedrock: { name: 'Amazon Bedrock' }, azureopenai: { name: 'Azure OpenAI' } }
+  const table = buildScoreTable(services, meta)
+  assert.ok(!table.includes('Amazon Bedrock'), 'Bedrock must not be ranked')
+  assert.ok(!table.includes('Azure OpenAI'), 'Azure must not be ranked')
+  assert.ok(table.includes('Modal'), 'a ranked service still appears')
+})
 
 console.log('\nbuildIncidentTable')
 test('excludes services with zero incidents from the table body', () => {
@@ -170,6 +230,17 @@ test('sorts by incident count desc', () => {
   const openaiIdx = tableRows.indexOf('OpenAI API')
   assert.ok(claudeIdx > 0 && openaiIdx > 0, 'both should appear')
   assert.ok(claudeIdx < openaiIdx, 'Claude (9 inc) should appear before OpenAI (1 inc)')
+})
+test('splits zero-incident services into confirmed vs no-feed (estimate) (#29)', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89, incidents: 0, uptime: 100, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null } },
+    { id: 'bedrock', data: { score: 90, incidents: 0, uptime: 100, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, bedrock: { name: 'Amazon Bedrock' } }
+  const { zeroIncLine } = buildIncidentTable(services, meta)
+  // Official-uptime zero → confirmed; estimate-uptime zero (bedrock) → "No incident feed"
+  assert.ok(/\*\*Zero incidents \(1 services\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed line: ${zeroIncLine}`)
+  assert.ok(/\*\*No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), `no-feed line: ${zeroIncLine}`)
 })
 
 console.log('\nbuildUptimeTable')
