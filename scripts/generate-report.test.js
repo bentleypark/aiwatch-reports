@@ -10,6 +10,7 @@ const {
   buildRankingNote,
   buildScoreTable,
   buildIncidentTable,
+  officialUptimeFor,
   buildStaleSourceCaveat,
   buildUptimeTable,
   buildLatencyTable,
@@ -292,12 +293,60 @@ test('excludes services with null uptime', () => {
   assert.ok(rows.includes('Cohere API'), 'real-uptime service should appear')
 })
 test('excludes hardcoded NO_PUBLIC_UPTIME even if archive returns a value', () => {
-  // Defense: if archive wrongly returns uptime for mistral, still exclude from table
+  // Defense: if a LEGACY archive (no officialUptime field) wrongly returns uptime for mistral,
+  // still exclude from table
   const services = [
     { id: 'mistral', data: { score: 75, grade: 'good', uptime: 99.5, incidents: 7, avgResolutionMin: 6, avgLatencyMs: 420 } },
   ]
   const rows = buildUptimeTable(services, { mistral: { name: 'Mistral API' } })
   eq(rows, '')
+})
+
+// #586 — Official Uptime table is driven by the status-page `officialUptime` field, not `uptime`.
+console.log('\nofficialUptimeFor (#586)')
+test('new archive: returns officialUptime (status-page), not the daily-counter uptime', () => {
+  eq(officialUptimeFor({ id: 'chatgpt', data: { uptime: 72.78, officialUptime: 99.83 } }), 99.83)
+})
+test('new archive: officialUptime null → omitted (no comparable published metric)', () => {
+  eq(officialUptimeFor({ id: 'chatgpt', data: { uptime: 72.78, officialUptime: null } }), null)
+})
+test('new archive: a number of 0 is honored (not treated as missing)', () => {
+  eq(officialUptimeFor({ id: 'someapi', data: { uptime: 50, officialUptime: 0 } }), 0)
+})
+test('legacy archive (no field): chatgpt falls back to null, never the bad 72.78', () => {
+  eq(officialUptimeFor({ id: 'chatgpt', data: { uptime: 72.78 } }), null)
+})
+test('legacy archive (no field): NO_PUBLIC_UPTIME service → null', () => {
+  eq(officialUptimeFor({ id: 'mistral', data: { uptime: 99.5 } }), null)
+})
+test('legacy archive (no field): normal service → daily-counter uptime', () => {
+  eq(officialUptimeFor({ id: 'cohere', data: { uptime: 100 } }), 100)
+})
+test('new archive: NO_PUBLIC_UPTIME estimate service (bedrock 100) → null (no #29 stray-100 row)', () => {
+  eq(officialUptimeFor({ id: 'bedrock', data: { uptime: 100, officialUptime: 100 } }), null)
+})
+test('new archive: NO_PUBLIC_UPTIME stays excluded even with a value (mistral)', () => {
+  eq(officialUptimeFor({ id: 'mistral', data: { uptime: 99.5, officialUptime: 99.5 } }), null)
+})
+test('chatgpt is NOT in NO_PUBLIC_UPTIME — included via officialUptime despite uptimeSource=estimate', () => {
+  // ChatGPT is also `uptimeSource: estimate` upstream, but must STAY in the table (the whole #586 point),
+  // so the guard keys off NO_PUBLIC_UPTIME (which omits it not) rather than the estimate flag.
+  eq(officialUptimeFor({ id: 'chatgpt', data: { uptime: 72.78, officialUptime: 99.23 } }), 99.23)
+})
+
+test('#586 buildUptimeTable: chatgpt included with officialUptime, sorted by it', () => {
+  const services = [
+    { id: 'openai', data: { uptime: 99.6, officialUptime: 99.60 } },
+    { id: 'chatgpt', data: { uptime: 72.78, officialUptime: 99.83 } },
+    { id: 'mistral', data: { uptime: 99.5, officialUptime: null } }, // no published metric → omit
+  ]
+  const meta = { openai: { name: 'OpenAI API' }, chatgpt: { name: 'ChatGPT' }, mistral: { name: 'Mistral API' } }
+  const rows = buildUptimeTable(services, meta)
+  assert.ok(rows.includes('<tr><td>ChatGPT</td><td>99.83%</td></tr>'), 'ChatGPT shows status-page 99.83%, not 72.78%')
+  assert.ok(!rows.includes('72.78'), 'the pessimistic daily-counter value never appears')
+  assert.ok(!rows.includes('Mistral API'), 'null-officialUptime service omitted')
+  // sorted desc by officialUptime → ChatGPT (99.83) before OpenAI (99.60)
+  assert.ok(rows.indexOf('ChatGPT') < rows.indexOf('OpenAI API'), 'sorted by officialUptime desc')
 })
 
 console.log('\nbuildLatencyTable')

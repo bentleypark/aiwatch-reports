@@ -33,12 +33,16 @@ const OUT_DIR_ROOT = path.join(__dirname, '..')
 
 // Services whose uptime is an estimate, not an official rolling-30-day metric read directly
 // from a status page — either no published metric (industry-average assumption) or a
-// poll/incident-derived figure. Marked "Estimate" in the Score table's Uptime Source column
-// and excluded from the Official Uptime table. (#29 — `bedrock` was previously missing here,
-// so it leaked a stray "100.00%" row into the Official Uptime table.)
-// TODO(#29): drive this from an archive `uptimeSource` field once the Worker exposes it
-// (it would also fold in chatgpt's group-aggregate case, tracked separately as aiwatch#586),
-// instead of this maintained constant.
+// poll/incident-derived figure. Marked "Estimate" in the Score table's Uptime Source column.
+// (#29 — `bedrock` was previously missing here, so it leaked a stray "100.00%" row.)
+//
+// NOTE (aiwatch#586): the Official Uptime TABLE's VALUE now comes from the archive's per-service
+// `officialUptime` field (the status-page rolling-30d figure) instead of the daily-counter `uptime`,
+// which is what folds ChatGPT in with its real ~99% value (see `officialUptimeFor`). This set is
+// STILL the table's exclusion guard, though: the worker emits a non-null `officialUptime` for the
+// estimate-source members too (bedrock/azureopenai → synthetic 100), so without the guard #29's
+// stray "100.00%" row would return. The set also drives the Score table's "Estimate"/"Official"
+// label and the zero-incident framing.
 const NO_PUBLIC_UPTIME = new Set([
   'bedrock', 'azureopenai', 'deepgram', 'gemini', 'mistral', 'perplexity', 'xai',
 ])
@@ -305,11 +309,37 @@ function buildIncidentTable(services, meta) {
   }
 }
 
+// #586 — resolve the value the "Official Uptime" table should display for a service: the
+// STATUS-PAGE rolling-30d figure (`officialUptime`), NOT the daily-counter `uptime` that feeds the
+// Score. Returns null when the service has no comparable published metric (→ omitted from the table).
+//   • NO_PUBLIC_UPTIME services are ALWAYS omitted (both paths). The worker emits a non-null
+//     `officialUptime` for the estimate-source ones too (bedrock/azureopenai carry a synthetic
+//     `uptime30d` of 100 — `services.ts` estimate source), which would otherwise leak the stray
+//     "100.00%" row #29 removed; gemini/mistral/perplexity/xai/deepgram already carry null. Gating
+//     on the maintained set (not `uptimeSource`) is deliberate: ChatGPT is ALSO `uptimeSource:
+//     'estimate'` but is NOT in the set, so it stays IN the table with its real ~99% figure.
+//   • New archives (≥2026-06) carry `officialUptime` explicitly: a number shows, null omits. This
+//     is what folds ChatGPT in — its daily-counter `uptime` is pessimistic (multi-component status
+//     marks it degraded whenever any sub-component has an incident, e.g. 72.78% in May), but its
+//     status-page `officialUptime` (~99%) is the real comparable figure.
+//   • Legacy archives (≤2026-05) lack the field (undefined) → fall back to the daily-counter
+//     `uptime`, but still suppress chatgpt (whose legacy `uptime` is the known-bad value this issue
+//     exists to hide), preserving the pre-#586 table + the manual May fixup on regeneration.
+function officialUptimeFor(s) {
+  if (NO_PUBLIC_UPTIME.has(s.id)) return null
+  const o = s.data.officialUptime
+  if (o !== undefined) return o
+  if (s.id === 'chatgpt') return null
+  return s.data.uptime ?? null
+}
+
 function buildUptimeTable(services, meta) {
-  const withUptime = services.filter(s => s.data.uptime !== null && !NO_PUBLIC_UPTIME.has(s.id))
-  withUptime.sort((a, b) => b.data.uptime - a.data.uptime)
-  return withUptime.map(s =>
-    `<tr><td>${serviceName(s.id, meta)}</td><td>${fmtPercent(s.data.uptime)}</td></tr>`,
+  const withUptime = services
+    .map(s => ({ s, uptime: officialUptimeFor(s) }))
+    .filter(x => x.uptime !== null && x.uptime !== undefined)
+  withUptime.sort((a, b) => b.uptime - a.uptime)
+  return withUptime.map(x =>
+    `<tr><td>${serviceName(x.s.id, meta)}</td><td>${fmtPercent(x.uptime)}</td></tr>`,
   ).join('\n')
 }
 
@@ -1003,6 +1033,7 @@ module.exports = {
   buildRankingNote,
   buildScoreTable,
   buildIncidentTable,
+  officialUptimeFor,
   buildStaleSourceCaveat,
   buildUptimeTable,
   buildLatencyTable,
