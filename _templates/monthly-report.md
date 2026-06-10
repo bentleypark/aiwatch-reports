@@ -130,64 +130,13 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 
 ---
 
-## Detection & RTT Degradation
-
-<!-- #464 redefinition: AIWatch does NOT claim to detect "before the official status page."
-     Diagnostic data showed status-page-based detection is structurally bounded by polling lag
-     (always at/after the official publish), and genuine probe-first leads are rare. The two
-     honest, verifiable framings are detection latency (MTTD) and RTT degradation detection.
-     Do NOT reinstate any "X minutes ahead of the official status page" headline claim. -->
-
-### Detection Latency
-
-AIWatch independently detects incidents and alerts within **~5 minutes** — the probe/poll cadence, the upper bound on how long an issue can go unnoticed by our monitoring. This is independent, low-latency awareness across all monitored services, not a timing comparison against any provider's status page.
-
-### RTT Degradation Detection
-
-<!-- Include this subsection ONLY when archive:monthly:{YYYY-MM}.degradation is non-null
-     (aiwatch#511). Omit for months before aiwatch#512 deployed (no probe-degradation:monthly
-     accumulator existed — e.g. any month ≤ 2026-05) or with zero degradations.
-     Data source: GET /api/report?month=YYYY-MM → degradation.{total, noStatusTotal,
-     byService, noStatusByService}. Backed by probe-degradation:monthly:* (60d TTL). -->
-
-AIWatch's direct RTT probes flagged **<!-- N -->** latency degradations this month, of which **<!-- M -->** were **not reflected on the providers' official status pages** — slowdowns status pages typically don't report, only hard outages.
-
-| Service | RTT Degradations | Not on Status Page |
-|---|---|---|
-| | | |
-
-> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages (which report hard-down, not slowness) often omit entirely.
-
-### Early RTT Detections
-
-<!-- Include this subsection ONLY when archive:monthly:{YYYY-MM}.detectionLead is non-null
-     (topExamples has entries). These are the RARE genuine cases where a probe RTT spike was
-     flagged before the official update — honest per-event evidence, NOT a headline metric.
-     Data source: detectionLead.{count, avgLeadMs, medianLeadMs, maxLeadMs, byService, topExamples},
-     backed by detection:lead:monthly:* (60d TTL, aiwatch#369). Omit the whole subsection when
-     topExamples is empty (the common case — #464 showed in_window events are rare).
-     COLUMN → SOURCE (each row from a detectionLead.topExamples entry {svcId, incId, leadMs, detectedAt}):
-       • Incident       = incId
-       • Service        = svcId (→ display name)
-       • Probe Flagged  = detectedAt (the ISO timestamp, rendered UTC)
-       • Official Update= NOT in the payload — compute as detectedAt + leadMs (the official publish
-                          is leadMs *after* the probe flagged it). Drop this column if you'd rather
-                          not derive it.
-       • Earlier By     = leadMs (format as "Nm") -->
-
-| Incident | Service | Probe Flagged (UTC) | Official Update (UTC) | Earlier By |
-|---|---|---|---|---|
-| | | | | |
-
-<!-- "Average early detection" line: include ONLY when detectionLead.count >= 5, mirroring the
-     worker canPresentLeadAverage / MIN_LEAD_SAMPLE_SIZE gate (aiwatch#464). Below 5 samples the
-     average is statistically thin — show the per-event rows above but DROP this averaged line so
-     no marketing-grade figure rests on a handful of samples. -->
-**Average early detection**: <!-- X min --> (across N events) <!-- ONLY when count ≥ 5 -->
-
-> Occasional cases where AIWatch's RTT probe flagged degradation before the official status update. Rare by design — the headline metrics are detection latency and degradation detection above, not a "faster than official" average.
-
----
+<!-- DETECTION_SECTION -->
+<!-- ^ Auto-rendered by generate-report.js (buildDetectionSection) from archive.degradation
+     (aiwatch#511) + archive.detectionLead (aiwatch#369). Emits the whole "## Detection & RTT
+     Degradation" section ending in its own `---` when there's data, and is omitted entirely
+     otherwise (the case for any month ≤ 2026-05). #464 framing is fixed — detection latency
+     (MTTD) + RTT degradation, never a "faster than the official status page" claim. Do not
+     hand-author. -->
 
 ## Incident Summary
 

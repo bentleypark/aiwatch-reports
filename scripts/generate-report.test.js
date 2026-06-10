@@ -18,6 +18,8 @@ const {
   buildTimelineDetails,
   buildTopFindings,
   buildSecuritySection,
+  buildDetectionSection,
+  fmtLeadMin,
   monthName,
   lastDayOfMonth,
   nextMonthName,
@@ -583,6 +585,51 @@ test('omits subsections that have no data but still renders the heading + total'
   assert.ok(!out.includes('### Top Findings'), 'top findings omitted when empty')
 })
 
+// ── buildDetectionSection (#28) ─────────────────────────────────────
+console.log('\nfmtLeadMin')
+test('formats ms → whole minutes', () => eq(fmtLeadMin(900000), '15m'))
+test('handles null', () => eq(fmtLeadMin(null), '—'))
+
+console.log('\nbuildDetectionSection (#28)')
+const detMeta = { deepgram: { name: 'Deepgram' }, mistral: { name: 'Mistral API' }, gemini: { name: 'Gemini API' } }
+test('omits the whole section when no degradation and no detectionLead', () => {
+  eq(buildDetectionSection({}, detMeta), '')
+  eq(buildDetectionSection({ degradation: { total: 0 }, detectionLead: { topExamples: [] } }, detMeta), '')
+  eq(buildDetectionSection({ degradation: null, detectionLead: null }, detMeta), '')
+})
+test('renders RTT Degradation from archive.degradation', () => {
+  const out = buildDetectionSection({
+    degradation: { total: 12, noStatusTotal: 8, byService: { deepgram: 5, mistral: 4 }, noStatusByService: { deepgram: 4, mistral: 3 } },
+  }, detMeta)
+  assert.ok(out.startsWith('## Detection & RTT Degradation'), `heading first: ${out.slice(0, 40)}`)
+  assert.ok(out.includes('### Detection Latency'), 'keeps the static Detection Latency blurb')
+  assert.ok(/flagged \*\*12\*\* latency degradations/.test(out), `total: ${out}`)
+  assert.ok(/\*\*8\*\* were \*\*not reflected/.test(out), 'noStatus total rendered')
+  assert.ok(/\| Deepgram \| 5 \| 4 \|/.test(out), 'degradation row rendered with display name')
+  assert.ok(!out.includes('### Early RTT Detections'), 'no Early RTT subsection without leads')
+  assert.ok(out.trimEnd().endsWith('---'), 'section ends with its own trailing separator')
+})
+test('renders Early RTT Detections + Official Update = detectedAt + leadMs', () => {
+  const out = buildDetectionSection({
+    detectionLead: { count: 6, avgLeadMs: 480000, topExamples: [
+      { svcId: 'mistral', incId: '01ABC', leadMs: 900000, detectedAt: '2026-04-12T14:30:00Z' },
+    ] },
+  }, detMeta)
+  assert.ok(out.includes('### Early RTT Detections'), 'Early RTT subsection rendered')
+  assert.ok(/\| 01ABC \| Mistral API \| 2026-04-12 14:30 UTC \| 2026-04-12 14:45 UTC \| 15m \|/.test(out), `row: ${out}`)
+  assert.ok(/\*\*Average early detection\*\*: 8m \(across 6 events\)/.test(out), 'average shown when count >= 5')
+  assert.ok(!out.includes('### RTT Degradation Detection'), 'no degradation subsection without degradation data')
+})
+test('drops the Average line below the sample-size gate (count < 5)', () => {
+  const out = buildDetectionSection({
+    detectionLead: { count: 3, avgLeadMs: 480000, topExamples: [
+      { svcId: 'gemini', incId: '01DEF', leadMs: 300000, detectedAt: '2026-04-18T09:05:00Z' },
+    ] },
+  }, detMeta)
+  assert.ok(out.includes('### Early RTT Detections'), 'still shows per-event rows')
+  assert.ok(!out.includes('**Average early detection**'), 'no averaged figure below MIN_LEAD_SAMPLE_SIZE')
+})
+
 // ── fillTemplate × security ─────────────────────────────────────────
 console.log('\nfillTemplate × security')
 test('inserts the security block when archive.security has data', () => {
@@ -957,6 +1004,35 @@ test('security section omitted with no double `---` when archive.security is nul
   assert.ok(!out.includes('<!-- SECURITY_SECTION -->'), 'marker removed on omission')
   assert.ok(!out.includes('Do not hand-author'), 'explainer comment removed on omission')
   assert.ok(!/---\s*\n\s*---/.test(out), 'the marker + its separator collapse without leaving a double rule')
+})
+
+// ── fillTemplate × detection (#28) ──────────────────────────────────
+console.log('\nfillTemplate × detection')
+test('real template: Detection section omitted (no double rule) when archive has no detection data', () => {
+  const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+  // 2026-04 has neither degradation nor detectionLead — the common ≤2026-05 case.
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const meta = {}
+  for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+  const out = fillTemplate(tmpl, '2026-04', archive, meta)
+  assert.ok(!out.includes('## Detection & RTT Degradation'), 'no Detection section without data')
+  assert.ok(!out.includes('<!-- DETECTION_SECTION -->'), 'marker consumed on omission')
+  assert.ok(!out.includes('buildDetectionSection)'), 'explainer comment removed on omission')
+  assert.ok(!/---\s*\n\s*---/.test(out), 'no double horizontal rule after omission')
+  assert.ok(/## API Response[\s\S]*?\n---\n[\s\S]*?## Incident Summary/.test(out), 'API Response → Incident Summary stay separated by one rule')
+})
+test('real template: Detection section renders when degradation/detectionLead present', () => {
+  const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+  archive.degradation = { total: 12, noStatusTotal: 8, byService: { deepgram: 5 }, noStatusByService: { deepgram: 4 } }
+  archive.detectionLead = { count: 6, avgLeadMs: 480000, topExamples: [{ svcId: 'mistral', incId: '01ABC', leadMs: 900000, detectedAt: '2026-04-12T14:30:00Z' }] }
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const meta = {}
+  for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+  const out = fillTemplate(tmpl, '2026-04', archive, meta)
+  assert.ok(out.includes('## Detection & RTT Degradation'), 'section renders')
+  assert.ok(!out.includes('<!-- DETECTION_SECTION -->'), 'marker consumed')
+  assert.ok(!out.includes('buildDetectionSection)'), 'explainer not leaked')
+  assert.ok(!/---\s*\n\s*---/.test(out.slice(out.indexOf('## API Response'), out.indexOf('## Incident Summary'))), 'no double rule around the section')
 })
 
 // ── injectNarrativeDraft (refs aiwatch-reports#4 Phase 3 / aiwatch#426) ──

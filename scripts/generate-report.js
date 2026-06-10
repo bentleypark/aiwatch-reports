@@ -403,6 +403,99 @@ function buildSecuritySection(security) {
   return parts.join('\n')
 }
 
+// ── Detection & RTT Degradation section (#28) ────────────────────────
+// Auto-renders the "## Detection & RTT Degradation" section from the archive's `degradation`
+// (RTT degradation rising edges, aiwatch#511/#512) and `detectionLead` (rare probe-first leads,
+// aiwatch#369). The whole section is OMITTED when neither exists — the common case for months
+// ≤ 2026-05 (no accumulator) and any month with no data — matching what 2026-04/2026-05 did by
+// hand. Emits its own trailing `---` (like buildSecuritySection) so the marker carries no
+// separator in the template. The #464 framing is fixed: detection latency (MTTD) + RTT
+// degradation, NOT any "faster than the official status page" headline.
+const DETECTION_LEAD_MIN_SAMPLE = 5  // mirrors worker MIN_LEAD_SAMPLE_SIZE / canPresentLeadAverage
+
+function fmtUtcMinute(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`
+}
+
+function fmtLeadMin(ms) {
+  if (ms === null || ms === undefined || Number.isNaN(ms)) return '—'
+  return `${Math.round(ms / 60000)}m`
+}
+
+function buildDetectionSection(archive, meta) {
+  const deg = archive && archive.degradation
+  const lead = archive && archive.detectionLead
+  const hasDeg = deg && typeof deg.total === 'number' && deg.total > 0
+  const examples = lead && Array.isArray(lead.topExamples) ? lead.topExamples : []
+  const hasLeads = examples.length > 0
+  if (!hasDeg && !hasLeads) return ''
+
+  const parts = [
+    '## Detection & RTT Degradation',
+    '',
+    '### Detection Latency',
+    '',
+    "AIWatch independently detects incidents and alerts within **~5 minutes** — the probe/poll cadence, the upper bound on how long an issue can go unnoticed by our monitoring. This is independent, low-latency awareness across all monitored services, not a timing comparison against any provider's status page.",
+    '',
+  ]
+
+  if (hasDeg) {
+    const byService = deg.byService || {}
+    const noStatus = deg.noStatusByService || {}
+    const ids = Object.keys(byService).sort((a, b) => (byService[b] || 0) - (byService[a] || 0))
+    parts.push(
+      '### RTT Degradation Detection',
+      '',
+      `AIWatch's direct RTT probes flagged **${deg.total}** latency degradations this month, of which **${deg.noStatusTotal ?? 0}** were **not reflected on the providers' official status pages** — slowdowns status pages typically don't report, only hard outages.`,
+      '',
+    )
+    // Only emit the table when there's a per-service breakdown — a total>0 with an empty
+    // byService (shouldn't happen with real worker data) would otherwise render a bodyless table.
+    if (ids.length) {
+      parts.push(
+        '| Service | RTT Degradations | Not on Status Page |',
+        '|---|---|---|',
+        ...ids.map(id => `| ${serviceName(id, meta)} | ${byService[id] || 0} | ${noStatus[id] || 0} |`),
+        '',
+      )
+    }
+    parts.push(
+      "> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages (which report hard-down, not slowness) often omit entirely.",
+      '',
+    )
+  }
+
+  if (hasLeads) {
+    parts.push(
+      '### Early RTT Detections',
+      '',
+      '| Incident | Service | Probe Flagged (UTC) | Official Update (UTC) | Earlier By |',
+      '|---|---|---|---|---|',
+      ...examples.map(e => {
+        const official = (e.detectedAt && typeof e.leadMs === 'number' && !Number.isNaN(new Date(e.detectedAt).getTime()))
+          ? fmtUtcMinute(new Date(new Date(e.detectedAt).getTime() + e.leadMs).toISOString())
+          : '—'
+        return `| ${e.incId || '—'} | ${serviceName(e.svcId, meta)} | ${fmtUtcMinute(e.detectedAt)} | ${official} | ${fmtLeadMin(e.leadMs)} |`
+      }),
+      '',
+    )
+    // Averaged figure only above the sample-size gate (#464) — below it, show per-event rows only.
+    if (typeof lead.count === 'number' && lead.count >= DETECTION_LEAD_MIN_SAMPLE && typeof lead.avgLeadMs === 'number') {
+      parts.push(`**Average early detection**: ${fmtLeadMin(lead.avgLeadMs)} (across ${lead.count} events)`, '')
+    }
+    parts.push(
+      '> Occasional cases where AIWatch\'s RTT probe flagged degradation before the official status update. Rare by design — the headline metrics are detection latency and degradation detection above, not a "faster than official" average.',
+      '',
+    )
+  }
+
+  parts.push('---', '')
+  return parts.join('\n')
+}
+
 function buildLatencyTable(services, meta) {
   const withLatency = services.filter(s => s.data.avgLatencyMs !== null && !NO_PROBE.has(s.id))
   // Competition rank with ascending sort: negate avgLatencyMs so competitionRank's
@@ -559,6 +652,17 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/<!-- SECURITY_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, securityBlock)
   } else {
     out = out.replace(/\n*<!-- SECURITY_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
+  }
+
+  // Detection & RTT Degradation section (#28) — same pattern as security: buildDetectionSection
+  // emits the whole section (ending in its own `---`) when there's degradation/detectionLead
+  // data, else nothing. When omitted, strip the marker + its one-line explainer comment AND the
+  // trailing `---` so the preceding API-Response `---` stands as the single separator.
+  const detectionSection = buildDetectionSection(archive, meta)
+  if (detectionSection) {
+    out = out.replace(/<!-- DETECTION_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, detectionSection)
+  } else {
+    out = out.replace(/\n*<!-- DETECTION_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
   }
 
   return out
@@ -872,6 +976,8 @@ module.exports = {
   buildTimelineDetails,
   buildTopFindings,
   buildSecuritySection,
+  buildDetectionSection,
+  fmtLeadMin,
   fmtIso,
   monthName,
   lastDayOfMonth,
