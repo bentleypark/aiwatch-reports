@@ -15,7 +15,7 @@ published: true
 
 - **Most reliable**: Modal (97/100, Excellent) — the top score of all 33 services, with 99.40% uptime; serverless GPU compute that held steady all month.
 - **Riskiest this month**: Replicate (61/100, Fair) — the lowest score, with a 3h 43m average recovery across 4 incidents.
-- **High incident count, fast recovery**: Mistral API (155 incidents, 19m avg resolution — up again from April's 97, a new high) and Together AI (133 incidents, 43m avg — roughly flat vs April's 139). The high counts come from per-component reporting plus the micro-incidents surfaced since the #372 probe-filter retune, not from instability (both still scored Good, 78 / 84).
+- **High incident count, fast recovery**: Mistral API (155 incidents, 19m avg resolution — up again from April's 97, a new high) and Together AI (133 incidents, 43m avg — roughly flat vs April's 139). The high counts come from per-component reporting plus the micro-incidents surfaced since a probe-filter retune, not from instability (both still scored Good, 78 / 84).
 - **Watch out**: Gemini API (only 2 incidents but a 22h 32m average recovery, 45h 4m total downtime) and the Anthropic stack — Claude API / claude.ai / Claude Code all landed Fair (63–65). ChatGPT had the consumer tier's heaviest disruption — 11 incidents, 50h 55m total, longest 15h 16m, 4h 38m average recovery.
 
 <details>
@@ -23,7 +23,7 @@ published: true
 <ul>
 <li><strong>가장 안정적</strong>: Modal (97/100, Excellent) — 가동률 99.40%로 전체 1위. 한 달 내내 안정적으로 운영된 서버리스 GPU 컴퓨트입니다.</li>
 <li><strong>이번 달 가장 위험</strong>: Replicate (61/100, Fair) — 전체 최저 점수. 장애 4건에 평균 복구 시간이 3h 43m으로 길었습니다.</li>
-<li><strong>잦은 장애, 빠른 복구</strong>: Mistral API (155건, 평균 복구 19m — 4월 97건에서 다시 늘어 최고치), Together AI (133건, 평균 43m — 4월 139건과 비슷한 수준). 건수가 많은 것은 컴포넌트별 집계와 #372 probe 필터 재조정 이후 미세 장애가 잡히기 때문이지 서비스가 불안정해서가 아닙니다 (둘 다 Good, 78 / 84).</li>
+<li><strong>잦은 장애, 빠른 복구</strong>: Mistral API (155건, 평균 복구 19m — 4월 97건에서 다시 늘어 최고치), Together AI (133건, 평균 43m — 4월 139건과 비슷한 수준). 건수가 많은 것은 컴포넌트별 집계와 probe 필터 재조정 이후 미세 장애가 잡히기 때문이지 서비스가 불안정해서가 아닙니다 (둘 다 Good, 78 / 84).</li>
 <li><strong>주의 필요</strong>: Gemini API (장애는 2건뿐이지만 평균 복구 22h 32m, 총 다운타임 45h 4m)와 Anthropic 제품군 — Claude API·claude.ai·Claude Code가 모두 Fair (63–65)에 머물렀습니다. ChatGPT는 소비자용 앱 중 장애가 가장 잦고 길었습니다 — 11건, 총 50h 55m, 최장 15h 16m, 평균 복구 4h 38m.</li>
 </ul>
 </details>
@@ -52,7 +52,7 @@ published: true
 Reading beyond the Summary's service-by-service view, three patterns shaped May — how to read incident counts, why recovery speed mattered more than count, and a standout turnaround in the coding-agent tier. Across the board, 26 of 33 services recorded at least one incident, for a combined 611h 4m of downtime.
 
 - **Pattern 1 — Incident count is the most misread metric**: the two highest counts of any service (Mistral 155, Together AI 133) belong to two of the *faster-recovering, Good-tier* services. Because providers report at different granularities (per-component vs service-level), raw counts are not comparable across vendors — adjust for that before ranking. The same caveat held in March and April; it is structural, not a one-month artifact.
-- **Pattern 2 — A few long outages hurt more than many short ones**: Gemini API had just 2 incidents but averaged 22h 32m to recover (45h 4m total), dropping it to Fair (64). Codex (7h 48m avg) and Deepgram (6h 4m avg) show the same long-tail-recovery drag, while Fireworks AI (5m) and DeepSeek (18m) show the upside.
+- **Pattern 2 — A few long outages hurt more than many short ones**: Gemini API had just 2 incidents but averaged 22h 32m to recover (45h 4m total), dropping it to Fair (64). Codex (7h 48m avg) and Deepgram (6h 4m avg) show the same long-tail-recovery drag, while Fireworks AI (5m) shows the upside.
 - **Pattern 3 — Coding agents were the most stable tier, led by a standout turnaround**: Junie (93), GitHub Copilot (92), and Windsurf (92) all scored Excellent. Copilot is the month's biggest reversal — it sat at the bottom of the tier in both March (18 affected days) and April (69, 84h 32m total downtime), but May brought just 6 incidents and 9h 5m total. By contrast the consumer-facing apps were choppy — ChatGPT had the tier's heaviest disruption (11 incidents, longest 15h 16m, 4h 38m avg recovery) and Character.AI logged 29 incidents (though it recovered in ~20m).
 
 <details>
@@ -60,7 +60,7 @@ Reading beyond the Summary's service-by-service view, three patterns shaped May 
 <p>Summary가 서비스를 하나하나 짚었다면, 여기서는 5월 전반을 관통한 세 가지 흐름을 봅니다 — 장애 건수를 어떻게 읽어야 하는지, 건수보다 복구 속도가 왜 더 중요했는지, 그리고 코딩 에이전트에서 나온 뚜렷한 반전입니다. 5월에는 33개 중 26개 서비스가 한 건 이상의 장애를 겪었고, 총 다운타임은 611h 4m였습니다.</p>
 <ul>
 <li><strong>패턴 1 — 장애 건수는 가장 오해하기 쉬운 지표</strong>: 전체에서 건수가 가장 많은 Mistral(155)·Together AI(133)가 오히려 <em>복구가 빠른 Good 등급</em>입니다. 제공사마다 집계 단위(컴포넌트별 vs 서비스별)가 달라 단순 건수로는 제공사끼리 비교할 수 없으니, 순위를 매기기 전에 이를 감안해야 합니다. 이 점은 3월·4월에도 똑같았습니다 — 한 달만의 현상이 아니라 구조적인 문제입니다.</li>
-<li><strong>패턴 2 — 오래 지속되는 장애 하나가 짧은 장애 여러 건보다 더 치명적이다</strong>: Gemini API는 장애가 2건뿐이었는데도 평균 복구 시간이 22h 32m(총 45h 4m)이나 걸려 Fair(64)로 내려앉았습니다. Codex(평균 7h 48m)·Deepgram(6h 4m)도 복구가 오래 걸린 반면, Fireworks AI(5m)·DeepSeek(18m)은 빠른 복구가 얼마나 유리한지 보여줬습니다.</li>
+<li><strong>패턴 2 — 오래 지속되는 장애 하나가 짧은 장애 여러 건보다 더 치명적이다</strong>: Gemini API는 장애가 2건뿐이었는데도 평균 복구 시간이 22h 32m(총 45h 4m)이나 걸려 Fair(64)로 내려앉았습니다. Codex(평균 7h 48m)·Deepgram(6h 4m)도 복구가 오래 걸린 반면, Fireworks AI(5m)은 빠른 복구가 얼마나 유리한지 보여줬습니다.</li>
 <li><strong>패턴 3 — 코딩 에이전트가 가장 안정적이었고, 그 중심엔 뚜렷한 반전이 있었다</strong>: Junie(93)·GitHub Copilot(92)·Windsurf(92)가 모두 Excellent를 받았습니다. 그중에서도 Copilot의 반전이 가장 두드러집니다 — 3월(18일간 장애 영향)과 4월(69점, 다운타임 84h 32m)까지 코딩 에이전트 중 최하위였는데, 5월에는 장애 6건·총 9h 5m에 그쳤습니다. 반면 소비자용 앱은 기복이 컸습니다 — ChatGPT는 그중 장애가 가장 잦고 길었고(11건·최장 15h 16m·평균 복구 4h 38m), Character.AI는 29건(평균 복구 ~20m)을 기록했습니다.</li>
 </ul>
 </details>
@@ -95,7 +95,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 12 | Voyage AI | 86 | Good | Official | Zero incidents, 100.00% uptime |
 | 13 | ChatGPT | 85 | Good | Estimate | 11 incidents, avg 4h 38m |
 | 14 | Together AI | 84 | Good | Official | 133 incidents, avg 43m |
-| 15= | DeepSeek API | 82 | Good | Official | 3 incidents, fast recovery (avg 18m) |
+| 15= | DeepSeek API | 82 | Good | Official | 3 incidents through ~May 8 — partial month, see Stale-source caveat |
 | 15= | Codex | 82 | Good | Official | 7 incidents, avg 7h 48m |
 | 17 | OpenAI API | 80 | Good | Official | 7 incidents, avg 1h 36m |
 | 18 | Mistral API | 78 | Good | Estimate | 155 incidents, fast recovery (avg 19m) |
@@ -126,7 +126,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 
 > **Reference table.** Official 30-day uptime metrics from each service's status page (where published). The narrative-driven sections below (Incident Summary / Notable Incidents / Observations) cover what these numbers mean for vendor selection.
 
-*Amazon Bedrock, Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish a rolling-30-day uptime percentage on their status pages — they're excluded from this table for that reason. **ChatGPT is also excluded** — AIWatch's own month-measured availability for it (its multi-component status is marked degraded whenever any sub-component has an incident) runs far below the rolling-30-day figure OpenAI's status page publishes (~99.83% on the live status page as of this writing — a current rolling value, **not** a May measurement), and that status-page month-end value wasn't captured for May, so no comparable number is shown here. Reports from June 2026 onward surface the status-page figure directly (aiwatch#586). (xAI's [status page](https://status.x.ai) does expose per-endpoint live success rates measured since their monitoring system's last restart, but those numbers are not directly comparable to the 30-day figures shown above.)*
+*Amazon Bedrock, Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish a rolling-30-day uptime percentage on their status pages — they're excluded from this table for that reason. **ChatGPT is also excluded** — AIWatch's own month-measured availability for it (its multi-component status is marked degraded whenever any sub-component has an incident) runs far below the rolling-30-day figure OpenAI's status page publishes (~99.83% on the live status page as of this writing — a current rolling value, **not** a May measurement), and that status-page month-end value wasn't captured for May, so no comparable number is shown here. Reports from June 2026 onward surface the status-page figure directly. (xAI's [status page](https://status.x.ai) does expose per-endpoint live success rates measured since their monitoring system's last restart, but those numbers are not directly comparable to the 30-day figures shown above.)*
 
 <table class="uptime-cols">
 <thead><tr><th>Service</th><th>Uptime</th></tr></thead>
@@ -238,6 +238,8 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 **Zero incidents (5 services):** Cohere API, Groq Cloud, OpenRouter, Stability AI, Voyage AI — confirmed via their status-page incident feeds.
 
 **No incident feed (2 services):** Amazon Bedrock, Azure OpenAI — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.
+
+**Stale source (1 service):** DeepSeek API — its status page migrated from Atlassian Statuspage to Flashduty mid-month, and Flashduty blocks AIWatch's server-side fetches (Cloudflare Workers / Vercel Edge), so the feed froze at **2026-05-08**. The 3 incidents, 99.92% uptime, and Score (82) above therefore reflect only ~May 1–8 — later incidents (5/21, 5/24, 5/28) are not captured. Treat DeepSeek's May figures as a floor, not a verified month.
 
 ---
 
