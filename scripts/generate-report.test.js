@@ -11,6 +11,7 @@ const {
   buildScoreTable,
   buildIncidentTable,
   officialUptimeFor,
+  buildStaleSourceCaveat,
   buildUptimeTable,
   buildLatencyTable,
   buildBySourceTable,
@@ -244,6 +245,40 @@ test('splits zero-incident services into confirmed vs no-feed (estimate) (#29)',
   // Official-uptime zero → confirmed; estimate-uptime zero (bedrock) → "No incident feed"
   assert.ok(/\*\*Zero incidents \(1 services\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed line: ${zeroIncLine}`)
   assert.ok(/\*\*No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), `no-feed line: ${zeroIncLine}`)
+})
+
+// aiwatch#507 — DeepSeek status page migrated to Flashduty (unreachable server-side); its feed
+// is frozen, so neither a partial nonzero count nor a frozen zero is a verified picture.
+test('STALE_SOURCE: caveat renders with a NONZERO count (deepseek 3 partial-month incidents)', () => {
+  const services = [
+    { id: 'deepseek', data: { score: 82, incidents: 3, uptime: 99.92, avgResolutionMin: 18, totalDowntimeMin: 53, longestIncidentMin: 34 } },
+  ]
+  const meta = { deepseek: { name: 'DeepSeek API' } }
+  const { tableRows, zeroIncLine } = buildIncidentTable(services, meta)
+  assert.ok(tableRows.includes('DeepSeek API'), 'still listed in the incident table (data is real, just dated)')
+  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API is /.test(zeroIncLine), `stale line: ${zeroIncLine}`)
+  assert.ok(/floor, not a verified picture\./.test(zeroIncLine), 'self-contained caveat')
+  assert.ok(!/#\d+/.test(zeroIncLine), 'no reader-facing internal issue number')
+})
+test('STALE_SOURCE: a frozen ZERO count is NOT labelled "confirmed zero"', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89, incidents: 0, uptime: 100, avgResolutionMin: null } },
+    { id: 'deepseek', data: { score: 82, incidents: 0, uptime: 99.92, avgResolutionMin: null } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, deepseek: { name: 'DeepSeek API' } }
+  const { zeroIncLine } = buildIncidentTable(services, meta)
+  // deepseek's zero must NOT appear in the confirmed list…
+  assert.ok(/\*\*Zero incidents \(1 services\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed: ${zeroIncLine}`)
+  assert.ok(!/Zero incidents.*DeepSeek/.test(zeroIncLine), 'deepseek not in confirmed-zero')
+  // …it appears in the stale-source caveat instead
+  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API/.test(zeroIncLine), `stale: ${zeroIncLine}`)
+})
+test('buildStaleSourceCaveat: singular vs plural agreement, empty → ""', () => {
+  eq(buildStaleSourceCaveat([]), '')
+  const one = buildStaleSourceCaveat(['DeepSeek API'])
+  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API is /.test(one), `singular: ${one}`)
+  const two = buildStaleSourceCaveat(['DeepSeek API', 'Foo API'])
+  assert.ok(/\*\*Stale source \(2 services\):\*\* DeepSeek API, Foo API are /.test(two), `plural: ${two}`)
 })
 
 console.log('\nbuildUptimeTable')
