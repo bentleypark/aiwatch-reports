@@ -52,7 +52,7 @@ const ID_TO_NAME = {
   replicate: 'Replicate', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
   deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
   azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', stability: 'Stability AI',
-  voyageai: 'Voyage AI', modal: 'Modal', langsmith: 'LangChain (LangSmith)',
+  voyageai: 'Voyage AI', modal: 'Modal', langsmith: 'LangChain (LangSmith)', runway: 'Runway',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI',
   claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
   copilot: 'GitHub Copilot', windsurf: 'Windsurf', junie: 'Junie',
@@ -68,7 +68,7 @@ const CATEGORY_ORDER = [
   'together', 'fireworks', 'cerebras', 'perplexity', 'xai', 'deepseek', 'openrouter',
   // Voice & Inference
   'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone',
-  'stability', 'voyageai', 'modal', 'langsmith',
+  'stability', 'voyageai', 'modal', 'langsmith', 'runway',
   // Coding Agents
   'claudecode', 'codex', 'cursor', 'copilot', 'windsurf', 'junie',
 ]
@@ -304,7 +304,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 34 services in category order (not just incident table)
+      // Use all 35 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
