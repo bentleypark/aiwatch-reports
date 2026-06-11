@@ -66,6 +66,15 @@ const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
 // Maintained constant — REMOVE a service here once its feed is reachable again (aiwatch#507).
 const STALE_SOURCE = new Set(['deepseek'])
 
+// aiwatch#591 — is a service's incident source stale this month? PRIMARY signal is the archive's
+// per-service `incidentSourceStale` flag (the deployed Worker sets it from ServiceConfig; absent ⇒
+// not stale on a post-#591 archive). The STALE_SOURCE constant is the FALLBACK for archives built
+// before the Worker emitted the flag. Stale services are excluded from the Score ranking (their
+// frozen empty incident window would inflate the Score — DeepSeek ranked #4 live before the fix).
+function isStaleSource(s) {
+  return !!(s.data.incidentSourceStale ?? STALE_SOURCE.has(s.id))
+}
+
 // Services without direct probe coverage (excluded from API Response Time ranking).
 // Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
 const NO_PROBE = new Set(['bedrock', 'azureopenai', 'pinecone'])
@@ -224,22 +233,38 @@ function uptimeSourceLabel(id) {
 // Ranking-exclusion note (#29). NO_INCIDENT_FEED services have neither an accessible uptime
 // metric nor a reliable incident feed, so they're dropped from the Score ranking and called
 // out above the table. Returns '' when none are excluded (the marker then collapses).
+// Joins display names with " and " for two, commas otherwise.
+function joinNames(svcs, meta) {
+  const names = svcs.map(s => serviceName(s.id, meta))
+  return names.length === 2 ? names.join(' and ') : names.join(', ')
+}
+
 function buildRankingNote(services, meta) {
   const scored = services.filter(s => s.data.score !== null)
-  const excluded = scored.filter(s => NO_INCIDENT_FEED.has(s.id))
-  if (excluded.length === 0) return ''
-  const ranked = scored.length - excluded.length
-  const names = excluded.map(s => serviceName(s.id, meta))
-  const nameList = names.length === 2 ? names.join(' and ') : names.join(', ')
-  const verb = excluded.length === 1 ? 'is' : 'are'
-  return `*${ranked} of ${scored.length} services ranked. **${nameList} ${verb} excluded from this ranking** — neither publishes an accessible uptime metric, so their Score would otherwise inherit an industry-average assumption rather than a measured value, and AIWatch has no reliable incident feed for them (see "No incident feed" under [Incident Summary](#incident-summary)).*`
+  const noFeed = scored.filter(s => NO_INCIDENT_FEED.has(s.id))
+  // STALE_SOURCE that isn't already a no-feed service (avoid double-listing) — #591.
+  const stale = scored.filter(s => isStaleSource(s) && !NO_INCIDENT_FEED.has(s.id))
+  if (noFeed.length === 0 && stale.length === 0) return ''
+  const ranked = scored.length - noFeed.length - stale.length
+  const clauses = []
+  if (noFeed.length) {
+    const verb = noFeed.length === 1 ? 'is' : 'are'
+    clauses.push(`**${joinNames(noFeed, meta)} ${verb} excluded from this ranking** — neither publishes an accessible uptime metric, so their Score would otherwise inherit an industry-average assumption rather than a measured value, and AIWatch has no reliable incident feed for them (see "No incident feed" under [Incident Summary](#incident-summary))`)
+  }
+  if (stale.length) {
+    const verb = stale.length === 1 ? 'is' : 'are'
+    const poss = stale.length === 1 ? 'its' : 'their'
+    clauses.push(`**${joinNames(stale, meta)} ${verb} excluded from this ranking** — ${poss} status source migrated to a platform AIWatch can't reach, so the incident feed is frozen and the Score would be inflated by an empty 30-day window (see "Stale source" under [Incident Summary](#incident-summary))`)
+  }
+  return `*${ranked} of ${scored.length} services ranked. ${clauses.join('. ')}.*`
 }
 
 // ── Table builders ───────────────────────────────────────────────────
 function buildScoreTable(services, meta) {
-  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents) from the ranking;
-  // they're surfaced in the ranking-exclusion note + the Incident Summary "No incident feed" line.
-  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id))
+  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents) and STALE_SOURCE
+  // services (#591 — frozen feed inflates the Score from an empty window) from the ranking; both are
+  // surfaced in the ranking-exclusion note + the Incident Summary ("No incident feed" / "Stale source").
+  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
   const ranked = competitionRank(withScore, s => s.data.score)
   const rows = ranked.map(r => {
     const s = r.item
@@ -1032,6 +1057,7 @@ module.exports = {
   uptimeSourceLabel,
   buildRankingNote,
   buildScoreTable,
+  isStaleSource,
   buildIncidentTable,
   officialUptimeFor,
   buildStaleSourceCaveat,

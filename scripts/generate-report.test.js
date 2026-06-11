@@ -8,6 +8,7 @@ const {
   confidence,
   uptimeSourceLabel,
   buildRankingNote,
+  isStaleSource,
   buildScoreTable,
   buildIncidentTable,
   officialUptimeFor,
@@ -148,6 +149,40 @@ test('names the NO_INCIDENT_FEED services excluded from the ranking', () => {
 test('returns empty string when nothing is excluded', () => {
   const services = [{ id: 'modal', data: { score: 97 } }, { id: 'cohere', data: { score: 89 } }]
   eq(buildRankingNote(services, { modal: { name: 'Modal' }, cohere: { name: 'Cohere API' } }), '')
+})
+
+// #591 — stale-source services are excluded from the Score ranking (frozen feed inflates the Score).
+console.log('\nisStaleSource (#591)')
+test('archive flag true → stale; absent falls back to the STALE_SOURCE constant', () => {
+  eq(isStaleSource({ id: 'openai', data: { incidentSourceStale: true } }), true)   // new archive flag
+  eq(isStaleSource({ id: 'deepseek', data: {} }), true)                            // legacy archive → constant
+  eq(isStaleSource({ id: 'cohere', data: {} }), false)                             // neither
+})
+
+console.log('\nbuildScoreTable + buildRankingNote — stale exclusion (#591)')
+test('buildScoreTable drops a stale service from the ranking', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89, grade: 'good', uptime: 100, incidents: 0, avgResolutionMin: null } },
+    { id: 'deepseek', data: { score: 88, grade: 'good', uptime: 99.92, incidents: 3, avgResolutionMin: 18, incidentSourceStale: true } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, deepseek: { name: 'DeepSeek API' } }
+  const table = buildScoreTable(services, meta)
+  assert.ok(table.includes('Cohere API'), 'non-stale service still ranked')
+  assert.ok(!table.includes('DeepSeek API'), 'stale service dropped from the Score table')
+})
+test('buildRankingNote names stale + no-feed in separate clauses with distinct reasons', () => {
+  const services = [
+    { id: 'modal', data: { score: 97 } },
+    { id: 'bedrock', data: { score: 90 } },                       // NO_INCIDENT_FEED
+    { id: 'deepseek', data: { score: 88, incidentSourceStale: true } }, // STALE_SOURCE
+  ]
+  const meta = { modal: { name: 'Modal' }, bedrock: { name: 'Amazon Bedrock' }, deepseek: { name: 'DeepSeek API' } }
+  const note = buildRankingNote(services, meta)
+  assert.ok(note.includes('1 of 3 services ranked'), `got: ${note}`)
+  assert.ok(/Amazon Bedrock is excluded from this ranking/.test(note), `no-feed clause: ${note}`)
+  assert.ok(/no reliable incident feed/.test(note), `no-feed reason: ${note}`)
+  assert.ok(/DeepSeek API is excluded from this ranking/.test(note), `stale clause: ${note}`)
+  assert.ok(/incident feed is frozen/.test(note), `stale reason: ${note}`)
 })
 
 // ── Date helpers ─────────────────────────────────────────
