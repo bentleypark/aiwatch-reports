@@ -95,7 +95,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 12 | Voyage AI | 86 | Good | Official | Zero incidents, 100.00% uptime |
 | 13 | ChatGPT | 85 | Good | Estimate | 11 incidents, avg 4h 38m |
 | 14 | Together AI | 84 | Good | Official | 133 incidents, avg 43m |
-| 15= | DeepSeek API | 82 | Good | Official | 3 incidents through ~May 8 — partial month, see Stale-source caveat |
+| 15= | DeepSeek API | 82 | Good | Official | 3 incidents through ~May 8 — partial month, see DeepSeek correction note below |
 | 15= | Codex | 82 | Good | Official | 7 incidents, avg 7h 48m |
 | 17 | OpenAI API | 80 | Good | Official | 7 incidents, avg 1h 36m |
 | 18 | Mistral API | 78 | Good | Estimate | 155 incidents, fast recovery (avg 19m) |
@@ -239,7 +239,12 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 
 **No incident feed (2 services):** Amazon Bedrock, Azure OpenAI — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.
 
-**Stale source (1 service):** DeepSeek API — its status page migrated from Atlassian Statuspage to Flashduty mid-month, and Flashduty blocks AIWatch's server-side fetches (Cloudflare Workers / Vercel Edge), so the feed froze at **2026-05-08**. The 3 incidents, 99.92% uptime, and Score (82) above therefore reflect only ~May 1–8 — later incidents (5/21, 5/24, 5/28) are not captured. Treat DeepSeek's May figures as a floor, not a verified month.
+**Correction — DeepSeek now fully recoverable (June 2026 update):** When this report was published, DeepSeek's status page had migrated from Atlassian Statuspage to Flashduty mid-month and Flashduty blocked AIWatch's server-side fetches, freezing the feed at **2026-05-08**. So the figures in the tables above — **3 incidents, 99.92% uptime, Score 82** — reflect only ~May 1–8. AIWatch can now read the full Flashduty feed via a browser-rendered fetch, so the complete month is recoverable:
+
+- **DeepSeek API — 7 incidents** (May 6, 6, 8, 21, 24, 28, 28): total **2h 8m**, longest **33m**, median recovery **18m**, ≈**99.78%** uptime (Atlassian-weighted). The four later incidents (5/21, 5/24, 5/28×2) the frozen feed missed are all short API degradations.
+- DeepSeek's consumer **Web Chat** surface — now tracked separately as **DeepSeek App** (from June 2026) — saw **6 incidents** over the same period (median recovery 19m).
+
+The ranking, uptime, and incident tables above were **not** retroactively regenerated (the monthly archive's daily counters are immutable once written), so they remain the captured-window snapshot; treat these corrected figures as the verified month. DeepSeek returns to a fully-monitored month from June 2026 onward.
 
 ---
 

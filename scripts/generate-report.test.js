@@ -153,9 +153,10 @@ test('returns empty string when nothing is excluded', () => {
 
 // #591 — stale-source services are excluded from the Score ranking (frozen feed inflates the Score).
 console.log('\nisStaleSource (#591)')
-test('archive flag true → stale; absent falls back to the STALE_SOURCE constant', () => {
-  eq(isStaleSource({ id: 'openai', data: { incidentSourceStale: true } }), true)   // new archive flag
-  eq(isStaleSource({ id: 'deepseek', data: {} }), true)                            // legacy archive → constant
+test('archive flag drives staleness; STALE_SOURCE constant is empty since aiwatch#618', () => {
+  eq(isStaleSource({ id: 'openai', data: { incidentSourceStale: true } }), true)   // archive flag
+  eq(isStaleSource({ id: 'deepseek', data: { incidentSourceStale: true } }), true) // May archive: flag still set → stale
+  eq(isStaleSource({ id: 'deepseek', data: {} }), false)                           // #618 — removed from STALE_SOURCE; absent flag ⇒ not stale (June+)
   eq(isStaleSource({ id: 'cohere', data: {} }), false)                             // neither
 })
 
@@ -282,11 +283,13 @@ test('splits zero-incident services into confirmed vs no-feed (estimate) (#29)',
   assert.ok(/\*\*No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), `no-feed line: ${zeroIncLine}`)
 })
 
-// aiwatch#507 — DeepSeek status page migrated to Flashduty (unreachable server-side); its feed
-// is frozen, so neither a partial nonzero count nor a frozen zero is a verified picture.
-test('STALE_SOURCE: caveat renders with a NONZERO count (deepseek 3 partial-month incidents)', () => {
+// aiwatch#507 — a status page that migrated to an unreachable platform freezes its feed, so neither
+// a partial nonzero count nor a frozen zero is a verified picture. Since aiwatch#618 the STALE_SOURCE
+// constant is empty (DeepSeek is readable again), so staleness is driven by the archive's
+// `incidentSourceStale` flag — these tests set it explicitly (e.g. the frozen May 2026 archive).
+test('STALE_SOURCE: caveat renders with a NONZERO count (3 partial-month incidents, flag set)', () => {
   const services = [
-    { id: 'deepseek', data: { score: 82, incidents: 3, uptime: 99.92, avgResolutionMin: 18, totalDowntimeMin: 53, longestIncidentMin: 34 } },
+    { id: 'deepseek', data: { score: 82, incidents: 3, uptime: 99.92, avgResolutionMin: 18, totalDowntimeMin: 53, longestIncidentMin: 34, incidentSourceStale: true } },
   ]
   const meta = { deepseek: { name: 'DeepSeek API' } }
   const { tableRows, zeroIncLine } = buildIncidentTable(services, meta)
@@ -295,10 +298,10 @@ test('STALE_SOURCE: caveat renders with a NONZERO count (deepseek 3 partial-mont
   assert.ok(/floor, not a verified picture\./.test(zeroIncLine), 'self-contained caveat')
   assert.ok(!/#\d+/.test(zeroIncLine), 'no reader-facing internal issue number')
 })
-test('STALE_SOURCE: a frozen ZERO count is NOT labelled "confirmed zero"', () => {
+test('STALE_SOURCE: a frozen ZERO count is NOT labelled "confirmed zero" (flag set)', () => {
   const services = [
     { id: 'cohere', data: { score: 89, incidents: 0, uptime: 100, avgResolutionMin: null } },
-    { id: 'deepseek', data: { score: 82, incidents: 0, uptime: 99.92, avgResolutionMin: null } },
+    { id: 'deepseek', data: { score: 82, incidents: 0, uptime: 99.92, avgResolutionMin: null, incidentSourceStale: true } },
   ]
   const meta = { cohere: { name: 'Cohere API' }, deepseek: { name: 'DeepSeek API' } }
   const { zeroIncLine } = buildIncidentTable(services, meta)
