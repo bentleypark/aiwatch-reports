@@ -60,11 +60,14 @@ const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
 // uptime + an incident history, but both are STALE, which is more insidious: a partial-month count
 // reads as a verified low number and the frozen uptime reads as current. The guard surfaces a
 // caveat every report and stops a frozen zero-count from being labelled a "confirmed zero".
-//   • deepseek — migrated Atlassian Statuspage → Flashduty (~May 2026); the old mirror froze at
-//     2026-05-08 and Flashduty blocks AIWatch's server-side fetches (Workers/Edge), so 5/21+
-//     incidents are unreachable.
+//   • deepseek — migrated Atlassian Statuspage → Flashduty (~May 2026). REMOVED here as of June
+//     2026: AIWatch now reads the full Flashduty feed via a browser-rendered fetch (aiwatch#618),
+//     so DeepSeek (and the new DeepSeek App, aiwatch#619) are no longer frozen. From the June 2026
+//     archive onward their incidentSourceStale flag is absent → not stale; the May 2026 archive
+//     still carries the flag, so a May regeneration stays correctly stale (flag-driven, below).
 // Maintained constant — REMOVE a service here once its feed is reachable again (aiwatch#507).
-const STALE_SOURCE = new Set(['deepseek'])
+// Empty today; reserved for a future status-page migration that re-freezes a feed.
+const STALE_SOURCE = new Set([])
 
 // aiwatch#591 — is a service's incident source stale this month? PRIMARY signal is the archive's
 // per-service `incidentSourceStale` flag (the deployed Worker sets it from ServiceConfig; absent ⇒
@@ -304,15 +307,17 @@ function buildIncidentTable(services, meta) {
   // a blank count reflects what AIWatch can see, not verified incident-free operation. STALE_SOURCE
   // services (aiwatch#507) are also excluded from "confirmed": their feed is frozen, so a zero count
   // is "nothing since the cutoff," not a verified incident-free month.
+  // Use isStaleSource (flag-OR-constant) — not the raw STALE_SOURCE constant — so a service marked
+  // stale by the archive's incidentSourceStale flag is handled even though the constant is now empty
+  // (aiwatch#618 emptied it; the May 2026 archive still carries the flag).
   const zero = services.filter(s => s.data.incidents === 0)
   const confirmed = zero
-    .filter(s => !NO_PUBLIC_UPTIME.has(s.id) && !STALE_SOURCE.has(s.id))
+    .filter(s => !NO_PUBLIC_UPTIME.has(s.id) && !isStaleSource(s))
     .map(s => serviceName(s.id, meta))
-  // STALE_SOURCE is excluded from noFeed too (defensive — deepseek ∉ NO_PUBLIC_UPTIME today, but
-  // both sets are hand-maintained; a future stale service that also lacks a public uptime feed must
-  // get the more-specific Stale-source line, not a double caveat).
+  // Stale sources are excluded from noFeed too (defensive — a future stale service that also lacks a
+  // public uptime feed must get the more-specific Stale-source line, not a double caveat).
   const noFeed = zero
-    .filter(s => NO_PUBLIC_UPTIME.has(s.id) && !STALE_SOURCE.has(s.id))
+    .filter(s => NO_PUBLIC_UPTIME.has(s.id) && !isStaleSource(s))
     .map(s => serviceName(s.id, meta))
   const zeroLines = []
   if (confirmed.length) {
@@ -321,10 +326,11 @@ function buildIncidentTable(services, meta) {
   if (noFeed.length) {
     zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
   }
-  // Stale-source caveat (aiwatch#507) — rendered whenever a STALE_SOURCE service is in the report,
-  // regardless of its incident count (DeepSeek's May count is 3 but partial; its June count is 0 but
-  // not verified). Frozen feed → count + uptime + Score are not current.
-  const staleLine = buildStaleSourceCaveat(services.filter(s => STALE_SOURCE.has(s.id)).map(s => serviceName(s.id, meta)))
+  // Stale-source caveat (aiwatch#507) — rendered whenever a stale service is in the report (by the
+  // archive's incidentSourceStale flag or the STALE_SOURCE constant), regardless of incident count:
+  // a frozen feed means count + uptime + Score are not current. Driven by isStaleSource, not the raw
+  // constant, so it survives the aiwatch#618 emptying of STALE_SOURCE (the May archive's flag still fires).
+  const staleLine = buildStaleSourceCaveat(services.filter(s => isStaleSource(s)).map(s => serviceName(s.id, meta)))
   if (staleLine) zeroLines.push(staleLine)
   const zeroIncLine = zeroLines.join('\n\n')
 
