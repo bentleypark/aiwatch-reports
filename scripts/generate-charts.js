@@ -304,7 +304,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 36 services in category order (not just incident table)
+      // Use all 37 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
