@@ -20,6 +20,7 @@
 Each monthly report includes:
 
 - **AIWatch Score Rankings** — Composite reliability score (uptime + incidents + recovery time)
+- **3-Month Trend** — Score direction over the trailing 3 months (slope chart), plus **Notable Movers**: the services whose Score, recovery time (MTTR), or total downtime changed most, so a flat Score can't hide a recovery-time regression. Auto-rendered once ≥2 months of archive exist; omitted otherwise. (Uptime is intentionally not trended — see *Methodology*.)
 - **Incident Summary** — Total downtime and incident counts per service
 - **Official Uptime** — Provider-reported uptime figures
 - **Notable Incidents** — Top 5 incidents with root cause and impact
@@ -35,6 +36,7 @@ Each monthly report includes:
 - **Uptime figures**: Official status page metrics — single primary component basis where available, platform-wide average otherwise
 - **Incident counts**: Per-component aggregation — some providers (e.g., Anthropic) report per model, so counts may exceed distinct outages
 - **API probe**: Direct RTT measurement every 5 minutes to 20 services with public endpoints (supplementary monitoring data)
+- **3-Month Trend (Notable Movers)**: ranked by the largest single change across **Score / MTTR / total downtime** over the window — incident-feed *measured* metrics. Uptime is deliberately excluded: the archive's `uptime` field mixes per-service sources (status-page group aggregates, estimate/poll-derived figures) so a cross-service uptime delta is misleading (a 3-month official-uptime trend awaits aiwatch#586 + ≥3 months of the clean `officialUptime` field). Direction (🔺/🔻) follows the bold *headline* metric, not Score. Services the Score ranking excludes (no-incident-feed / stale source) are excluded from movers too. The first point is flagged when its month is partial (mid-month onboarding); MTTR/downtime are measured over the months that have incident data.
 
 Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
 
@@ -55,9 +57,11 @@ New monthly reports are generated from the permanent archive — no live-data fa
 
 **Local:**
 ```bash
-node scripts/generate-report.js 2026-04   # writes 2026-04/index.md with published: false
-node scripts/generate-charts.js 2026-04/index.md
+node scripts/generate-report.js 2026-04   # writes 2026-04/index.md (incl. the 3-Month Trend section)
+node scripts/generate-charts.js 2026-04/index.md   # writes score-chart.svg, uptime-heatmap.svg, trend-chart.svg
 ```
+
+The trend section + chart read the trailing months from `_data/` (prior months) plus the current report (this month), so they auto-populate once `_data/` holds ≥2 consecutive months; the first one or two reports render without the section. The first fully-comparable 3-month window is **2026-06** (Apr/May/Jun all full months).
 
 **GitHub Actions** (`.github/workflows/generate-report.yml`):
 1. Open the workflow's "Run workflow" page

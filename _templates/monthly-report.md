@@ -69,6 +69,13 @@ published: true
 
 ---
 
+<!-- TREND_SECTION -->
+<!-- ^ Auto-rendered by generate-report.js (buildTrendSection) from the current archive +
+     committed _data/{YYYY-MM}.json snapshots of prior months (aiwatch-reports#41). Emits the
+     whole "## N-Month Trend" section (ending in its own `---`) when ≥2 months of history exist
+     and there's a Score mover, else nothing — the case for the first 1–2 reports. The slope-chart
+     SVG is written by generate-charts.js under the same gate. Do not hand-author. -->
+
 ## AIWatch Score — [MONTH] [YEAR] Reliability Rankings
 
 **AIWatch Score (0–100)** is designed to answer one question:

@@ -22,6 +22,7 @@ const {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildTrendSection,
   fmtLeadMin,
   monthName,
   lastDayOfMonth,
@@ -1335,6 +1336,72 @@ test('buildNotableIncidentsDraft / buildObservationsDraft are fenced + carry the
   assert.ok(nb.includes('(sonnet)'))
   const ob = buildObservationsDraft(SAMPLE_NARRATIVE.observations, 'sonnet')
   assert.ok(ob.startsWith(OBSERVATIONS_OPEN_MARKER) && ob.endsWith(OBSERVATIONS_CLOSE_MARKER), 'observations draft fenced')
+})
+
+// ── buildTrendSection (aiwatch-reports#41) — exclusion wiring (round-2 fix) ──
+console.log('\nbuildTrendSection')
+
+const fsT = require('fs')
+const osT = require('os')
+const pathT = require('path')
+
+// Write two prior-month _data snapshots to a temp dir, then render the section for a current
+// month supplied via the archive arg. The archive carries a normal mover (codex, declining hard)
+// AND an excluded estimate-only mover (bedrock, NO_INCIDENT_FEED) that ALSO moves hard.
+function withTrendFixture(fn) {
+  const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-test-'))
+  try {
+    fsT.writeFileSync(pathT.join(dir, '2026-04.json'), JSON.stringify({
+      period: '2026-04', daysCollected: 30, services: {
+        codex: { score: 86, grade: 'Good', avgResolutionMin: 83, totalDowntimeMin: 578 },
+        bedrock: { score: 90, grade: 'Good', avgResolutionMin: null, totalDowntimeMin: null },
+      },
+    }))
+    fsT.writeFileSync(pathT.join(dir, '2026-05.json'), JSON.stringify({
+      period: '2026-05', daysCollected: 31, services: {
+        codex: { score: 82, grade: 'Good', avgResolutionMin: 468, totalDowntimeMin: 3277 },
+        bedrock: { score: 90, grade: 'Good', avgResolutionMin: null, totalDowntimeMin: null },
+      },
+    }))
+    return fn(dir)
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+const TREND_META = { codex: { name: 'Codex' }, bedrock: { name: 'Amazon Bedrock' } }
+// Current month (2026-06): codex keeps declining; bedrock's estimate-only score swings hard.
+const TREND_ARCHIVE = {
+  period: '2026-06', daysCollected: 30, services: {
+    codex: { score: 70, grade: 'Fair', avgResolutionMin: 600, totalDowntimeMin: 5000 },
+    bedrock: { score: 55, grade: 'Fair', avgResolutionMin: null, totalDowntimeMin: null },
+  },
+}
+
+test('renders a ## 3-Month Trend section with the Notable Movers list', () => {
+  withTrendFixture(dir => {
+    const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
+    assert.ok(out.includes('## 3-Month Trend'), 'has the section heading')
+    assert.ok(out.includes('### Notable Movers'), 'has the Notable Movers list')
+    assert.ok(out.includes('Codex'), 'normal mover present')
+  })
+})
+
+test('excludes a NO_INCIDENT_FEED service (bedrock) from the rendered movers — the round-2 fix', () => {
+  withTrendFixture(dir => {
+    const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
+    assert.ok(!out.includes('Amazon Bedrock'), 'estimate-only bedrock must NOT surface as a trend mover')
+  })
+})
+
+test('returns empty when fewer than 2 months of data exist', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-empty-'))
+  try {
+    // No prior _data files in dir → only the current (archive) month → <2 months.
+    eq(buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir), '')
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
