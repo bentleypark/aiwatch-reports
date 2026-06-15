@@ -26,6 +26,7 @@
 const fs = require('fs')
 const path = require('path')
 const summary = require('./generate-summary')
+const charts = require('./generate-charts')  // trend core (aiwatch-reports#41)
 
 const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf.workers.dev'
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
@@ -592,6 +593,113 @@ function buildDetectionSection(archive, meta) {
   return parts.join('\n')
 }
 
+// Auto-renders the "## N-Month Trend" section (aiwatch#637 quick-win / aiwatch-reports#41).
+// Turns the snapshot into a directional signal. The CURRENT month comes from the
+// freshly-fetched `archive`; PRIOR months from the committed `_data/{YYYY-MM}.json`
+// snapshots (immutable history). Emits its own trailing `---` (like buildSecuritySection /
+// buildDetectionSection) when ≥2 months exist AND at least one mover is found; otherwise
+// returns '' (a lone first month, or a flat board, has no trend to show). The actual
+// slope chart SVG is written by generate-charts.js under the same ≥2-month gate, so the
+// `![](trend-chart.svg)` ref below never dangles. The multi-month math lives in
+// generate-charts.js (buildTrendSeries / computeScoreMovers) — pure + unit-tested there.
+function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, '..', '_data')) {
+  const currentEntry = charts.toMonthEntry(month, archive)
+  if (!currentEntry) return ''
+  const entries = charts.loadTrendEntries(month, currentEntry, { dataDir })
+  if (entries.length < 2) return ''
+
+  const trend = charts.buildTrendSeries(entries)
+  // Exclude the services the Score ranking itself excludes (NO_INCIDENT_FEED + stale source,
+  // per buildScoreTable / the #29 note) so a trend mover never contradicts a report that
+  // elsewhere states it does not rank that service. Estimate-only bedrock/azureopenai scores
+  // CAN move month-to-month, so this isn't hypothetical. Keyed off the CURRENT month's archive.
+  const exclude = new Set(
+    Object.entries(archive.services)
+      .map(([id, data]) => ({ id, data }))
+      .filter(s => NO_INCIDENT_FEED.has(s.id) || isStaleSource(s))
+      .map(s => s.id),
+  )
+
+  const movers = charts.computeScoreMovers(trend, { nameFor: id => serviceName(id, meta), exclude })
+  if (!movers.declining.length && !movers.improving.length) return ''
+
+  const notable = charts.computeNotableMovers(trend, { nameFor: id => serviceName(id, meta), exclude })
+
+  const span = entries.length
+  const parts = [
+    `## ${span}-Month Trend`,
+    '',
+    `AIWatch Score direction over the last ${span} months (${entries[0].month} → ${month}). The chart shows the composite-Score direction for every service; **Notable Movers** below decompose the biggest changes into the incident-measured metrics that actually drive a "keep relying on this?" decision — recovery time (MTTR) and total downtime — since a flat Score can hide a recovery-time regression.`,
+    '',
+    `![AIWatch Score ${span}-month trend](../assets/${month}/trend-chart.svg)`,
+    '',
+  ]
+
+  if (notable.length) {
+    parts.push('### Notable Movers', '')
+    // Make the selection rule + the arrow semantics explicit (readers shouldn't have to guess
+    // why these N appear): ranked by the single largest change across Score / MTTR / downtime,
+    // the bold metric is that change, and 🔺/🔻 track that headline metric — not Score.
+    parts.push(
+      `*The ${notable.length} services whose **Score, recovery time (MTTR), or total downtime** changed most over the window (ranked by the largest single change, not a fixed threshold). The metric in **bold** is the change that ranked each service here; 🔺 / 🔻 mark whether that headline metric improved or worsened — so a service can show a small Score gain yet land here, and read 🔻, because its downtime regressed.*`,
+      '',
+    )
+    parts.push(...notable.map(m => fmtMoverLine(m)))
+    parts.push('')
+  }
+
+  if (trend.partialMonths.size) {
+    parts.push(
+      `> **Partial month**: ${[...trend.partialMonths].join(', ')} had fewer than a full month of monitoring — its point is indicative, not a full-month comparison. MTTR / downtime show "—" for any month a service recorded zero incidents.`,
+      '',
+    )
+  }
+  parts.push('---', '')
+  return parts.join('\n')
+}
+
+// Signed duration delta (MTTR / downtime): "+5h 12m" / "−18m" / "±0".
+function fmtDurationDelta(mins) {
+  if (mins === null || mins === undefined || Number.isNaN(mins)) return ''
+  if (mins === 0) return '±0'
+  return `${mins > 0 ? '+' : '−'}${fmtDurationMin(Math.abs(mins))}`
+}
+
+// One Notable-Movers bullet: direction marker + name, then Score · MTTR · Downtime with the
+// axis that moved most bolded. A null endpoint (a zero-incident month has no MTTR/downtime)
+// renders the segment as "—". Uptime is intentionally absent (see computeNotableMovers).
+function fmtMoverLine(m) {
+  const arrow = m.declining ? '🔻' : '🔺'
+  const segs = []
+
+  let s = `Score ${m.score.first} → ${m.score.last} (${charts.fmtScoreDelta(m.score.delta)})`
+  if (m.emphasize === 'score') s = `**${s}**`
+  segs.push(s)
+
+  // MTTR / downtime measured over the months that have data (first-present → last-present):
+  //  • never recorded   → "—"
+  //  • one month of data → single value (no redundant arrow)
+  //  • ≥2 months        → "X → Y (Δ)"
+  // Assumes a zero-incident month is null (not 0) in the archive — per toMonthEntry, MTTR/downtime
+  // are read only when typeof === 'number', and the archive emits null (not 0) for no incidents. If
+  // a future archive ever emits a literal 0, fmtDurationMin maps it to "—" too, so it still reads as
+  // "no incidents" rather than a misleading "0m" — safe either way.
+  const span = (o) => {
+    if (o.first === null && o.last === null) return '—'
+    if (o.delta === null) return fmtDurationMin(o.last)
+    return `${fmtDurationMin(o.first)} → ${fmtDurationMin(o.last)} (${fmtDurationDelta(o.delta)})`
+  }
+  let t = `MTTR ${span(m.mttr)}`
+  if (m.emphasize === 'mttr') t = `**${t}**`
+  segs.push(t)
+
+  let d = `downtime ${span(m.downtime)}`
+  if (m.emphasize === 'downtime') d = `**${d}**`
+  segs.push(d)
+
+  return `- ${arrow} **${m.name}** — ${segs.join(' · ')}`
+}
+
 function buildLatencyTable(services, meta) {
   const withLatency = services.filter(s => s.data.avgLatencyMs !== null && !NO_PROBE.has(s.id))
   // Competition rank with ascending sort: negate avgLatencyMs so competitionRank's
@@ -759,6 +867,17 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/<!-- DETECTION_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, detectionSection)
   } else {
     out = out.replace(/\n*<!-- DETECTION_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
+  }
+
+  // 3-Month Trend section (aiwatch-reports#41) — same marker pattern as security/detection:
+  // buildTrendSection emits the whole section (ending in its own `---`) when ≥2 months of
+  // archive history exist and there's a mover, else nothing. When omitted, strip the marker +
+  // its explainer comment AND the trailing `---` so the preceding `---` stays the single rule.
+  const trendSection = buildTrendSection(month, archive, meta)
+  if (trendSection) {
+    out = out.replace(/<!-- TREND_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, trendSection)
+  } else {
+    out = out.replace(/\n*<!-- TREND_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
   }
 
   return out
@@ -1076,6 +1195,7 @@ module.exports = {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildTrendSection,
   fmtLeadMin,
   fmtIso,
   monthName,

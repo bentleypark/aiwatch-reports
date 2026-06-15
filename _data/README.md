@@ -5,6 +5,21 @@ Stored alongside KV for long-term git preservation and trend analysis.
 
 Files are named `{YYYY-MM}.json` (e.g., `2026-03.json`).
 
+## Consumed by the 3-Month Trend section
+
+`generate-report.js` (`buildTrendSection`) and `generate-charts.js` (`generateTrendSvg`) read the
+**trailing months** here to render the report's *3-Month Trend* + *Notable Movers* (aiwatch-reports#41).
+The drift caveats below are handled, not ignored:
+- **Partial month** (e.g. `2026-03`, 12-day window): flagged on the trend's x-axis (`Mar*`) + a footnote;
+  MTTR / downtime are measured over the months that actually have incident data (first-present → last-present),
+  so a sparse partial month doesn't zero out the trend.
+- **Roster drift** (a service added mid-window appears with no score in earlier months): excluded from
+  *movers* — a service needs a Score at BOTH window ends to qualify, so a mid-window add never reads as a fake change.
+- **Excluded services**: no-incident-feed (`bedrock`, `azureopenai`) and stale-source services are kept out
+  of movers, mirroring the Score ranking's own exclusion.
+- **Uptime is NOT trended** from these files — the `uptime` field mixes per-service sources (group aggregates /
+  estimates), so only the incident-*measured* Score / MTTR / total-downtime fields feed the decomposition.
+
 ## Snapshot provenance
 
 Two paths produce these files:
