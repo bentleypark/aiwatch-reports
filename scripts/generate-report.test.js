@@ -9,6 +9,7 @@ const {
   uptimeSourceLabel,
   buildRankingNote,
   isStaleSource,
+  isRecentlyAdded,
   buildScoreTable,
   buildIncidentTable,
   officialUptimeFor,
@@ -185,6 +186,56 @@ test('buildRankingNote names stale + no-feed in separate clauses with distinct r
   assert.ok(/no reliable incident feed/.test(note), `no-feed reason: ${note}`)
   assert.ok(/DeepSeek API is excluded from this ranking/.test(note), `stale clause: ${note}`)
   assert.ok(/incident feed is frozen/.test(note), `stale reason: ${note}`)
+})
+
+// ── reports#45 — full-month coverage gate (consumes aiwatch#809 addedAt) ──
+console.log('\nisRecentlyAdded (#45)')
+test('added in the report month → recently added (excluded)', () => {
+  eq(isRecentlyAdded({ id: 'fal', data: { addedAt: '2026-06-24' } }, '2026-06'), true)
+})
+test('added in a PRIOR month → established (ranked)', () => {
+  eq(isRecentlyAdded({ id: 'fal', data: { addedAt: '2026-06-24' } }, '2026-07'), false)
+})
+test('addedAt absent → established (ranked, no regression for old archives)', () => {
+  eq(isRecentlyAdded({ id: 'claude', data: { score: 90 } }, '2026-06'), false)
+})
+test('no period → not gated (fail-open)', () => {
+  eq(isRecentlyAdded({ id: 'fal', data: { addedAt: '2026-06-24' } }, undefined), false)
+})
+
+console.log('\nbuildScoreTable + buildRankingNote — coverage gate (#45)')
+test('buildScoreTable drops a mid-month-added service for that month, keeps it the next', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89, grade: 'good', uptime: 100, incidents: 0, avgResolutionMin: null } },
+    { id: 'fal', data: { score: 95, grade: 'excellent', uptime: 100, incidents: 0, avgResolutionMin: null, addedAt: '2026-06-24' } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, fal: { name: 'fal.ai' } }
+  const june = buildScoreTable(services, meta, '2026-06')
+  assert.ok(june.includes('Cohere API'), 'established service ranked')
+  assert.ok(!june.includes('fal.ai'), 'mid-month-added service dropped for its first (partial) month')
+  const july = buildScoreTable(services, meta, '2026-07')
+  assert.ok(july.includes('fal.ai'), 'service rejoins the ranking once a full month accrues')
+})
+test('buildRankingNote flags the recently-added exclusion with a distinct reason', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89 } },
+    { id: 'fal', data: { score: 95, addedAt: '2026-06-24' } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, fal: { name: 'fal.ai' } }
+  const note = buildRankingNote(services, meta, '2026-06')
+  assert.ok(note.includes('1 of 2 services ranked'), `got: ${note}`)
+  assert.ok(/fal\.ai is excluded from this ranking/.test(note), `recent clause: ${note}`)
+  assert.ok(/added to AIWatch mid-month/.test(note), `recent reason: ${note}`)
+})
+test('full-month services are unaffected — no note, all ranked (no regression)', () => {
+  const services = [
+    { id: 'cohere', data: { score: 89, grade: 'good', uptime: 100, incidents: 0, avgResolutionMin: null, addedAt: '2026-04-01' } },
+    { id: 'claude', data: { score: 90, grade: 'excellent', uptime: 100, incidents: 0, avgResolutionMin: null } },
+  ]
+  const meta = { cohere: { name: 'Cohere API' }, claude: { name: 'Claude API' } }
+  eq(buildRankingNote(services, meta, '2026-06'), '')
+  const table = buildScoreTable(services, meta, '2026-06')
+  assert.ok(table.includes('Cohere API') && table.includes('Claude API'), 'both full-month services ranked')
 })
 
 // ── Date helpers ─────────────────────────────────────────
