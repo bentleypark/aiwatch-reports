@@ -79,6 +79,18 @@ function isStaleSource(s) {
   return !!(s.data.incidentSourceStale ?? STALE_SOURCE.has(s.id))
 }
 
+// reports#45 — a service added DURING (or after) the report month lacked full-month coverage, so its
+// partial-month Score must not be ranked or featured in Notable Movers against full-month services
+// (the report-side equivalent of aiwatch#802's <30d-coverage dashboard gate). Reads the static
+// `addedAt` the monthly archive now exposes (aiwatch#809). `addedAt` absent = established service =
+// full coverage. Compares YYYY-MM prefixes: addedAt in a PRIOR month → ranked; in the report month
+// (or later) → excluded. `period` = the report month 'YYYY-MM'.
+function isRecentlyAdded(s, period) {
+  const addedAt = s && s.data && s.data.addedAt
+  if (!addedAt || !period) return false
+  return addedAt.slice(0, 7) >= period.slice(0, 7)
+}
+
 // Services without direct probe coverage (excluded from API Response Time ranking).
 // Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
 const NO_PROBE = new Set(['bedrock', 'azureopenai', 'pinecone'])
@@ -243,13 +255,15 @@ function joinNames(svcs, meta) {
   return names.length === 2 ? names.join(' and ') : names.join(', ')
 }
 
-function buildRankingNote(services, meta) {
+function buildRankingNote(services, meta, period) {
   const scored = services.filter(s => s.data.score !== null)
   const noFeed = scored.filter(s => NO_INCIDENT_FEED.has(s.id))
   // STALE_SOURCE that isn't already a no-feed service (avoid double-listing) — #591.
   const stale = scored.filter(s => isStaleSource(s) && !NO_INCIDENT_FEED.has(s.id))
-  if (noFeed.length === 0 && stale.length === 0) return ''
-  const ranked = scored.length - noFeed.length - stale.length
+  // reports#45 — recently-added (partial-month) services, excluding any already covered above.
+  const recent = scored.filter(s => isRecentlyAdded(s, period) && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
+  if (noFeed.length === 0 && stale.length === 0 && recent.length === 0) return ''
+  const ranked = scored.length - noFeed.length - stale.length - recent.length
   const clauses = []
   if (noFeed.length) {
     const verb = noFeed.length === 1 ? 'is' : 'are'
@@ -260,15 +274,21 @@ function buildRankingNote(services, meta) {
     const poss = stale.length === 1 ? 'its' : 'their'
     clauses.push(`**${joinNames(stale, meta)} ${verb} excluded from this ranking** — ${poss} status source migrated to a platform AIWatch can't reach, so the incident feed is frozen and the Score would be inflated by an empty 30-day window (see "Stale source" under [Incident Summary](#incident-summary))`)
   }
+  if (recent.length) {
+    const verb = recent.length === 1 ? 'is' : 'are'
+    const poss = recent.length === 1 ? 'it was' : 'they were'
+    clauses.push(`**${joinNames(recent, meta)} ${verb} excluded from this ranking** — ${poss} added to AIWatch mid-month, so the partial-month Score rests on insufficient coverage; ${recent.length === 1 ? 'it rejoins' : 'they rejoin'} once a full month of data accrues`)
+  }
   return `*${ranked} of ${scored.length} services ranked. ${clauses.join('. ')}.*`
 }
 
 // ── Table builders ───────────────────────────────────────────────────
-function buildScoreTable(services, meta) {
-  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents) and STALE_SOURCE
-  // services (#591 — frozen feed inflates the Score from an empty window) from the ranking; both are
+function buildScoreTable(services, meta, period) {
+  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents), STALE_SOURCE services
+  // (#591 — frozen feed inflates the Score from an empty window), and recently-added services
+  // (reports#45 — partial-month coverage would rank off insufficient data) from the ranking; all are
   // surfaced in the ranking-exclusion note + the Incident Summary ("No incident feed" / "Stale source").
-  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
+  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s) && !isRecentlyAdded(s, period))
   const ranked = competitionRank(withScore, s => s.data.score)
   const rows = ranked.map(r => {
     const s = r.item
@@ -616,7 +636,7 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   const exclude = new Set(
     Object.entries(archive.services)
       .map(([id, data]) => ({ id, data }))
-      .filter(s => NO_INCIDENT_FEED.has(s.id) || isStaleSource(s))
+      .filter(s => NO_INCIDENT_FEED.has(s.id) || isStaleSource(s) || isRecentlyAdded(s, month)) // reports#45 — partial-month delta is not a real mover
       .map(s => s.id),
   )
 
@@ -803,8 +823,8 @@ function fillTemplate(template, month, archive, meta) {
   const services = Object.entries(archive.services).map(([id, data]) => ({ id, data }))
 
   // Build tables
-  const scoreTable = buildScoreTable(services, meta)
-  const rankingNote = buildRankingNote(services, meta)
+  const scoreTable = buildScoreTable(services, meta, month)
+  const rankingNote = buildRankingNote(services, meta, month)
   const { tableRows: incidentRows, zeroIncLine } = buildIncidentTable(services, meta)
   const uptimeRows = buildUptimeTable(services, meta)
   const latencyTable = buildLatencyTable(services, meta)
@@ -1183,6 +1203,7 @@ module.exports = {
   buildRankingNote,
   buildScoreTable,
   isStaleSource,
+  isRecentlyAdded,
   buildIncidentTable,
   officialUptimeFor,
   buildStaleSourceCaveat,
