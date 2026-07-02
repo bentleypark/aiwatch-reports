@@ -49,10 +49,10 @@ const ID_TO_NAME = {
   mistral: 'Mistral API', cohere: 'Cohere API', groq: 'Groq Cloud',
   together: 'Together AI', fireworks: 'Fireworks AI', cerebras: 'Cerebras Inference',
   perplexity: 'Perplexity', huggingface: 'Hugging Face',
-  replicate: 'Replicate', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
+  replicate: 'Replicate', fal: 'fal.ai', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
   deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
-  azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', stability: 'Stability AI',
-  voyageai: 'Voyage AI', modal: 'Modal', langsmith: 'LangChain (LangSmith)', helicone: 'Helicone', langfuse: 'Langfuse', runway: 'Runway', luma: 'Luma (Dream Machine)',
+  azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', turbopuffer: 'turbopuffer', stability: 'Stability AI', bfl: 'Black Forest Labs (FLUX)',
+  voyageai: 'Voyage AI', modal: 'Modal', twelvelabs: 'Twelve Labs', langsmith: 'LangChain (LangSmith)', helicone: 'Helicone', langfuse: 'Langfuse', runway: 'Runway', luma: 'Luma (Dream Machine)',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI', deepseekapp: 'DeepSeek App',
   claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
   copilot: 'GitHub Copilot', windsurf: 'Windsurf', junie: 'Junie',
@@ -67,8 +67,8 @@ const CATEGORY_ORDER = [
   'claude', 'openai', 'gemini', 'bedrock', 'azureopenai', 'mistral', 'cohere', 'groq',
   'together', 'fireworks', 'cerebras', 'perplexity', 'xai', 'deepseek', 'openrouter',
   // Voice & Inference (incl. observability — langsmith/helicone/langfuse — and video; coarse grouping)
-  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'pinecone',
-  'stability', 'voyageai', 'modal', 'langsmith', 'helicone', 'langfuse', 'runway', 'luma',
+  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'fal', 'pinecone', 'turbopuffer',
+  'stability', 'bfl', 'voyageai', 'modal', 'twelvelabs', 'langsmith', 'helicone', 'langfuse', 'runway', 'luma',
   // Coding Agents
   'claudecode', 'codex', 'cursor', 'copilot', 'windsurf', 'junie',
 ]
@@ -681,7 +681,7 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 42 services in category order (not just incident table)
+      // Use all 43 services in category order (not just incident table)
       const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
