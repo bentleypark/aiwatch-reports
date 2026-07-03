@@ -604,10 +604,14 @@ if (require.main === module) {
   }
 
   const scores = parseTable(md, 'AIWatch Score')
-  const incidents = parseTable(md, 'Incident Summary')
 
   if (scores.length === 0) { console.error('Failed to parse AIWatch Score table. Check "## AIWatch Score" heading exists.'); process.exit(1) }
-  if (incidents.length === 0) { console.error('Failed to parse Incident Summary table. Check "## Incident Summary" heading exists.'); process.exit(1) }
+  // The Incident Summary renders as an HTML <table> (not a markdown pipe table), so parseTable()
+  // can't read it and charts don't consume incident data anyway — the scores guard above is the
+  // report-well-formedness check. A markdown-table guard here false-failed on zero-security months:
+  // parseTable's non-greedy scan skipped the HTML table and matched the next markdown table further
+  // down — the Security Alerts section, which is conditionally omitted (buildSecuritySection returns
+  // '' when totalAlerts <= 0) — so the guard aborted the whole pipeline when it was absent (#49).
 
   const relDir = path.dirname(file)
   const monthMatch = relDir.match(/(\d{4}-\d{2})/)
