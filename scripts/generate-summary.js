@@ -1,9 +1,10 @@
-#!/usr/bin/env node
-// generate-summary.js — Parse monthly report tables and generate Opening + TL;DR
-// Usage: node scripts/generate-summary.js 2026-03/index.md
-
-const fs = require('fs')
-const path = require('path')
+// generate-summary.js — Library: table parser + monthly-report analyzer/narrative generators.
+// Consumed by generate-report.js (auto-draft narrative injection) and generate-charts.js
+// (parseTable for the Score table). NOT a CLI: the former standalone `node generate-summary.js
+// <report>.md` path was removed (#52) — it re-parsed the rendered markdown, but the Incident
+// Summary renders as an HTML <table> that parseTable (markdown pipe tables only) can't read, so
+// analyze() ran on mis-parsed rows. generate-report.js feeds analyze() correct rows built directly
+// from archive.services (archiveToAnalysisRows), superseding the CLI.
 
 // ── Table parser ──────────────────────────────────────────
 function parseTable(md, heading) {
@@ -172,41 +173,3 @@ function generateStats(a) {
 
 // ── Exports for testing ───────────────────────────────────
 module.exports = { parseTable, toMinutes, fmtDuration, analyze, generateOpening, generateTldr, generateStats }
-
-// ── CLI execution ─────────────────────────────────────────
-if (require.main === module) {
-  const file = process.argv[2]
-  if (!file) {
-    console.error('Usage: node scripts/generate-summary.js <report.md>')
-    process.exit(1)
-  }
-
-  const md = fs.readFileSync(path.resolve(file), 'utf-8')
-  const scores = parseTable(md, 'AIWatch Score')
-  const incidents = parseTable(md, 'Incident Summary')
-
-  if (scores.length === 0 || incidents.length === 0) {
-    console.error('Failed to parse tables. Check heading names match.')
-    process.exit(1)
-  }
-
-  const titleMatch = md.match(/^#\s+(\w+ \d{4})/m)
-  const monthYear = titleMatch ? titleMatch[1] : '[MONTH] [YEAR]'
-
-  const a = analyze(scores, incidents)
-
-  console.log('═══════════════════════════════════════════')
-  console.log('  OPENING NARRATIVE')
-  console.log('═══════════════════════════════════════════\n')
-  console.log(generateOpening(monthYear, a))
-
-  console.log('\n═══════════════════════════════════════════')
-  console.log('  TL;DR')
-  console.log('═══════════════════════════════════════════\n')
-  console.log(generateTldr(a, incidents))
-
-  console.log('\n═══════════════════════════════════════════')
-  console.log('  STATS')
-  console.log('═══════════════════════════════════════════\n')
-  console.log(generateStats(a))
-}
