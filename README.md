@@ -35,7 +35,7 @@ Each monthly report includes:
 - **AIWatch Score**: Weighted composite of uptime (40pts), incident affected days (25pts), recovery time (15pts), and probe-based responsiveness (20pts). Services without probe data use 80→100 score redistribution.
 - **Uptime figures**: Official status page metrics — single primary component basis where available, platform-wide average otherwise
 - **Incident counts**: Per-component aggregation — some providers (e.g., Anthropic) report per model, so counts may exceed distinct outages
-- **API probe**: Direct RTT measurement every 5 minutes to 20 services with public endpoints (supplementary monitoring data)
+- **API probe**: Direct RTT measurement every 5 minutes to 31 probe targets with public endpoints (supplementary monitoring data)
 - **3-Month Trend (Notable Movers)**: ranked by the largest single change across **Score / MTTR / total downtime** over the window — incident-feed *measured* metrics. Uptime is deliberately excluded: the archive's `uptime` field mixes per-service sources (status-page group aggregates, estimate/poll-derived figures) so a cross-service uptime delta is misleading (a 3-month official-uptime trend awaits aiwatch#586 + ≥3 months of the clean `officialUptime` field). Direction (🔺/🔻) follows the bold *headline* metric, not Score. Services the Score ranking excludes (no-incident-feed / stale source) are excluded from movers too. The first point is flagged when its month is partial (mid-month onboarding); MTTR/downtime are measured over the months that have incident data.
 
 Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)

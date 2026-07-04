@@ -123,7 +123,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 These p75 figures are the input to the **Responsiveness** component (20% weight) of [AIWatch Score](#aiwatch-score--[month]-[year]-reliability-rankings). Lower is better. The two tables answer different questions: Score Rankings sorts by *which service is safest to rely on* (combining uptime, incidents, recovery, and responsiveness); this table sorts by *which service is fastest at the network layer*.
 
 <!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
-<!-- 20 probe-covered API services. Non-probe services (Bedrock, Azure OpenAI, Pinecone) excluded. -->
+<!-- 31 probe targets (30 API services incl. twelvelabs + cursor). Non-probe API services (Bedrock, Azure OpenAI, Modal) excluded. -->
 <!-- p95 + Spikes are present in probe:daily:{date} (CLAUDE.md KV schema) but not yet
      surfaced by /api/report. vs-Last-Month additionally requires reading the previous
      month's archive:monthly:* and computing deltas. Re-add the columns once the
@@ -133,7 +133,7 @@ These p75 figures are the input to the **Responsiveness** component (20% weight)
 |---|---|---|
 | 1 | | |
 
-> **Note**: Probe RTT measures direct API endpoint response time from Cloudflare Workers edge (5-min intervals). Values reflect network round-trip time, not inference latency. Services without probe coverage (Bedrock, Azure OpenAI, Pinecone) are excluded from rankings.
+> **Note**: Probe RTT measures direct API endpoint response time from Cloudflare Workers edge (5-min intervals). Values reflect network round-trip time, not inference latency. Services without probe coverage (Bedrock, Azure OpenAI, Modal) are excluded from rankings.
 
 ---
 
