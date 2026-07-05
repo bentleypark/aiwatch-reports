@@ -1455,5 +1455,261 @@ test('returns empty when fewer than 2 months of data exist', () => {
   }
 })
 
+// ── Narrative recurrence check (aiwatch-reports#54) ──────────────────
+const {
+  extractNarrativeSubjects,
+  detectRecurrence,
+  buildRecurrenceBlock,
+  injectRecurrenceCheck,
+  buildMomIncidentDeltas,
+  loadPriorNarrative,
+  RECURRENCE_OPEN_MARKER,
+  RECURRENCE_CLOSE_MARKER,
+} = require('./generate-report')
+const osR = require('os')
+const chartsR = require('./generate-charts')
+const { computeCurrentSubjects } = require('./generate-report')
+
+// A minimal published-report fixture: a Score table (the self-contained lexicon) plus
+// the three narrative slots, mirroring the real report structure.
+function sampleReport({ highIncident, keyInsight, affected }) {
+  return [
+    '# Report',
+    '',
+    '## Summary',
+    '',
+    '- **Most reliable**: Modal (97/100)',
+    `- **High incident count, fast recovery**: ${highIncident}`,
+    '',
+    '## Key Insight',
+    '',
+    keyInsight,
+    '',
+    '## AIWatch Score — Test 2026 Rankings',
+    '',
+    '| Rank | Service | Score | Grade |',
+    '|------|---------|-------|-------|',
+    '| 1 | Modal | 97 | Excellent |',
+    '| 2 | Together AI | 84 | Good |',
+    '| 3 | Mistral API | 78 | Good |',
+    '| 4 | ChatGPT | 70 | Good |',
+    '| 5 | Gemini API | 64 | Fair |',
+    '',
+    '## Notable Incidents',
+    '',
+    '### 1. Something broke',
+    `**Affected**: ${affected}`,
+    '**Duration**: 2h',
+    '',
+    '## Observations',
+    '',
+    '- done',
+  ].join('\n')
+}
+
+console.log('\nextractNarrativeSubjects (aiwatch-reports#54)')
+
+test('pulls the High-incident bullet subjects (name-before-stats)', () => {
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents, 43m avg) and Mistral API (78 incidents, 19m avg)',
+    keyInsight: '- **Pattern 1**: nothing',
+    affected: 'Gemini API',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq(s.summary.join('|'), 'Together AI|Mistral API')
+})
+
+test('High-incident subjects are canonicalized to the lexicon (Mistral → Mistral API)', () => {
+  // The flagship false-negative: a bare "Mistral" one month must fold onto "Mistral API"
+  // so it matches a "Mistral API" subject next month (both are the same Score row).
+  const md = sampleReport({
+    highIncident: 'Mistral (97 incidents) and Together AI (139 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq(s.summary.join('|'), 'Mistral API|Together AI')
+})
+
+test('Key Insight subjects come from bold-lead bullets (Pattern OR free-form label), not prose', () => {
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: [
+      'Prose mentioning ChatGPT that must NOT count as a subject.',
+      '',
+      '- **Pattern 1 — counts**: Gemini API drove the month; unrelated Foobar ignored.',
+      '- **Major-LLM concentration risk, two months running**: Mistral API stayed elevated.',
+    ].join('\n'),
+    affected: 'Gemini API',
+  })
+  const s = extractNarrativeSubjects(md)
+  assert.ok(s.keyInsight.includes('Gemini API'), 'Pattern-labelled bullet subject found')
+  assert.ok(s.keyInsight.includes('Mistral API'), 'free-form bold-label bullet subject found (not just "Pattern N")')
+  assert.ok(!s.keyInsight.includes('ChatGPT'), 'prose-only mention excluded (scoped to bold-lead bullets)')
+  assert.ok(!s.keyInsight.includes('Foobar'), 'non-lexicon token excluded')
+})
+
+test('Notable Affected expands "(also …)" and filters description noise to the lexicon', () => {
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API (newly-created keys), Mistral API (also ChatGPT)',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq(s.notable.join('|'), 'Gemini API|Mistral API|ChatGPT')
+})
+
+test('missing sections and garbage input degrade to [] without throwing', () => {
+  const empty = extractNarrativeSubjects('## Nothing here')
+  eq(`${empty.summary.length}${empty.keyInsight.length}${empty.notable.length}`, '000')
+  const junk = extractNarrativeSubjects(null)
+  eq(`${junk.summary.length}${junk.keyInsight.length}${junk.notable.length}`, '000')
+})
+
+console.log('\ndetectRecurrence (aiwatch-reports#54)')
+
+const PRIORS_3 = [
+  { month: '2026-03', subjects: { summary: ['Together AI'], keyInsight: [], notable: [] } },
+  { month: '2026-04', subjects: { summary: ['Together AI', 'Mistral API'], keyInsight: [], notable: [] } },
+  { month: '2026-05', subjects: { summary: ['together ai'], keyInsight: ['ChatGPT'], notable: [] } },
+]
+
+test('flags a subject that filled the same slot in ≥2 of the last 3 months', () => {
+  const flags = detectRecurrence({ summary: ['Together AI'], keyInsight: [], notable: [] }, PRIORS_3)
+  eq(flags.length, 1)
+  eq(flags[0].service, 'Together AI')
+  eq(flags[0].slot, 'summary')
+  eq(flags[0].monthsSeen.join(','), '2026-03,2026-04,2026-05') // case-insensitive match on 05
+})
+
+test('does NOT flag a subject seen in only 1 month', () => {
+  const flags = detectRecurrence({ summary: ['Mistral API'], keyInsight: [], notable: [] }, PRIORS_3)
+  eq(flags.length, 0)
+})
+
+test('slots are isolated — a summary repeat does not flag the notable slot', () => {
+  const flags = detectRecurrence({ notable: ['Together AI'], summary: [], keyInsight: [] }, PRIORS_3)
+  eq(flags.length, 0)
+})
+
+test('window caps the look-back — a 4th-oldest month is ignored', () => {
+  const priors = [
+    ...PRIORS_3,
+    { month: '2026-02', subjects: { summary: ['Cohere API'], keyInsight: [], notable: [] } },
+  ]
+  // 'Cohere API' only in the 2026-02 entry, which is the 4th → outside the window of 3.
+  eq(detectRecurrence({ summary: ['Cohere API'], keyInsight: [], notable: [] }, priors).length, 0)
+})
+
+test('empty prior history yields no flags', () => {
+  eq(detectRecurrence({ summary: ['Together AI'] }, []).length, 0)
+})
+
+console.log('\nbuildRecurrenceBlock / injectRecurrenceCheck (aiwatch-reports#54)')
+
+test('no flags → empty block (clean omission)', () => {
+  eq(buildRecurrenceBlock([]), '')
+  eq(buildRecurrenceBlock([], { currentMonth: '2026-06' }), '')
+})
+
+test('block carries the delete-before-merge fence + MoM hint', () => {
+  const block = buildRecurrenceBlock(
+    [{ service: 'Together AI', slot: 'summary', monthsSeen: ['2026-04', '2026-05'] }],
+    { currentMonth: '2026-06', priorCount: 2, momByService: { 'Together AI': { prev: 133, curr: 85 } } },
+  )
+  assert.ok(block.startsWith(RECURRENCE_OPEN_MARKER), 'opens with fence marker')
+  assert.ok(block.includes('DELETE this entire block before merge'), 'delete-before-merge instruction present')
+  assert.ok(block.trim().endsWith(RECURRENCE_CLOSE_MARKER), 'closes with fence marker')
+  assert.ok(block.includes('Together AI'), 'names the subject')
+  assert.ok(block.includes('133 → this month 85'), 'MoM delta rendered')
+})
+
+test('injects the block above "## Summary" and is idempotent', () => {
+  const block = buildRecurrenceBlock(
+    [{ service: 'Together AI', slot: 'summary', monthsSeen: ['2026-04', '2026-05'] }],
+    { currentMonth: '2026-06', priorCount: 2 },
+  )
+  const once = injectRecurrenceCheck('intro\n\n## Summary\n\n- bullet', block)
+  assert.ok(once.indexOf(RECURRENCE_OPEN_MARKER) < once.indexOf('## Summary'), 'block sits above Summary')
+  const twice = injectRecurrenceCheck(once, block)
+  eq(twice, once) // idempotent — open marker already present
+  const markerCount = (twice.match(new RegExp(RECURRENCE_OPEN_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+  eq(markerCount, 1)
+})
+
+test('empty block is a no-op injection', () => {
+  eq(injectRecurrenceCheck('## Summary\n\n- x', ''), '## Summary\n\n- x')
+})
+
+console.log('\nbuildMomIncidentDeltas + loadPriorNarrative (aiwatch-reports#54)')
+
+test('buildMomIncidentDeltas pairs this-month vs last-month incident counts', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'mom-'))
+  try {
+    const togetherId = chartsR.nameToId('Together AI')
+    // prev month for '2026-06' is '2026-05'
+    fsT.writeFileSync(pathT.join(dir, '2026-05.json'), JSON.stringify({
+      archive: { services: { [togetherId]: { incidents: 133 } } },
+    }))
+    const archive = { services: { [togetherId]: { score: 84, grade: 'good', incidents: 85, totalDowntimeMin: 60, avgResolutionMin: 40 } } }
+    const meta = { [togetherId]: { name: 'Together AI' } }
+    const map = buildMomIncidentDeltas(archive, meta, '2026-06', { dataDir: dir })
+    eq(map['Together AI'].curr, 85)
+    eq(map['Together AI'].prev, 133)
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('buildMomIncidentDeltas returns {} when the prior _data archive is absent (graceful)', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'mom-empty-'))
+  try {
+    const archive = { services: { together: { score: 84, incidents: 85 } } }
+    eq(Object.keys(buildMomIncidentDeltas(archive, { together: { name: 'Together AI' } }, '2026-06', { dataDir: dir })).length, 0)
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('computeCurrentSubjects derives slots from archive data (top-incident → summary)', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'cur-'))
+  try {
+    const mid = chartsR.nameToId('Mistral API')
+    const tid = chartsR.nameToId('Together AI')
+    const archive = { services: {
+      [mid]: { score: 78, grade: 'good', incidents: 155, totalDowntimeMin: 60, avgResolutionMin: 19 },
+      [tid]: { score: 84, grade: 'good', incidents: 133, totalDowntimeMin: 90, avgResolutionMin: 43 },
+    } }
+    const meta = { [mid]: { name: 'Mistral API' }, [tid]: { name: 'Together AI' } }
+    const s = computeCurrentSubjects(archive, meta, '2026-06', { dataDir: dir }) // no _data → movers drop
+    eq(s.summary.slice().sort().join('|'), 'Mistral API|Together AI') // top-2 incident counts
+    assert.ok(s.keyInsight.includes('Mistral API'), 'top-incident feeds keyInsight too')
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('computeCurrentSubjects returns empty slots for an empty archive (no throw)', () => {
+  const s = computeCurrentSubjects({ services: {} }, {}, '2026-06', { dataDir: fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'cur-empty-')) })
+  eq(`${s.summary.length}${s.keyInsight.length}${s.notable.length}`, '000')
+})
+
+test('loadPriorNarrative skips months with no index.md (never throws)', () => {
+  const root = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'prior-'))
+  try {
+    // Only 2026-05 exists; 2026-03/04 are absent → skipped, not thrown.
+    fsT.mkdirSync(pathT.join(root, '2026-05'))
+    fsT.writeFileSync(pathT.join(root, '2026-05', 'index.md'), sampleReport({
+      highIncident: 'Together AI (133 incidents)', keyInsight: '- x', affected: 'Gemini API',
+    }))
+    const prior = loadPriorNarrative('2026-06', { rootDir: root })
+    eq(prior.length, 1)
+    eq(prior[0].month, '2026-05')
+    eq(prior[0].subjects.summary.join('|'), 'Together AI')
+  } finally {
+    fsT.rmSync(root, { recursive: true, force: true })
+  }
+})
+
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)

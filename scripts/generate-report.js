@@ -1012,7 +1012,7 @@ function injectAutoDraft(filled, opening, tldr) {
 // (by passing a stub `summaryMod` whose `analyze` throws). main() routes through
 // this so the failure-isolation contract — "narrative-generation failure never
 // blocks the deterministic data pipeline" — is testable, not just documented.
-function applyAutoDraft(filled, archive, meta, month, summaryMod = summary) {
+function applyAutoDraft(filled, archive, meta, month, summaryMod = summary, momByService = {}) {
   try {
     const { scores, incidents } = archiveToAnalysisRows(archive, meta)
     if (scores.length === 0 || incidents.length === 0) {
@@ -1021,7 +1021,7 @@ function applyAutoDraft(filled, archive, meta, month, summaryMod = summary) {
     }
     const a = summaryMod.analyze(scores, incidents)
     const opening = summaryMod.generateOpening(`${monthName(month)} ${month.split('-')[0]}`, a)
-    const tldr = summaryMod.generateTldr(a, incidents)
+    const tldr = summaryMod.generateTldr(a, incidents, momByService)
     return injectAutoDraft(filled, opening, tldr)
   } catch (err) {
     console.warn('[generate-report] Auto-draft injection failed (continuing with un-injected draft):', err instanceof Error ? err.message : err)
@@ -1145,10 +1145,21 @@ async function main() {
   }
   const filled = fillTemplate(template, month, archive, meta)
 
+  // aiwatch-reports#54 — month-over-month incident-count deltas, used to MoM-frame the
+  // auto-draft "Most incidents" bullet AND the recurrence block's "133 → 85" hint.
+  // Best-effort: an absent prior-month _data archive yields an empty map (no MoM tails).
+  const dataDir = path.join(__dirname, '..', '_data')
+  let momByService = {}
+  try {
+    momByService = buildMomIncidentDeltas(archive, meta, month, { dataDir })
+  } catch (err) {
+    console.warn('[generate-report] MoM delta computation failed (continuing without deltas):', err instanceof Error ? err.message : err)
+  }
+
   // Auto-draft narrative is best-effort — never blocks the deterministic data pipeline.
   // applyAutoDraft swallows analyzer/parsing failures (logs `console.warn`, returns
   // `filled` unchanged); see its docstring above for the contract.
-  let withDraft = applyAutoDraft(filled, archive, meta, month)
+  let withDraft = applyAutoDraft(filled, archive, meta, month, summary, momByService)
   if (withDraft !== filled) {
     console.log('[generate-report] Injected auto-draft narrative (Opening → Key Insight; TL;DR → Summary).')
   }
@@ -1174,6 +1185,24 @@ async function main() {
     console.warn('[generate-report] Narrative injection failed (continuing without it):', err instanceof Error ? err.message : err)
   }
 
+  // aiwatch-reports#54 — flag narrative subjects repeated across prior months. Best-effort:
+  // a missing/corrupt prior month degrades (loadPriorNarrative skips it), never throws.
+  try {
+    const currentSubjects = computeCurrentSubjects(archive, meta, month, { dataDir })
+    const priorMonths = loadPriorNarrative(month, { rootDir: OUT_DIR_ROOT })
+    const flags = detectRecurrence(currentSubjects, priorMonths)
+    const block = buildRecurrenceBlock(flags, { currentMonth: month, priorCount: priorMonths.length, momByService })
+    const beforeRecurrence = withDraft
+    withDraft = injectRecurrenceCheck(withDraft, block)
+    if (withDraft !== beforeRecurrence) {
+      console.log(`[generate-report] Injected RECURRENCE CHECK — ${flags.length} repeated subject${flags.length === 1 ? '' : 's'} (review, then DELETE the block before merge).`)
+    } else if (flags.length === 0) {
+      console.log('[generate-report] No narrative recurrence vs prior months.')
+    }
+  } catch (err) {
+    console.warn('[generate-report] Recurrence check failed (continuing without it):', err instanceof Error ? err.message : err)
+  }
+
   const outDir = path.join(OUT_DIR_ROOT, month)
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'index.md')
@@ -1181,6 +1210,296 @@ async function main() {
 
   console.log(`[generate-report] ✓ Wrote ${month}/index.md (published: false)`)
   console.log(`[generate-report]   Review narrative sections (including AUTO-DRAFT), then flip published: true and merge.`)
+}
+
+// ── Narrative recurrence check (aiwatch-reports#54) ──────────────────
+//
+// The hand-authored narrative slots (Summary "High incident count" bullet, Key
+// Insight patterns, Notable Incidents) have no memory of prior months, so the same
+// framing recurs (Together AI led the "High incident count" bullet Apr/May/Jun) and
+// is only caught by a human at edit time. This injects a generate-time RECURRENCE
+// CHECK block — the same class of mechanical gate #415 was on the aiwatch side:
+// a passive "compare against last month" rule gets only probabilistic compliance.
+//
+// Two pure cores (unit-tested, no I/O): `extractNarrativeSubjects` reads the subject
+// services out of a prior month's published index.md per slot; `detectRecurrence`
+// flags any current-month subject that also filled the SAME slot in ≥2 of the last 3
+// months. The I/O wrappers read the prior months + inject the block behind the same
+// delete-before-merge fence as AUTO-DRAFT, and degrade gracefully (a missing/corrupt
+// prior month is skipped, never thrown — same contract as the charts prior-month read).
+
+// Slots we track. Keyed the same on the current-subject side (computeCurrentSubjects)
+// and the prior-month side (extractNarrativeSubjects) so detectRecurrence can pair them.
+const RECURRENCE_SLOTS = ['summary', 'keyInsight', 'notable']
+const RECURRENCE_WINDOW = 3 // look back this many published months
+const RECURRENCE_MIN = 2    // flag a subject repeated in ≥ this many of the window
+
+const RECURRENCE_OPEN_MARKER = '<!-- BEGIN RECURRENCE CHECK — review, reframe around the change, then DELETE this entire block before merge -->'
+const RECURRENCE_CLOSE_MARKER = '<!-- END RECURRENCE CHECK -->'
+
+// Human label per slot for the injected block.
+const RECURRENCE_SLOT_LABEL = {
+  summary: "the Summary 'High incident count' bullet",
+  keyInsight: 'a Key Insight pattern',
+  notable: 'Notable Incidents',
+}
+
+// Case/spacing-insensitive service-name key for cross-month matching. Prior-month
+// names are read from rendered markdown (author-typed) so exact equality is unsafe.
+function normSubject(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+// Text of a `## <heading>` section up to (excluding) the next top-level `## ` or EOF.
+// Returns '' when the heading is absent. The Score heading carries a "— Month Year"
+// suffix, so callers pass a prefix and we match `## <prefix>` to end-of-line. No `m`
+// flag: the terminating `$` must mean end-of-STRING (EOF fallback), not end-of-line.
+function sectionText(md, headingPrefix) {
+  const esc = headingPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`\\n##\\s+${esc}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`)
+  const m = ('\n' + String(md)).match(re)
+  return m ? m[1] : ''
+}
+
+// Service display-names the report names in its own AIWatch Score table — a
+// self-contained lexicon so the prose slots can be scanned without external meta.
+function serviceNameLexicon(md) {
+  return summary.parseTable(md, 'AIWatch Score')
+    .map(r => r.Service)
+    .filter(Boolean)
+}
+
+// Fold an author-typed name variant onto its canonical Score-table name so cross-month
+// matching survives spelling drift — the "High incident count" bullet says "Mistral" one
+// month and "Mistral API" the next, but both are the same "Mistral API" Score row. Exact
+// match wins; else a UNIQUE prefix-word-run resolve ("mistral" → "Mistral API"); an
+// ambiguous or absent match keeps the raw token (never a wrong canonicalization).
+function canonicalizeToLexicon(name, lexicon) {
+  const key = normSubject(name)
+  if (!key) return name
+  const exact = lexicon.find(l => normSubject(l) === key)
+  if (exact) return exact
+  const startsWithToken = lexicon.filter(l => normSubject(l).startsWith(key + ' '))
+  if (startsWithToken.length === 1) return startsWithToken[0]
+  const tokenStartsWith = lexicon.filter(l => key.startsWith(normSubject(l) + ' '))
+  if (tokenStartsWith.length === 1) return tokenStartsWith[0]
+  return name
+}
+
+// Which lexicon names appear in `text` (whole-name, boundary-guarded so "Codex"
+// doesn't match inside another word). Order-preserving, de-duplicated.
+function subjectsInText(text, lexicon) {
+  const seen = new Set()
+  const out = []
+  for (const name of lexicon) {
+    const key = normSubject(name)
+    if (seen.has(key)) continue
+    const re = new RegExp(`(?<![\\w])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'i')
+    if (re.test(text)) { seen.add(key); out.push(name) }
+  }
+  return out
+}
+
+// Subjects of the Summary "High incident count" bullet — the proven recurrence.
+// Matches the bullet by its bold label (hand-authored "High incident count…" or the
+// auto-draft's "Most incidents"), then pulls each service name that precedes a `(`
+// stat group ("Mistral API (155 incidents…) and Together AI (133…)"). Each name is
+// canonicalized to the report's own lexicon so "Mistral" and "Mistral API" fold together
+// across months (the false-negative this feature exists to prevent).
+function highIncidentBulletSubjects(summaryTxt, lexicon) {
+  const bulletRe = /^[-*]\s*\*\*(?:high incident|most incidents)[^*]*\*\*:?\s*(.+)$/im
+  const m = summaryTxt.match(bulletRe)
+  if (!m) return []
+  const out = []
+  const seen = new Set()
+  for (const nm of m[1].matchAll(/([A-Z][A-Za-z0-9.&()/-]*(?:\s+[A-Z0-9][A-Za-z0-9.&()/-]*)*)\s*\(/g)) {
+    const name = canonicalizeToLexicon(nm[1].trim(), lexicon)
+    const key = normSubject(name)
+    if (name && !seen.has(key)) { seen.add(key); out.push(name) }
+  }
+  return out
+}
+
+// Key Insight subjects = services named in the section's BOLD-LEAD bullets (`- **…**: …`)
+// ONLY, not its prose — the bold-lead bullets ARE the recurring framings. Scanning the full
+// ~200-line section pulls every incidentally-mentioned service (noisy flags); requiring the
+// literal word "Pattern" is too strict (real months use free-form labels like "Single-month
+// deltas…" / "…two months running"), so we scope to any bold-lead bullet then filter to the
+// report's own lexicon — precision without depending on a label convention.
+function keyInsightSubjects(keyInsightTxt, lexicon) {
+  const boldBullets = (keyInsightTxt.match(/^[-*]\s*\*\*[^\n]*$/gim) || []).join('\n')
+  return boldBullets ? subjectsInText(boldBullets, lexicon) : []
+}
+
+// Service subjects named on `**Affected**:` lines in the Notable Incidents section.
+// "(also Claude Code, claude.ai)" is expanded to its service list; every other
+// parenthetical is descriptive prose and dropped. Results are filtered to the report's
+// own service lexicon so incident-description noise ("newly-created keys") never leaks
+// in as a subject.
+function affectedSubjects(notableTxt, lexicon) {
+  const known = new Map(lexicon.map(n => [normSubject(n), n]))
+  const out = []
+  const seen = new Set()
+  for (const m of notableTxt.matchAll(/^\s*\*\*Affected:?\*\*:?\s*(.+)$/gim)) {
+    const expanded = m[1].replace(/\(also\s+([^)]*)\)/gi, ', $1').replace(/\([^)]*\)/g, '')
+    for (const part of expanded.split(/\s*(?:&|,|\band\b)\s*/i)) {
+      const canon = known.get(normSubject(part))
+      if (canon && !seen.has(normSubject(canon))) { seen.add(normSubject(canon)); out.push(canon) }
+    }
+  }
+  return out
+}
+
+// PURE. Extract the subject services of each tracked narrative slot from a prior
+// month's published index.md. Never throws — an absent/odd section yields []. The
+// lexicon is derived from the same document's Score table (self-contained).
+function extractNarrativeSubjects(indexMd) {
+  const md = String(indexMd || '')
+  const lexicon = serviceNameLexicon(md)
+  return {
+    summary: highIncidentBulletSubjects(sectionText(md, 'Summary'), lexicon),
+    keyInsight: keyInsightSubjects(sectionText(md, 'Key Insight'), lexicon),
+    notable: affectedSubjects(sectionText(md, 'Notable Incidents'), lexicon),
+  }
+}
+
+// PURE. Flag each current-month subject that also filled the SAME slot in ≥ `min` of
+// the (up to `window`) prior months.
+//   currentSubjectsBySlot: { slot -> [name] }
+//   priorMonths:           [{ month, subjects: { slot -> [name] } }]
+// Returns [{ service, slot, monthsSeen: [YYYY-MM,…] }], one per (service, slot).
+function detectRecurrence(currentSubjectsBySlot, priorMonths, opts = {}) {
+  const { window = RECURRENCE_WINDOW, min = RECURRENCE_MIN } = opts
+  const recent = (priorMonths || []).slice(0, window)
+  const flags = []
+  for (const slot of RECURRENCE_SLOTS) {
+    const current = currentSubjectsBySlot?.[slot] || []
+    const emitted = new Set()
+    for (const svc of current) {
+      const key = normSubject(svc)
+      if (!key || emitted.has(key)) continue
+      emitted.add(key)
+      const monthsSeen = recent
+        .filter(pm => (pm.subjects?.[slot] || []).some(n => normSubject(n) === key))
+        .map(pm => pm.month)
+      if (monthsSeen.length >= min) flags.push({ service: svc, slot, monthsSeen })
+    }
+  }
+  return flags
+}
+
+// ── Recurrence I/O wrappers ──────────────────────────────────────────
+
+// Read the last `window` published months' narrative subjects. Graceful: a month
+// with no `index.md` (or an unreadable one) is skipped, matching the charts
+// prior-month contract (a partial history degrades, never throws).
+function loadPriorNarrative(month, opts = {}) {
+  const { rootDir = OUT_DIR_ROOT, window = RECURRENCE_WINDOW } = opts
+  const prior = []
+  for (const pm of charts.monthsBefore(month, window)) {
+    let md
+    try {
+      md = fs.readFileSync(path.join(rootDir, pm, 'index.md'), 'utf-8')
+    } catch {
+      continue // month never published / unreadable → skip
+    }
+    try {
+      prior.push({ month: pm, subjects: extractNarrativeSubjects(md) })
+    } catch (err) {
+      console.warn(`[generate-report] recurrence: could not parse ${pm}/index.md — skipping (${err instanceof Error ? err.message : err})`)
+    }
+  }
+  return prior
+}
+
+// Month-over-month incident-count deltas, keyed by service display name, for every
+// service with a count this month AND last month. Feeds both the RECURRENCE block's
+// "133 → 85" hint and the auto-draft's MoM-framed "Most incidents" bullet (#54 bonus).
+function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
+  const { dataDir = path.join(__dirname, '..', '_data') } = opts
+  const map = {}
+  const prevMonth = charts.monthsBefore(month, 1)[0]
+  const prev = charts.readDataArchive(prevMonth, dataDir)
+  if (!prev || !prev.services) return map
+  const { incidents } = archiveToAnalysisRows(archive, meta)
+  for (const r of incidents) {
+    const curr = parseInt(r.Incidents, 10)
+    if (Number.isNaN(curr)) continue
+    const id = charts.nameToId(r.Service)
+    const p = prev.services[id]?.incidents
+    if (typeof p !== 'number') continue
+    map[r.Service] = { curr, prev: p }
+  }
+  return map
+}
+
+// Current-month likely narrative subjects per slot, derived from the archive data
+// already computed for the report — top incident-count services (drive the Summary
+// bullet + Key Insight Pattern-1), the slowest-recovery service (Pattern-2), and the
+// Notable Movers (Key Insight turnaround + Notable Incidents). Best-effort: a trend
+// gap (fewer than 2 months of _data) just drops the movers.
+function computeCurrentSubjects(archive, meta, month, opts = {}) {
+  const { dataDir = path.join(__dirname, '..', '_data') } = opts
+  const { scores, incidents } = archiveToAnalysisRows(archive, meta)
+  if (scores.length === 0 || incidents.length === 0) return { summary: [], keyInsight: [], notable: [] }
+  const a = summary.analyze(scores, incidents)
+  const topIncident = [...incidents]
+    .filter(r => parseInt(r.Incidents, 10) > 0)
+    .sort((x, y) => parseInt(y.Incidents, 10) - parseInt(x.Incidents, 10))
+    .slice(0, 2)
+    .map(r => r.Service)
+  const slowest = a.slowestRecovery?.Service ? [a.slowestRecovery.Service] : []
+  let movers = []
+  try {
+    const cur = charts.toMonthEntry(month, archive)
+    const entries = charts.loadTrendEntries(month, cur, { dataDir })
+    if (entries.length >= 2) {
+      const trend = charts.buildTrendSeries(entries)
+      movers = charts.computeNotableMovers(trend, { nameFor: id => serviceName(id, meta) }).map(m => m.name)
+    }
+  } catch { /* movers are optional context */ }
+  const uniq = arr => [...new Set(arr.filter(Boolean))]
+  return {
+    summary: uniq(topIncident),
+    keyInsight: uniq([...topIncident, ...slowest, ...movers]),
+    notable: uniq([...topIncident, ...movers]),
+  }
+}
+
+// Render the RECURRENCE CHECK block for the flags (or '' when none). Behind the same
+// delete-before-merge fence as AUTO-DRAFT so #55's lint + the "no fence in output"
+// sanity check catch a leak. `priorCount` = months actually available (the /N).
+function buildRecurrenceBlock(flags, opts = {}) {
+  if (!flags || flags.length === 0) return ''
+  const { currentMonth = '', priorCount = RECURRENCE_WINDOW, momByService = {} } = opts
+  const lines = [
+    RECURRENCE_OPEN_MARKER,
+    '_Narrative repeated vs prior months — lead with the month-over-month change or a fresh lens, then delete this block._',
+    '',
+  ]
+  for (const f of flags) {
+    const label = RECURRENCE_SLOT_LABEL[f.slot] || f.slot
+    const priors = f.monthsSeen.join(', ')
+    const nMonths = Math.max(priorCount, f.monthsSeen.length)
+    const thisMonth = currentMonth ? ` + this month (${currentMonth})` : ''
+    const mom = momByService[f.service]
+    const momHint = mom && typeof mom.prev === 'number' && typeof mom.curr === 'number'
+      ? ` (last month ${mom.prev} → this month ${mom.curr})`
+      : ''
+    lines.push(`- ⚠️ **${f.service}** — led ${label} in ${f.monthsSeen.length} of the last ${nMonths} published month${nMonths === 1 ? '' : 's'} (${priors})${thisMonth}.${momHint} → Reframe around the change or pick a fresh lens.`)
+  }
+  lines.push('', RECURRENCE_CLOSE_MARKER)
+  return lines.join('\n')
+}
+
+// Insert the block directly above `## Summary` (near the top, next to the narrative
+// work). Idempotent — a document already carrying the open marker is returned as-is.
+function injectRecurrenceCheck(filled, block) {
+  if (!block) return filled
+  if (filled.includes(RECURRENCE_OPEN_MARKER)) return filled
+  // Function replacer — `block` is a literal, so a `$`-sequence in a service name / hint
+  // can't be misread as a replacement pattern ($&, $1, …).
+  return filled.replace(/^## Summary$/m, () => `${block}\n\n## Summary`)
 }
 
 if (require.main === module) {
@@ -1236,4 +1555,15 @@ module.exports = {
   NOTABLE_CLOSE_MARKER,
   OBSERVATIONS_OPEN_MARKER,
   OBSERVATIONS_CLOSE_MARKER,
+  // Narrative recurrence check (aiwatch-reports#54) — pure cores reused by #55's lint.
+  extractNarrativeSubjects,
+  detectRecurrence,
+  buildRecurrenceBlock,
+  injectRecurrenceCheck,
+  buildMomIncidentDeltas,
+  computeCurrentSubjects,
+  loadPriorNarrative,
+  RECURRENCE_OPEN_MARKER,
+  RECURRENCE_CLOSE_MARKER,
+  RECURRENCE_SLOTS,
 }

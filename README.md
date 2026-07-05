@@ -70,6 +70,8 @@ The trend section + chart read the trailing months from `_data/` (prior months) 
 
 After generation, fill in the narrative sections (`Summary`, `Recommendations`, `Key Insight`, `Notable Incidents`, `Observations`), flip `published: false` → `true`, and merge.
 
+**Narrative recurrence check** (aiwatch-reports#54): when a likely narrative subject (a top-incident service, the slowest-recovery service, or a Notable Mover) also filled the **same slot** — the Summary "High incident count" bullet, a Key Insight pattern, or Notable Incidents — in ≥2 of the last 3 published months, the generator injects a `RECURRENCE CHECK` block above `## Summary` (e.g. *"Together AI led the Summary 'High incident count' bullet in 2 of the last 2 published months … (last month 133 → this month 85)"*). It has no memory of prior months otherwise, so the same framing recurred unnoticed (Together AI three months running). **Reframe around the month-over-month change, then delete the block** — it uses the same delete-before-merge fence as AUTO-DRAFT, and a leaked fence hard-fails the pre-publish lint. The auto-drafted "Most incidents" bullet is also MoM-framed by default (`155 incidents … — 97 last month (+58)`).
+
 ---
 
 ## About AIWatch
