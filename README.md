@@ -72,6 +72,8 @@ After generation, fill in the narrative sections (`Summary`, `Recommendations`, 
 
 **Narrative recurrence check** (aiwatch-reports#54): when a likely narrative subject (a top-incident service, the slowest-recovery service, or a Notable Mover) also filled the **same slot** — the Summary "High incident count" bullet, a Key Insight pattern, or Notable Incidents — in ≥2 of the last 3 published months, the generator injects a `RECURRENCE CHECK` block above `## Summary` (e.g. *"Together AI led the Summary 'High incident count' bullet in 2 of the last 2 published months … (last month 133 → this month 85)"*). It has no memory of prior months otherwise, so the same framing recurred unnoticed (Together AI three months running). **Reframe around the month-over-month change, then delete the block** — it uses the same delete-before-merge fence as AUTO-DRAFT, and a leaked fence hard-fails the pre-publish lint. The auto-drafted "Most incidents" bullet is also MoM-framed by default (`155 incidents … — 97 last month (+58)`).
 
+**Pre-publish recurrence lint** (aiwatch-reports#55): the publish-time enforcement of the same signal. `.github/workflows/lint-recurrence.yml` runs `scripts/lint-recurrence.js` on any PR that changes a `NNNN-NN/index.md`, reusing #54's `extractNarrativeSubjects`/`detectRecurrence` (single source of truth). On a `published: true` report it **fails** if any AUTO-DRAFT / RECURRENCE CHECK fence survived (draft scaffolding must never publish) and **warns** (PR annotation) when a service fills the same narrative slot as the immediately prior month — so a genuine recurrence can proceed after the author acknowledges it, but never *silently*. A `published: false` draft is exempt.
+
 ---
 
 ## About AIWatch
