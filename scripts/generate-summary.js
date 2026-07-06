@@ -107,7 +107,11 @@ function generateOpening(monthYear, a) {
   return `${monthYear} showed a clear divide: ${topStable} remained highly stable, while ${worstSvc?.Service} (${worstSvc?.Score}/100) experienced the most challenges. ${a.withIncidents.length} out of ${a.totalServices} services recorded at least one incident, with a combined downtime of ${fmtDuration(a.totalDowntimeMins)}.`
 }
 
-function generateTldr(a, incidents) {
+// `momByService` (aiwatch-reports#54 bonus) maps a service display name → { curr, prev }
+// incident counts. When present for the "Most incidents" subject, the bullet is
+// MoM-framed ("85 incidents … — 133 last month (−48)") so the default draft leads with
+// the change a human otherwise adds by hand. Default {} → unchanged snapshot wording.
+function generateTldr(a, incidents, momByService = {}) {
   const lines = []
 
   // Most reliable
@@ -130,9 +134,16 @@ function generateTldr(a, incidents) {
     lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score}/100${riskRow ? `, ${riskRow['Total Downtime']} total downtime` : ''})`)
   }
 
-  // Most incidents
+  // Most incidents (MoM-framed when a prior-month count is available — #54 bonus)
   if (a.mostIncidents) {
-    lines.push(`- **Most incidents**: ${a.mostIncidents.Service} (${a.mostIncidents.Incidents} incidents, ${a.mostIncidents['Total Downtime']} downtime)`)
+    const mom = momByService[a.mostIncidents.Service]
+    let momTail = ''
+    if (mom && typeof mom.prev === 'number' && typeof mom.curr === 'number') {
+      const d = mom.curr - mom.prev
+      const delta = d === 0 ? '±0' : `${d > 0 ? '+' : '−'}${Math.abs(d)}`
+      momTail = ` — ${mom.prev} last month (${delta})`
+    }
+    lines.push(`- **Most incidents**: ${a.mostIncidents.Service} (${a.mostIncidents.Incidents} incidents, ${a.mostIncidents['Total Downtime']} downtime${momTail})`)
   }
 
   // Recommendations

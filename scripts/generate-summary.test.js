@@ -244,6 +244,19 @@ test('most reliable shows perfect services', () => {
   assert(text.includes('ServiceA (100/100'), 'should show perfect score service')
 })
 
+test('MoM-frames the Most-incidents bullet when a prior count is provided (aiwatch-reports#54)', () => {
+  const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
+  const curr = parseInt(a.mostIncidents.Incidents, 10)
+  const text = generateTldr(a, MOCK_INCIDENTS, { [a.mostIncidents.Service]: { prev: curr + 40, curr } })
+  assert(text.includes(`${curr + 40} last month`), 'shows prior-month count')
+  assert(text.includes('(−40)'), 'shows signed delta')
+})
+
+test('omits the MoM tail when no prior count is provided (backward-compat)', () => {
+  const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
+  assert(!generateTldr(a, MOCK_INCIDENTS).includes('last month'), 'no MoM tail by default')
+})
+
 // ── generateStats ─────────────────────────────────────────
 console.log('\ngenerateStats')
 
