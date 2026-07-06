@@ -1,7 +1,7 @@
 const {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
-  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth,
+  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
 } = require('./generate-charts')
 const assert = require('assert')
 
@@ -487,6 +487,48 @@ test('rosterForMonth fail-opens on null roster (missing/corrupt snapshot)', () =
 
 test('rosterForMonth fail-opens on empty roster', () => {
   assert.deepStrictEqual(rosterForMonth(CAT, []), CAT)
+})
+
+// ── spreadLabelYs (trend end-label de-collision, aiwatch-reports#65) ──
+test('spreadLabelYs separates two labels at the same y by minGap', () => {
+  // Copilot(88)/Perplexity(88) both anchor at y=90 → must split
+  assert.deepStrictEqual(spreadLabelYs([90, 90], 12), [90, 102])
+})
+
+test('spreadLabelYs leaves already-spaced labels untouched', () => {
+  assert.deepStrictEqual(spreadLabelYs([90, 108, 135], 12), [90, 108, 135])
+})
+
+test('spreadLabelYs preserves INPUT order (not sorted order)', () => {
+  // input out of order: the label at index 0 (y=108) and index 1 (y=90) — output keeps index positions
+  assert.deepStrictEqual(spreadLabelYs([108, 90], 12), [108, 90])
+})
+
+test('spreadLabelYs cascades a tight cluster', () => {
+  // three within <minGap of each other → 90, 102, 114
+  assert.deepStrictEqual(spreadLabelYs([90, 95, 100], 12), [90, 102, 114])
+})
+
+test('spreadLabelYs handles single + empty', () => {
+  assert.deepStrictEqual(spreadLabelYs([90], 12), [90])
+  assert.deepStrictEqual(spreadLabelYs([], 12), [])
+})
+
+test('generateTrendSvg emits two same-final-Score movers at different label ys (wiring)', () => {
+  // guards against a future refactor silently unwiring spreadLabelYs while the pure-fn
+  // tests stay green — the actual #65 bug was two movers ending at 88 overlapping.
+  const trend = { months: ['2026-04', '2026-05', '2026-06'], partialMonths: new Set(), series: {} }
+  const movers = {
+    declining: [],
+    improving: [
+      { id: 'copilot', name: 'GitHub Copilot', delta: 19, points: [{ score: 69 }, { score: 78 }, { score: 88 }] },
+      { id: 'perplexity', name: 'Perplexity', delta: 12, points: [{ score: 76 }, { score: 82 }, { score: 88 }] },
+    ],
+  }
+  const svg = generateTrendSvg(trend, { movers, nameFor: id => id })
+  const ys = [...svg.matchAll(/<text[^>]*\sy="([0-9.]+)"[^>]*>(?:GitHub Copilot|Perplexity)/g)].map(m => Number(m[1]))
+  eq(ys.length, 2, `both mover labels present (got ${ys.length})`)
+  assert.ok(Math.abs(ys[0] - ys[1]) >= 12, `same-score labels must be ≥12 apart, got ${JSON.stringify(ys)}`)
 })
 
 // ── Summary ──────────────────────────────────────────────

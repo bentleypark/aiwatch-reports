@@ -510,6 +510,26 @@ function loadTrendEntries(month, currentEntry, opts = {}) {
   return entries
 }
 
+// PURE. De-collide a set of label y-anchors so none overlap: sort by y, greedily push
+// any label closer than `minGap` to the previous one down to `prev + minGap`, then
+// restore the input order. Returns a new array of adjusted ys (same order/length as
+// input). Two labels at the same y separate by exactly `minGap`; already-spaced labels
+// are untouched. Used for the trend chart's mover end-labels (aiwatch-reports#65).
+// Greedy push-DOWN (never centers): safe because movers cap at 3+3=6, so the worst-case
+// 72px spread fits the ~300px plot for realistic scores; only a pathological cluster of
+// near-0 decliners could reach the plot bottom.
+function spreadLabelYs(ys, minGap) {
+  const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y)
+  let prev = -Infinity
+  for (const o of order) {
+    if (o.y < prev + minGap) o.y = prev + minGap
+    prev = o.y
+  }
+  const out = new Array(ys.length)
+  for (const o of order) out[o.i] = o.y
+  return out
+}
+
 // ── Trend slope chart ────────────────────────────────────
 // All services render as faint context lines; the movers (decliners red, improvers
 // green) are emphasized + end-labeled. Partial months get a "*" on the x-axis label.
@@ -559,16 +579,30 @@ function generateTrendSvg(trend, opts = {}) {
     .filter(Boolean)
     .join('\n')
 
-  // mover lines (emphasized) + end labels
-  const moverRows = [...movers.declining, ...movers.improving].map(m => {
+  // mover lines (emphasized) + end labels. Labels anchor at the mover's final-score y;
+  // two movers finishing at the same Score would collide, so the label y-positions are
+  // de-collided (spreadLabelYs) — pushed apart to a minimum gap while the line still
+  // ties each label to its series by colour/endpoint (aiwatch-reports#65).
+  const moverList = [...movers.declining, ...movers.improving].map(m => {
     const color = m.delta < 0 ? COLORS.down : COLORS.operational
-    const line = polyFor(m.points, color, 2.5, 0.95)
     const drawn = m.points.map((p, i) => ({ p, i })).filter(o => o.p.score !== null)
     const lastDrawn = drawn[drawn.length - 1]
-    const label = lastDrawn
-      ? `  <text x="${(xFor(lastDrawn.i) + 8).toFixed(1)}" y="${(yFor(lastDrawn.p.score) + 4).toFixed(1)}" fill="${color}" font-size="11" font-family="ui-monospace,monospace">${escapeXml(m.name)} ${fmtScoreDelta(m.delta)}</text>`
+    return {
+      color,
+      line: polyFor(m.points, color, 2.5, 0.95),
+      labelX: lastDrawn ? xFor(lastDrawn.i) + 8 : null,
+      labelYNatural: lastDrawn ? yFor(lastDrawn.p.score) + 4 : null,
+      text: `${escapeXml(m.name)} ${fmtScoreDelta(m.delta)}`,
+    }
+  })
+  const labeled = moverList.filter(o => o.labelYNatural !== null)
+  const spreadYs = spreadLabelYs(labeled.map(o => o.labelYNatural), 12)
+  labeled.forEach((o, k) => { o.labelY = spreadYs[k] })
+  const moverRows = moverList.map(o => {
+    const label = o.labelX !== null
+      ? `  <text x="${o.labelX.toFixed(1)}" y="${o.labelY.toFixed(1)}" fill="${o.color}" font-size="11" font-family="ui-monospace,monospace">${o.text}</text>`
       : ''
-    return [line, label].filter(Boolean).join('\n')
+    return [o.line, label].filter(Boolean).join('\n')
   }).filter(Boolean).join('\n')
 
   const partialNote = partialMonths.size
@@ -596,7 +630,7 @@ module.exports = {
   // trend (aiwatch-reports#41)
   monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
-  generateTrendSvg, nameToId, ID_TO_NAME, TREND_MONTHS,
+  generateTrendSvg, spreadLabelYs, nameToId, ID_TO_NAME, TREND_MONTHS,
 }
 
 // ── CLI ──────────────────────────────────────────────────
