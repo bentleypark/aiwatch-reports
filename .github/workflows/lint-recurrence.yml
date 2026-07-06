@@ -1,0 +1,50 @@
+name: Recurrence Lint
+
+# Pre-publish backstop (aiwatch-reports#55) for narrative recurrence, the second layer
+# behind the generate-time RECURRENCE CHECK block (#54). Runs on any PR that touches a
+# report's index.md and lints ONLY the changed report(s):
+#   • FAIL — a leaked AUTO-DRAFT / RECURRENCE CHECK fence in a `published: true` report.
+#   • WARN — a service named in the same narrative slot as the immediately prior month.
+# A `published: false` draft is exempt (the fences are expected there).
+
+on:
+  pull_request:
+    paths:
+      - '[0-9][0-9][0-9][0-9]-[0-9][0-9]/index.md'
+
+# Read-only: `::error`/`::warning` workflow commands need no elevated token.
+permissions:
+  contents: read
+
+concurrency:
+  group: recurrence-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: pre-publish recurrence lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so we can diff against the PR base to find the changed reports.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Determine changed report index.md files
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # --diff-filter=ACMR: added/copied/modified/renamed-to only — exclude a DELETED
+          # or renamed-away report path (it's gone from HEAD, so linting it would ENOENT-fail CI).
+          files=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA"...HEAD -- '[0-9][0-9][0-9][0-9]-[0-9][0-9]/index.md' | tr '\n' ' ')
+          echo "Changed reports: ${files:-<none>}"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+      - name: Recurrence lint
+        if: steps.changed.outputs.files != ''
+        run: node scripts/lint-recurrence.js ${{ steps.changed.outputs.files }}
