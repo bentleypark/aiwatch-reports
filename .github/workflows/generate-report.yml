@@ -82,14 +82,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Reset local state to remote branch when it exists, so re-runs for the same
-          # month start from a clean baseline instead of failing the push as non-fast-forward.
-          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
-            git fetch origin "$BRANCH:$BRANCH"
-            git checkout "$BRANCH"
-          else
-            git checkout -b "$BRANCH"
-          fi
+          # The report files were generated onto the default (main) checkout ABOVE. Create/RESET
+          # the branch at that generated HEAD with `git checkout -B` — a plain `git checkout <branch>`
+          # aborts on an existing month because the untracked generated files (2026-06/index.md,
+          # assets/, _data/*.json) would be overwritten by the switch (#59). `-B` moves the branch
+          # pointer without touching the working tree, so the generated files survive and are committed.
+          # We still fetch the remote branch first — with an EXPLICIT refspec so the remote-tracking
+          # ref the force-with-lease below reads is always fresh (a bare `git fetch origin $BRANCH`
+          # only updates it opportunistically, so a re-run could otherwise be rejected as "stale info").
+          # First run (branch absent): fetch errors → `|| true` → force-with-lease creates the branch.
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
+          git checkout -B "$BRANCH"
 
           # _data/${MONTH}.json (snapshot) and index.md (Reports list entry) are added
           # alongside the report file + assets so the draft PR is self-contained — #15.
