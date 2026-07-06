@@ -1,7 +1,7 @@
 const {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
-  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows,
+  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth,
 } = require('./generate-charts')
 const assert = require('assert')
 
@@ -458,6 +458,35 @@ test('monthEntryFromScoreRows maps a parsed Score table to a current-month entry
 test('monthEntryFromScoreRows tolerates N/A scores', () => {
   const e = monthEntryFromScoreRows('2026-05', [{ Service: 'Voyage AI', Score: 'N/A', Grade: '' }])
   eq(e.services.voyageai.score, null)
+})
+
+// ── rosterForMonth (heatmap month-roster filter, aiwatch-reports#63) ──
+const CAT = ['claude', 'openai', 'bedrock', 'characterai', 'langfuse', 'turbopuffer', 'twelvelabs']
+
+test('rosterForMonth drops ids absent from the month archive (added after the month)', () => {
+  // archive = existed-in-month set (excludes July-added turbopuffer/twelvelabs)
+  const out = rosterForMonth(CAT, ['claude', 'openai', 'bedrock', 'characterai', 'langfuse'])
+  assert.deepStrictEqual(out, ['claude', 'openai', 'bedrock', 'characterai', 'langfuse'])
+  assert.ok(!out.includes('turbopuffer') && !out.includes('twelvelabs'))
+})
+
+test('rosterForMonth KEEPS score-excluded-but-existed services (bedrock/azure/characterai + mid-month)', () => {
+  // bedrock/characterai are score-withheld; langfuse is mid-month-added — all existed, all kept
+  const out = rosterForMonth(CAT, ['claude', 'bedrock', 'characterai', 'langfuse'])
+  assert.ok(out.includes('bedrock') && out.includes('characterai') && out.includes('langfuse'))
+})
+
+test('rosterForMonth preserves category order', () => {
+  const out = rosterForMonth(['a', 'b', 'c', 'd'], ['d', 'b', 'a'])
+  assert.deepStrictEqual(out, ['a', 'b', 'd']) // input order, filtered — not roster order
+})
+
+test('rosterForMonth fail-opens on null roster (missing/corrupt snapshot)', () => {
+  assert.deepStrictEqual(rosterForMonth(CAT, null), CAT)
+})
+
+test('rosterForMonth fail-opens on empty roster', () => {
+  assert.deepStrictEqual(rosterForMonth(CAT, []), CAT)
 })
 
 // ── Summary ──────────────────────────────────────────────

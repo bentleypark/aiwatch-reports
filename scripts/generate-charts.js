@@ -272,6 +272,20 @@ function readDataArchive(month, dataDir) {
   }
 }
 
+// PURE. Filter the full category-ordered id list down to the roster that EXISTED in the
+// report month — the ids present in that month's `_data/{month}.json` archive (the #909
+// `existedInMonth` set). Drops services added AFTER the month (which would otherwise
+// render as blank "Added Later" heatmap rows, aiwatch-reports#63), while KEEPING
+// score-excluded-but-existed services (bedrock/azureopenai/characterai + the mid-month-
+// added ones) — they still have that month's uptime. Criterion is archive membership,
+// NOT "has a score". Fail-open: a null/empty roster (missing or corrupt snapshot) returns
+// the full list unchanged, so the chart never breaks on a bad snapshot.
+function rosterForMonth(categoryOrder, archiveServiceIds) {
+  if (!archiveServiceIds || archiveServiceIds.length === 0) return categoryOrder
+  const roster = new Set(archiveServiceIds)
+  return categoryOrder.filter(id => roster.has(id))
+}
+
 // Normalize an archive-like object into a trend month-entry. `daysCollected`
 // (when present) drives the partial-month flag; absent → assumed full.
 function toMonthEntry(month, archiveLike) {
@@ -580,7 +594,7 @@ ${partialNote}
 module.exports = {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   // trend (aiwatch-reports#41)
-  monthsBefore, daysInMonthOf, readDataArchive, toMonthEntry, monthEntryFromScoreRows,
+  monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
   generateTrendSvg, nameToId, ID_TO_NAME, TREND_MONTHS,
 }
@@ -685,8 +699,17 @@ if (require.main === module) {
         if (history[key]) { lastDataDay = d; break }
       }
 
-      // Use all 43 services in category order (not just incident table)
-      const serviceNames = CATEGORY_ORDER.map(id => ID_TO_NAME[id]).filter(Boolean)
+      // Roster = services that EXISTED in the report month (that month's archive keys),
+      // not the current live CATEGORY_ORDER — otherwise services added AFTER the month
+      // (e.g. turbopuffer / Twelve Labs for a June report) render as blank "Added Later"
+      // rows (aiwatch-reports#63). Score-excluded-but-existed services stay (the criterion
+      // is archive membership, not "has a score"). Fail-open to the full list if absent.
+      const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
+      const rosterIds = rosterForMonth(
+        CATEGORY_ORDER,
+        monthArchive && monthArchive.services ? Object.keys(monthArchive.services) : null,
+      )
+      const serviceNames = rosterIds.map(id => ID_TO_NAME[id]).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
       const heatmapPath = path.join(outDir, 'uptime-heatmap.svg')
