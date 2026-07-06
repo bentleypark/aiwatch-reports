@@ -52,18 +52,22 @@ jobs:
           MONTH: ${{ steps.month.outputs.month }}
         run: node scripts/generate-report.js "$MONTH"
 
-      - name: Generate charts
-        env:
-          MONTH: ${{ steps.month.outputs.month }}
-        run: node scripts/generate-charts.js "${MONTH}/index.md"
-
       - name: Snapshot archive JSON to _data/ (#15)
         # Persists /api/report?month=YYYY-MM as _data/{MONTH}.json for long-term
         # git preservation alongside the KV archive — see _data/README.md for
         # provenance + rebuild caveats.
+        # MUST run BEFORE "Generate charts" (#63): the uptime-heatmap roster is filtered
+        # to this snapshot's service keys (existedInMonth) so services added AFTER the
+        # report month don't render as blank rows. If the snapshot isn't present yet the
+        # filter fails open to the full live roster and the post-month services leak back in.
         env:
           MONTH: ${{ steps.month.outputs.month }}
         run: bash scripts/fetch-archive.sh "$MONTH"
+
+      - name: Generate charts
+        env:
+          MONTH: ${{ steps.month.outputs.month }}
+        run: node scripts/generate-charts.js "${MONTH}/index.md"
 
       - name: Update top-level index.md (#15)
         # Inserts/refreshes the entry for $MONTH in the front-page Reports list
