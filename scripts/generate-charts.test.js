@@ -2,6 +2,7 @@ const {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
+  buildMoverExclude, notableMoversForChart,
 } = require('./generate-charts')
 const assert = require('assert')
 
@@ -529,6 +530,107 @@ test('generateTrendSvg emits two same-final-Score movers at different label ys (
   const ys = [...svg.matchAll(/<text[^>]*\sy="([0-9.]+)"[^>]*>(?:GitHub Copilot|Perplexity)/g)].map(m => Number(m[1]))
   eq(ys.length, 2, `both mover labels present (got ${ys.length})`)
   assert.ok(Math.abs(ys[0] - ys[1]) >= 12, `same-score labels must be ≥12 apart, got ${JSON.stringify(ys)}`)
+})
+
+// ── buildMoverExclude (moved from generate-report.js, aiwatch-reports#67) ──
+console.log('\nbuildMoverExclude')
+
+test('excludes NO_INCIDENT_FEED / stale / recently-added, keeps established; null → empty', () => {
+  const services = {
+    bedrock: { score: 90 },                             // NO_INCIDENT_FEED
+    deepseek: { score: 88, incidentSourceStale: true }, // stale (archive flag)
+    fal: { score: 77, addedAt: '2026-06-24' },          // added IN the report month
+    claude: { score: 71 },                              // established → kept
+  }
+  const ex = buildMoverExclude(services, '2026-06')
+  assert.ok(ex.has('bedrock'), 'bedrock (NO_INCIDENT_FEED) excluded')
+  assert.ok(ex.has('deepseek'), 'stale source excluded')
+  assert.ok(ex.has('fal'), 'recently-added (addedAt in report month) excluded')
+  assert.ok(!ex.has('claude'), 'established service kept')
+  assert.strictEqual(ex.size, 3)
+})
+
+test('a service added in a PRIOR month is NOT excluded', () => {
+  const ex = buildMoverExclude({ fal: { score: 77, addedAt: '2026-05-10' } }, '2026-06')
+  assert.ok(!ex.has('fal'), 'prior-month addedAt → full coverage → not excluded')
+})
+
+test('null archive → empty set (fail-open)', () => {
+  const ex = buildMoverExclude(null, '2026-06')
+  assert.ok(ex instanceof Set && ex.size === 0)
+})
+
+// ── notableMoversForChart (aiwatch-reports#67) ──
+console.log('\nnotableMoversForChart')
+
+test('splits by SCORE delta and carries {id,name,delta,points}', () => {
+  const pts = [{ score: 70 }, { score: 78 }]
+  const notable = [
+    { id: 'up', name: 'Up', score: { first: 70, last: 78, delta: 8, points: pts }, declining: false },
+    { id: 'down', name: 'Down', score: { first: 78, last: 70, delta: -8, points: pts }, declining: true },
+  ]
+  const { declining, improving } = notableMoversForChart(notable)
+  eq(improving.length, 1)
+  eq(improving[0].id, 'up')
+  eq(declining.length, 1)
+  eq(declining[0].id, 'down')
+  // item shape
+  eq(improving[0].name, 'Up')
+  eq(improving[0].delta, 8)
+  eq(improving[0].points, pts)
+})
+
+test('a flat-Score row (delta 0) follows the table declining flag', () => {
+  const pts = [{ score: 64 }, { score: 64 }]
+  const flatDeclining = [{ id: 'g', name: 'G', score: { delta: 0, points: pts }, declining: true }]
+  const flatImproving = [{ id: 'g', name: 'G', score: { delta: 0, points: pts }, declining: false }]
+  eq(notableMoversForChart(flatDeclining).declining.length, 1)   // declining flag → declining
+  eq(notableMoversForChart(flatDeclining).improving.length, 0)
+  eq(notableMoversForChart(flatImproving).improving.length, 1)   // not declining → improving
+})
+
+// ── wiring: the CHART emphasizes the NOTABLE set, not the Score-mover set (#67) ──
+console.log('\ntrend chart wiring (notable movers, #67)')
+
+test('generateTrendSvg emphasizes the Notable Movers, not computeScoreMovers', () => {
+  // NOTABLE_ENTRIES: gemini has a FLAT score (64→64) but a huge MTTR/downtime spike, so it is a
+  // Notable Mover but NOT a Score mover (delta 0). claude declines -8 (both a Notable + a Score
+  // mover). So the notable-chart must label gemini; the old Score-mover chart would NOT.
+  const trend = buildTrendSeries(NOTABLE_ENTRIES)
+  const nameFor = id => id
+
+  const notable = computeNotableMovers(trend, { nameFor })
+  const notableSet = new Set(notable.map(m => m.id))
+  assert.ok(notableSet.has('gemini') && notableSet.has('claude'), 'fixture sanity')
+
+  const movers = notableMoversForChart(notable)
+  const notableSvg = generateTrendSvg(trend, { nameFor, movers })
+  // Extract emphasized label ids (mover end-labels are the only service-name texts).
+  const labeled = id => new RegExp(`<text[^>]*>${id} [±+−]`).test(notableSvg)
+  assert.ok(labeled('gemini'), 'notable chart labels gemini (flat score, spiked MTTR)')
+  assert.ok(labeled('claude'), 'notable chart labels claude')
+
+  // The old Score-mover path would NOT emphasize gemini (delta 0 is not a score mover).
+  const scoreMovers = computeScoreMovers(trend, { nameFor })
+  const scoreSet = new Set([...scoreMovers.declining, ...scoreMovers.improving].map(m => m.id))
+  assert.ok(!scoreSet.has('gemini'), 'score movers exclude gemini — proves the chart changed source')
+  assert.deepStrictEqual([...notableSet].sort(), ['claude', 'gemini'])
+})
+
+// ── chart current-month entry must carry MTTR/downtime, else MTTR-driven movers vanish (#67) ──
+// Pins WHY the trend CLI builds the current month via toMonthEntry (archive) not
+// monthEntryFromScoreRows (Score/grade only): a flat-Score service whose only signal is an
+// MTTR spike is a Notable Mover in the table but disappears if the current entry lacks MTTR.
+test('computeNotableMovers surfaces an MTTR-driven mover ONLY when the current entry carries MTTR (#67)', () => {
+  const prior = toMonthEntry('2026-05', { services: { gemini: { score: 64, grade: 'Fair', avgResolutionMin: 120, totalDowntimeMin: 240 } } })
+  const archiveCurrent = toMonthEntry('2026-06', { services: { gemini: { score: 64, grade: 'Fair', avgResolutionMin: 1320, totalDowntimeMin: 2640 } } })
+  const rowsCurrent = monthEntryFromScoreRows('2026-06', [{ Service: 'Gemini API', Score: '64', Grade: 'Fair' }])
+  // archive-based current entry (the fixed CLI path) → gemini's MTTR spike is visible → mover
+  const withArchive = computeNotableMovers(buildTrendSeries([prior, archiveCurrent]))
+  assert.ok(withArchive.some(m => m.id === 'gemini'), 'gemini surfaces when current entry carries MTTR')
+  // Score-table-only current entry (the old bug path) → MTTR null → flat Score → NOT a mover
+  const withRows = computeNotableMovers(buildTrendSeries([prior, rowsCurrent]))
+  assert.ok(!withRows.some(m => m.id === 'gemini'), 'gemini vanishes when current entry lacks MTTR — why the CLI must use toMonthEntry')
 })
 
 // ── Summary ──────────────────────────────────────────────

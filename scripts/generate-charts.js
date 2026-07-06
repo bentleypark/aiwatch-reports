@@ -402,6 +402,68 @@ function presentDelta(points, field) {
   return { first, last, delta: present.length >= 2 ? last - first : null }
 }
 
+// ── Mover exclusion predicates (moved here from generate-report.js, aiwatch-reports#67) ──
+// Single source of truth: both the Notable Movers TABLE (generate-report.js) and the trend
+// CHART (this file's CLI) must exclude the SAME services, so they live next to
+// computeNotableMovers and generate-report.js imports them from here.
+
+// Estimate-uptime services that ALSO have no reliable incident feed (RSS-only — a blank
+// incident count is monitoring coverage, not a verified zero). With neither an accessible
+// uptime metric nor trustworthy incident data there's nothing to score fairly, so they're
+// dropped from the Score ranking entirely. Subset of NO_PUBLIC_UPTIME; matches the 2026-04
+// report's "29 of 31 ranked — Bedrock/Azure excluded" handling.
+const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
+
+// Services whose status page migrated to a platform AIWatch can't reach server-side, so the
+// feed is FROZEN at the last reachable fetch — the incident count, uptime and Score reflect only
+// data up to that cutoff, NOT the full month. Unlike NO_INCIDENT_FEED these DO carry an "official"
+// uptime + an incident history, but both are STALE, which is more insidious: a partial-month count
+// reads as a verified low number and the frozen uptime reads as current. The guard surfaces a
+// caveat every report and stops a frozen zero-count from being labelled a "confirmed zero".
+//   • deepseek — migrated Atlassian Statuspage → Flashduty (~May 2026). REMOVED here as of June
+//     2026: AIWatch now reads the full Flashduty feed via a browser-rendered fetch (aiwatch#618),
+//     so DeepSeek (and the new DeepSeek App, aiwatch#619) are no longer frozen. From the June 2026
+//     archive onward their incidentSourceStale flag is absent → not stale; the May 2026 archive
+//     still carries the flag, so a May regeneration stays correctly stale (flag-driven, below).
+// Maintained constant — REMOVE a service here once its feed is reachable again (aiwatch#507).
+// Empty today; reserved for a future status-page migration that re-freezes a feed.
+const STALE_SOURCE = new Set([])
+
+// aiwatch#591 — is a service's incident source stale this month? PRIMARY signal is the archive's
+// per-service `incidentSourceStale` flag (the deployed Worker sets it from ServiceConfig; absent ⇒
+// not stale on a post-#591 archive). The STALE_SOURCE constant is the FALLBACK for archives built
+// before the Worker emitted the flag. Stale services are excluded from the Score ranking (their
+// frozen empty incident window would inflate the Score — DeepSeek ranked #4 live before the fix).
+function isStaleSource(s) {
+  return !!(s.data.incidentSourceStale ?? STALE_SOURCE.has(s.id))
+}
+
+// reports#45 — a service added DURING (or after) the report month lacked full-month coverage, so its
+// partial-month Score must not be ranked or featured in Notable Movers against full-month services
+// (the report-side equivalent of aiwatch#802's <30d-coverage dashboard gate). Reads the static
+// `addedAt` the monthly archive now exposes (aiwatch#809). `addedAt` absent = established service =
+// full coverage. Compares YYYY-MM prefixes: addedAt in a PRIOR month → ranked; in the report month
+// (or later) → excluded. `period` = the report month 'YYYY-MM'.
+function isRecentlyAdded(s, period) {
+  const addedAt = s && s.data && s.data.addedAt
+  if (!addedAt || !period) return false
+  return addedAt.slice(0, 7) >= period.slice(0, 7)
+}
+
+// PURE. Build the set of service ids the Notable Movers table / trend chart must exclude
+// (services the Score ranking itself drops: NO_INCIDENT_FEED + stale source + mid-month-added).
+// Keyed off `month`'s archive services. Fail-open: a null archive → empty set (the
+// computeNotableMovers "score at both ends" guard still filters mid-month / null-score services).
+function buildMoverExclude(archiveServices, month) {
+  if (!archiveServices) return new Set()
+  return new Set(
+    Object.entries(archiveServices)
+      .map(([id, data]) => ({ id, data }))
+      .filter(s => NO_INCIDENT_FEED.has(s.id) || isStaleSource(s) || isRecentlyAdded(s, month)) // reports#45 — partial-month delta is not a real mover
+      .map(s => s.id),
+  )
+}
+
 // PURE. "Notable Movers" — the decision-grade list. Unlike computeScoreMovers (which ranks
 // by Score delta only, for the slope chart's emphasis), this ranks by the LARGEST move across
 // Score / MTTR / total-downtime — incident-feed MEASURED metrics — so a service with a FLAT
@@ -474,6 +536,23 @@ function computeNotableMovers(trend, opts = {}) {
 
   rows.sort((a, b) => b.notability - a.notability || Math.abs(b.score.delta) - Math.abs(a.score.delta))
   return rows.slice(0, limit)
+}
+
+// PURE. Reshape computeNotableMovers output → generateTrendSvg's { declining, improving } shape
+// (aiwatch-reports#67), so the CHART emphasizes the SAME services the table ranks. generateTrendSvg
+// colours/labels each line purely by `item.delta` (= SCORE delta), NOT by which array it's in — so
+// the split here is organizational (kept for the interface shape), and a flat-Score row (delta 0)
+// renders green / labelled "±0" even when the table marks it 🔻 (an MTTR/downtime regressor). That's
+// accepted: on a Score-axis plot the line honestly shows the Score didn't move; the table below
+// carries the headline metric. Flat rows are bucketed by the table's `declining` flag for tidiness.
+function notableMoversForChart(notable) {
+  const declining = [], improving = []
+  for (const r of notable) {
+    const item = { id: r.id, name: r.name, delta: r.score.delta, points: r.score.points }
+    const up = r.score.delta > 0 || (r.score.delta === 0 && !r.declining) // flat Score → table's flag
+    ;(up ? improving : declining).push(item)
+  }
+  return { declining, improving }
 }
 
 // "71 → 68 → 63" from a series' points (skips months the service was absent).
@@ -631,6 +710,8 @@ module.exports = {
   monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
   generateTrendSvg, spreadLabelYs, nameToId, ID_TO_NAME, TREND_MONTHS,
+  // mover exclusion + chart-reshape (aiwatch-reports#67)
+  NO_INCIDENT_FEED, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
 }
 
 // ── CLI ──────────────────────────────────────────────────
@@ -680,21 +761,30 @@ if (require.main === module) {
   fs.writeFileSync(scorePath, scoreSvg + '\n', 'utf-8')
   console.log(`✓ ${scorePath}`)
 
-  // 3-month trend chart (sync — prior months from committed _data/, current month
-  // from this report's parsed Score table). Written only when ≥2 months are available
-  // (a lone first month has no trend); the report's TREND_SECTION applies the same
-  // gate so the `![](trend-chart.svg)` ref never dangles.
-  const currentEntry = monthEntryFromScoreRows(monthKey, scores)
+  // 3-month trend chart (sync — prior months from committed _data/). The CURRENT month is
+  // built from THIS month's archive snapshot (toMonthEntry) so it carries MTTR + downtime —
+  // the Notable-Movers ranking axes — exactly like the report table's current entry; it falls
+  // back to the parsed Score table (score/grade only) when the snapshot is absent. Building it
+  // from the Score table alone would drop MTTR/downtime-driven movers (a flat-Score service
+  // with an MTTR spike), diverging from the table (#67). Written only when ≥2 months are
+  // available; the report's TREND_SECTION applies the same gate so the ref never dangles.
+  const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
+  const currentEntry = monthArchive
+    ? toMonthEntry(monthKey, monthArchive)
+    : monthEntryFromScoreRows(monthKey, scores)
   const trendEntries = loadTrendEntries(monthKey, currentEntry, { dataDir: path.resolve('_data') })
   if (trendEntries.length >= 2) {
     const trend = buildTrendSeries(trendEntries)
-    // No explicit `exclude` here (unlike the report-section path): the current-month entry is
-    // built from the parsed AIWatch Score table, and buildScoreTable already drops the services
-    // the report doesn't rank (NO_INCIDENT_FEED + stale), so an excluded service has a null
-    // current-month score and computeScoreMovers' "score at both ends" guard filters it from
-    // emphasis automatically — it can only ever appear as a faint context line. If the current
-    // month is ever sourced from the full archive instead, pass the same exclude set here too.
-    const movers = computeScoreMovers(trend, { nameFor: id => ID_TO_NAME[id] || id })
+    // aiwatch-reports#67 — emphasize the SAME services as the report's Notable Movers TABLE
+    // (Score/MTTR/downtime ranking) rather than a Score-delta-only slope, so the chart and the
+    // table can never highlight different services. Uses the SAME exclude as the table, keyed off
+    // the current month's archive. Fail-open: a missing/corrupt `_data/{month}.json` → empty
+    // exclude (computeNotableMovers' "score at both ends" guard still filters mid-month / null-
+    // score services). notableMoversForChart reshapes the table rows → the chart's {declining,
+    // improving} shape, split by SCORE delta since generateTrendSvg is a Score-axis plot.
+    const exclude = buildMoverExclude(monthArchive && monthArchive.services ? monthArchive.services : null, monthKey)
+    const notable = computeNotableMovers(trend, { nameFor: id => ID_TO_NAME[id] || id, exclude })
+    const movers = notableMoversForChart(notable)
     const trendSvg = generateTrendSvg(trend, { nameFor: id => ID_TO_NAME[id] || id, movers })
     const trendPath = path.join(outDir, 'trend-chart.svg')
     fs.writeFileSync(trendPath, trendSvg + '\n', 'utf-8')

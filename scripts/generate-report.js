@@ -28,6 +28,11 @@ const path = require('path')
 const summary = require('./generate-summary')
 const charts = require('./generate-charts')  // trend core (aiwatch-reports#41)
 
+// Mover-exclusion predicates now live in generate-charts.js (single source of truth) so the
+// Notable Movers TABLE (here) and the trend CHART (charts.js CLI) exclude the SAME services
+// (aiwatch-reports#67). Imported here; re-exported below so existing report.test.js callers work.
+const { NO_INCIDENT_FEED, isStaleSource, isRecentlyAdded } = charts
+
 const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf.workers.dev'
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
 const OUT_DIR_ROOT = path.join(__dirname, '..')
@@ -48,48 +53,8 @@ const NO_PUBLIC_UPTIME = new Set([
   'bedrock', 'azureopenai', 'deepgram', 'gemini', 'mistral', 'perplexity', 'xai',
 ])
 
-// Estimate-uptime services that ALSO have no reliable incident feed (RSS-only — a blank
-// incident count is monitoring coverage, not a verified zero). With neither an accessible
-// uptime metric nor trustworthy incident data there's nothing to score fairly, so they're
-// dropped from the Score ranking entirely. Subset of NO_PUBLIC_UPTIME; matches the 2026-04
-// report's "29 of 31 ranked — Bedrock/Azure excluded" handling.
-const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
-
-// Services whose status page migrated to a platform AIWatch can't reach server-side, so the
-// feed is FROZEN at the last reachable fetch — the incident count, uptime and Score reflect only
-// data up to that cutoff, NOT the full month. Unlike NO_INCIDENT_FEED these DO carry an "official"
-// uptime + an incident history, but both are STALE, which is more insidious: a partial-month count
-// reads as a verified low number and the frozen uptime reads as current. The guard surfaces a
-// caveat every report and stops a frozen zero-count from being labelled a "confirmed zero".
-//   • deepseek — migrated Atlassian Statuspage → Flashduty (~May 2026). REMOVED here as of June
-//     2026: AIWatch now reads the full Flashduty feed via a browser-rendered fetch (aiwatch#618),
-//     so DeepSeek (and the new DeepSeek App, aiwatch#619) are no longer frozen. From the June 2026
-//     archive onward their incidentSourceStale flag is absent → not stale; the May 2026 archive
-//     still carries the flag, so a May regeneration stays correctly stale (flag-driven, below).
-// Maintained constant — REMOVE a service here once its feed is reachable again (aiwatch#507).
-// Empty today; reserved for a future status-page migration that re-freezes a feed.
-const STALE_SOURCE = new Set([])
-
-// aiwatch#591 — is a service's incident source stale this month? PRIMARY signal is the archive's
-// per-service `incidentSourceStale` flag (the deployed Worker sets it from ServiceConfig; absent ⇒
-// not stale on a post-#591 archive). The STALE_SOURCE constant is the FALLBACK for archives built
-// before the Worker emitted the flag. Stale services are excluded from the Score ranking (their
-// frozen empty incident window would inflate the Score — DeepSeek ranked #4 live before the fix).
-function isStaleSource(s) {
-  return !!(s.data.incidentSourceStale ?? STALE_SOURCE.has(s.id))
-}
-
-// reports#45 — a service added DURING (or after) the report month lacked full-month coverage, so its
-// partial-month Score must not be ranked or featured in Notable Movers against full-month services
-// (the report-side equivalent of aiwatch#802's <30d-coverage dashboard gate). Reads the static
-// `addedAt` the monthly archive now exposes (aiwatch#809). `addedAt` absent = established service =
-// full coverage. Compares YYYY-MM prefixes: addedAt in a PRIOR month → ranked; in the report month
-// (or later) → excluded. `period` = the report month 'YYYY-MM'.
-function isRecentlyAdded(s, period) {
-  const addedAt = s && s.data && s.data.addedAt
-  if (!addedAt || !period) return false
-  return addedAt.slice(0, 7) >= period.slice(0, 7)
-}
+// (NO_INCIDENT_FEED / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
+// as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
 
 // Services without direct probe coverage (excluded from API Response Time ranking).
 // Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
@@ -633,12 +598,7 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   // per buildScoreTable / the #29 note) so a trend mover never contradicts a report that
   // elsewhere states it does not rank that service. Estimate-only bedrock/azureopenai scores
   // CAN move month-to-month, so this isn't hypothetical. Keyed off the CURRENT month's archive.
-  const exclude = new Set(
-    Object.entries(archive.services)
-      .map(([id, data]) => ({ id, data }))
-      .filter(s => NO_INCIDENT_FEED.has(s.id) || isStaleSource(s) || isRecentlyAdded(s, month)) // reports#45 — partial-month delta is not a real mover
-      .map(s => s.id),
-  )
+  const exclude = charts.buildMoverExclude(archive.services, month)
 
   const movers = charts.computeScoreMovers(trend, { nameFor: id => serviceName(id, meta), exclude })
   if (!movers.declining.length && !movers.improving.length) return ''
