@@ -115,6 +115,8 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 
 ---
 
+<!-- COMPONENT_RELIABILITY_SECTION -->
+
 ## API Response Time — Monthly p75
 
 <!-- Anchor below: substitute [month]/[year] with lowercase values (e.g. "april", "2026").
