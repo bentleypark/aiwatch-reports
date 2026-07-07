@@ -587,6 +587,42 @@ function buildDetectionSection(archive, meta) {
 // slope chart SVG is written by generate-charts.js under the same ≥2-month gate, so the
 // `![](trend-chart.svg)` ref below never dangles. The multi-month math lives in
 // generate-charts.js (buildTrendSeries / computeScoreMovers) — pure + unit-tested there.
+// #605 Phase 3b — "Component Reliability" table: the WEAKEST curated component per multi-component
+// service (archive.services[id].components — per-component monthly uptime, least-reliable-first,
+// curated to the display set by aiwatch#605 Phase 3a). One row per service whose weakest surface is
+// < COMPONENT_WEAK_THRESHOLD (signal-rich — skip all-healthy services), sorted weakest-first. The
+// AIWatch differentiator: no competitor publishes a monthly per-component uptime ranking. EN-only,
+// like the other data tables. Returns '' (section omitted) when nothing qualifies. Pure + tested.
+const COMPONENT_WEAK_THRESHOLD = 99.9
+function buildComponentReliabilitySection(archive, meta) {
+  const services = archive && archive.services
+  if (!services || typeof services !== 'object') return ''
+  const rows = []
+  for (const [id, s] of Object.entries(services)) {
+    const comps = s && Array.isArray(s.components) ? s.components : null
+    if (!comps || comps.length < 2) continue // curation already ≥2; defensive
+    const weakest = comps[0] // least-reliable-first
+    // Number.isFinite (not typeof===number): a NaN uptime is typeof number and NaN>=99.9 is false,
+    // so it would slip through and render "NaN%" + poison the weakest-first sort comparator.
+    if (!weakest || !Number.isFinite(weakest.uptime) || weakest.uptime >= COMPONENT_WEAK_THRESHOLD) continue
+    rows.push({ name: serviceName(id, meta), comp: weakest.name, uptime: weakest.uptime, count: comps.length })
+  }
+  if (rows.length === 0) return ''
+  rows.sort((a, b) => a.uptime - b.uptime || a.name.localeCompare(b.name))
+  const cell = (s) => String(s).replace(/\|/g, '\\|') // a component name with a literal | can't break the row
+  return [
+    '## Component Reliability',
+    '',
+    "> AIWatch is the only monitor publishing a **monthly per-component uptime ranking**. This surfaces each multi-surface service's weakest component this month — the surface most likely to be your bottleneck, which a single service-level uptime number hides.",
+    '',
+    '| Service | Weakest Component | Uptime | Components |',
+    '|---|---|---|---|',
+    ...rows.map(r => `| ${cell(r.name)} | ${cell(r.comp)} | ${r.uptime.toFixed(2)}% | ${r.count} |`),
+    '',
+    '---',
+  ].join('\n')
+}
+
 function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, '..', '_data')) {
   const currentEntry = charts.toMonthEntry(month, archive)
   if (!currentEntry) return ''
@@ -858,6 +894,16 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/<!-- TREND_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, trendSection)
   } else {
     out = out.replace(/\n*<!-- TREND_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
+  }
+
+  // Component Reliability section (aiwatch#605 Phase 3b) — same marker pattern. The section
+  // emits its own trailing `---`; when omitted, strip the marker so the preceding Official
+  // Uptime `---` stays the single rule before API Response Time.
+  const componentSection = buildComponentReliabilitySection(archive, meta)
+  if (componentSection) {
+    out = out.replace(/<!-- COMPONENT_RELIABILITY_SECTION -->/, componentSection)
+  } else {
+    out = out.replace(/\n*<!-- COMPONENT_RELIABILITY_SECTION -->\n*/, '\n\n')
   }
 
   return out
@@ -1495,6 +1541,7 @@ module.exports = {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildComponentReliabilitySection,
   buildTrendSection,
   fmtLeadMin,
   fmtIso,

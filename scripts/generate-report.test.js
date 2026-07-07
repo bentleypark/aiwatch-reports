@@ -23,6 +23,7 @@ const {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildComponentReliabilitySection,
   buildTrendSection,
   fmtLeadMin,
   monthName,
@@ -1709,6 +1710,59 @@ test('loadPriorNarrative skips months with no index.md (never throws)', () => {
   } finally {
     fsT.rmSync(root, { recursive: true, force: true })
   }
+})
+
+// ── buildComponentReliabilitySection (aiwatch#605 Phase 3b) ─────────
+console.log('\nbuildComponentReliabilitySection (#605 Phase 3b)')
+const crMeta = { services: {} }
+test('omits the section when no service has components', () => {
+  eq(buildComponentReliabilitySection({ services: { openai: { score: 90 } } }, crMeta), '')
+  eq(buildComponentReliabilitySection({}, crMeta), '')
+  eq(buildComponentReliabilitySection(null, crMeta), '')
+})
+test('omits a service whose weakest component is >= 99.9% (all-healthy → no row)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    groq: { components: [{ id: 'a', name: 'API', uptime: 99.95 }, { id: 'b', name: 'Console', uptime: 100 }] },
+  } }, crMeta)
+  eq(out, '') // both healthy → nothing qualifies
+})
+test('renders one weakest-component row per qualifying service, weakest-first', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    openai: { components: [{ id: 'l', name: 'Login', uptime: 99.66 }, { id: 'c', name: 'Chat Completions', uptime: 99.98 }] },
+    chatgpt: { components: [{ id: 'conv', name: 'Conversations', uptime: 99.20 }, { id: 'x', name: 'Sync', uptime: 99.99 }] },
+    groq: { components: [{ id: 'a', name: 'API', uptime: 100 }, { id: 'b', name: 'Console', uptime: 100 }] }, // all healthy → skipped
+  } }, { openai: { name: 'OpenAI API' }, chatgpt: { name: 'ChatGPT' }, groq: { name: 'Groq Cloud' } })
+  assert.ok(out.includes('## Component Reliability'), 'has heading')
+  assert.ok(out.trimEnd().endsWith('---'), 'ends with a rule')
+  // ChatGPT (99.20) before OpenAI (99.66); groq absent
+  const rowOrder = [...out.matchAll(/\| (ChatGPT|OpenAI API|Groq[^|]*) \|/g)].map(m => m[1].trim())
+  assert.deepStrictEqual(rowOrder, ['ChatGPT', 'OpenAI API'])
+  assert.ok(out.includes('| ChatGPT | Conversations | 99.20% | 2 |'), 'weakest component + uptime + count')
+  assert.ok(!out.includes('Groq'), 'all-healthy service skipped')
+})
+test('skips a single-component service (needs >=2)', () => {
+  eq(buildComponentReliabilitySection({ services: {
+    solo: { components: [{ id: 'a', name: 'API', uptime: 98 }] },
+  } }, crMeta), '')
+})
+test('threshold boundary: a component at exactly 99.9 is omitted (>= is exclusive of the table)', () => {
+  eq(buildComponentReliabilitySection({ services: {
+    svc: { components: [{ id: 'a', name: 'API', uptime: 99.9 }, { id: 'b', name: 'Web', uptime: 100 }] },
+  } }, { svc: { name: 'Svc' } }), '')
+})
+test('a NaN / non-finite weakest uptime is dropped (no NaN% row)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    bad: { components: [{ id: 'a', name: 'API', uptime: NaN }, { id: 'b', name: 'Web', uptime: 100 }] },
+    ok: { components: [{ id: 'c', name: 'Core', uptime: 98.5 }, { id: 'd', name: 'Edge', uptime: 100 }] },
+  } }, { bad: { name: 'Bad' }, ok: { name: 'Ok' } })
+  assert.ok(!out.includes('NaN'), 'no NaN cell')
+  assert.ok(out.includes('| Ok | Core | 98.50% | 2 |') && !out.includes('| Bad |'), 'bad dropped, ok kept')
+})
+test('escapes a literal pipe in a component name so the row is not broken', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    svc: { components: [{ id: 'a', name: 'A | B', uptime: 97 }, { id: 'b', name: 'Web', uptime: 100 }] },
+  } }, { svc: { name: 'Svc' } })
+  assert.ok(out.includes('A \\| B'), 'pipe escaped')
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
