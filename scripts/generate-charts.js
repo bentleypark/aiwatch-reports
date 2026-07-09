@@ -407,10 +407,10 @@ function presentDelta(points, field) {
 // CHART (this file's CLI) must exclude the SAME services, so they live next to
 // computeNotableMovers and generate-report.js imports them from here.
 
-// Estimate-uptime services that ALSO have no reliable incident feed (RSS-only — a blank
+// Services with no reliable incident feed (aggregated event JSON / RSS only — a blank
 // incident count is monitoring coverage, not a verified zero). With neither an accessible
 // uptime metric nor trustworthy incident data there's nothing to score fairly, so they're
-// dropped from the Score ranking entirely. Subset of NO_PUBLIC_UPTIME; matches the 2026-04
+// dropped from the Score ranking entirely. Matches the 2026-04
 // report's "29 of 31 ranked — Bedrock/Azure excluded" handling.
 const NO_INCIDENT_FEED = new Set(['bedrock', 'azureopenai'])
 
