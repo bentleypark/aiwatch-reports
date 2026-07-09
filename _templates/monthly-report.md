@@ -95,16 +95,16 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 <!-- Generate with: node scripts/generate-charts.js [YYYY-MM]/index.md -->
 ![AIWatch Score Rankings](../assets/[YYYY-MM]/score-chart.svg)
 
-> **Uptime Source column**: **Official** (read directly from the service's status page) · **Estimate** (no official metric; only the Score input is computed — the % itself is not surfaced) · **Partial (Nd)** (service newly tracked mid-month). Full definitions: [About This Report → Uptime Source](#about-this-report).
+> **Uptime Source column**: **Official** (read directly from the service's status page) · **No official uptime** (the provider publishes none; the Score is computed from the remaining signals) · **Partial (Nd)** (service newly tracked mid-month). Full definitions: [About This Report → Uptime Source](#about-this-report).
 > <!-- Cycle-specific notes (e.g. "Codex was added on 22 Apr, mid-month") can be appended after the Partial label. Keep this caption short — full definitions live in the About This Report methodology section to avoid duplication. -->
 
 ---
 
 ## Official Uptime (Primary Component)
 
-> **Reference table.** Official 30-day uptime metrics from each service's status page (where published). The narrative-driven sections below (Incident Summary / Notable Incidents / Observations) cover what these numbers mean for vendor selection.
+> **Reference table.** The uptime percentage each service publishes on its own status page, where it publishes one (the window varies by page — 30 or 90 days). The narrative-driven sections below (Incident Summary / Notable Incidents / Observations) cover what these numbers mean for vendor selection.
 
-*Amazon Bedrock, Azure OpenAI, Deepgram, Gemini, Mistral, Perplexity, and xAI do not publish a rolling-30-day uptime percentage on their status pages — they're excluded from this table for that reason. (xAI's [status page](https://status.x.ai) does expose per-endpoint live success rates measured since their monitoring system's last restart, but those numbers are not directly comparable to the 30-day figures shown above.)*
+<!-- UPTIME_EXCLUSION_NOTE -->
 
 <table class="uptime-cols">
 <thead><tr><th>Service</th><th>Uptime</th></tr></thead>
@@ -211,7 +211,7 @@ Actionable takeaways per service. Descriptive context for each event lives in ea
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
 * **Monitoring Frequency:** All 43 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
 * **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). Services without probe data use 80→100 score redistribution **plus a 5% penalty** to reflect the missing responsiveness signal. Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
-* **Uptime Source:** *Official* = service publishes a rolling 30-day uptime metric AIWatch reads directly. *Estimate* = no official metric; AIWatch substitutes an industry-average assumption (99.5%) or its own poll-derived figure for the Score's Uptime input. *Partial (Nd)* = an official source exists but AIWatch's measurement window is shorter than the full month (e.g. service newly tracked mid-month). The label only describes the Uptime input quality — the Score itself is computed identically across all services.
+* **Uptime Source:** *Official* = the service publishes a rolling uptime % that AIWatch reads directly from its status page (the window varies by page — 30 or 90 days). *No official uptime* = the provider publishes no comparable figure. AIWatch **invents none**: the Score simply drops its 40-point Uptime component and is rescaled over the remaining signals (incidents, recovery, responsiveness), so these services are scored — and ranked — on what can actually be measured. *Partial (Nd)* = an official source exists but AIWatch's measurement window is shorter than the full month (e.g. service newly tracked mid-month). The label describes the Uptime input, not the Score's rigour.
 * **Incident Counting:** Incident counts reflect all affected components per service. Providers differ in reporting granularity — Anthropic reports per-model incidents (Opus/Sonnet/Haiku each counted separately), while others report at the service level.
 * **Uptime Metrics:** Uptime percentages reflect official single-component figures provided by the status pages. Services marked with "—" do not provide a publicly accessible uptime metric.
 * **Timezone Standard:** All timestamps are recorded in **UTC**.

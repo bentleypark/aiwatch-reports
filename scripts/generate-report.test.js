@@ -13,8 +13,11 @@ const {
   buildScoreTable,
   buildIncidentTable,
   officialUptimeFor,
+  findUptimeInconsistencies,
+  emitUptimeWarnings,
   buildStaleSourceCaveat,
   buildUptimeTable,
+  buildUptimeExclusionNote,
   buildLatencyTable,
   buildBySourceTable,
   buildBySeverityTable,
@@ -103,10 +106,28 @@ test('zero incidents no uptime data', () => {
   const w = buildWhy({ data: { incidents: 0, uptime: null, avgResolutionMin: null } }, 'cohere')
   eq(w, 'Zero incidents')
 })
-test('zero incidents, estimate-uptime service → "(no published 30-day uptime)" (#29)', () => {
-  // perplexity is in NO_PUBLIC_UPTIME — must NOT assert "Zero incidents, X% uptime"
+test('legacy archive: a NO_PUBLIC_UPTIME service must NOT assert "Zero incidents, X% uptime" (#29)', () => {
+  // No `officialUptime` field → legacy archive → the maintained set is the only evidence we have.
+  // The "30-day" qualifier is gone: status pages publish over different windows (aiwatch#951).
   const w = buildWhy({ data: { incidents: 0, uptime: 99.5, avgResolutionMin: null } }, 'perplexity')
-  eq(w, 'Zero incidents (no published 30-day uptime)')
+  eq(w, 'Zero incidents (no published uptime)')
+})
+// aiwatch#951 — the "Why" text cites the OFFICIAL figure, never the daily-counter `uptime`.
+test('modern archive: cites the official figure, not the measured one', () => {
+  const w = buildWhy({ id: 'chatgpt', data: { incidents: 0, uptime: 72.78, officialUptime: 99.83, avgResolutionMin: null } }, 'chatgpt')
+  eq(w, 'Zero incidents, 99.83% uptime')
+})
+test('modern archive: a service publishing no official uptime never quotes its measured 100%', () => {
+  // The bug: OpenRouter read "Zero incidents, 100.00% uptime" beside a Score of 80 that was rescaled
+  // over /60 because it has no uptime at all. Impossible under the formula (floor 80 WITH uptime).
+  const w = buildWhy({ id: 'openrouter', data: { incidents: 0, uptime: 100, officialUptime: null, avgResolutionMin: null } }, 'openrouter')
+  eq(w, 'Zero incidents (no published uptime)')
+})
+test('distinguishes "provider publishes none" from "we have no figure"', () => {
+  const noFigure = buildWhy({ id: 'cohere', data: { incidents: 0, uptime: null, avgResolutionMin: null } }, 'cohere')
+  eq(noFigure, 'Zero incidents')  // legacy archive, missing counters — say nothing about the provider
+  const publishesNone = buildWhy({ id: 'stability', data: { incidents: 0, uptime: 100, officialUptime: null, avgResolutionMin: null } }, 'stability')
+  eq(publishesNone, 'Zero incidents (no published uptime)')
 })
 test('many incidents with fast recovery', () => {
   const w = buildWhy({ data: { incidents: 20, uptime: 99.5, avgResolutionMin: 25 } })
@@ -127,13 +148,26 @@ test('Medium when uptime null', () => {
   eq(confidence({ data: { uptime: null, incidents: 3 } }), 'Medium')
 })
 
-console.log('\nuptimeSourceLabel (#29)')
-test('Official for a status-page-read service', () => {
-  eq(uptimeSourceLabel('cohere'), 'Official')
+console.log('\nuptimeSourceLabel (#29, rewritten for aiwatch#951)')
+test('Official when the archive carries a status-page figure', () => {
+  eq(uptimeSourceLabel({ id: 'cohere', data: { officialUptime: 100 } }), 'Official')
 })
-test('Estimate for a NO_PUBLIC_UPTIME service', () => {
-  eq(uptimeSourceLabel('perplexity'), 'Estimate')
-  eq(uptimeSourceLabel('bedrock'), 'Estimate')
+test('No official uptime when the archive says the provider publishes none', () => {
+  eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'stability', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
+})
+// The label used to come from a hand-maintained set, which had drifted in BOTH directions.
+test('aiwatch#951: Mistral and Perplexity publish real uptime — no longer mislabelled', () => {
+  eq(uptimeSourceLabel({ id: 'mistral', data: { officialUptime: 99.559 } }), 'Official')
+  eq(uptimeSourceLabel({ id: 'perplexity', data: { officialUptime: 100 } }), 'Official')
+})
+test('aiwatch#951: bedrock/azureopenai stay excluded even if a stale archive carries a value', () => {
+  eq(uptimeSourceLabel({ id: 'bedrock', data: { officialUptime: 100 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'azureopenai', data: { officialUptime: 100 } }), 'No official uptime')
+})
+test('legacy archive (no officialUptime field) falls back to the maintained set', () => {
+  eq(uptimeSourceLabel({ id: 'perplexity', data: { uptime: 99.5 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'cohere', data: { uptime: 100 } }), 'Official')
 })
 
 console.log('\nbuildRankingNote (#29)')
@@ -282,17 +316,24 @@ test('renders rows sorted by score desc', () => {
   assert.ok(rows[2].includes('100'), `score 100 missing: ${rows[2]}`)
   assert.ok(rows[4].includes('Claude API'), `last row not Claude: ${rows[4]}`)
 })
-test('header is "Uptime Source" (not "Confidence") and marks the estimate cohort (#29)', () => {
+test('header is "Uptime Source" (not "Confidence"); the column reads the archive (#29, aiwatch#951)', () => {
   const services = [
-    { id: 'modal', data: { score: 97, grade: 'excellent', uptime: 99.4, incidents: 5, avgResolutionMin: 65 } },
-    { id: 'perplexity', data: { score: 68, grade: 'fair', uptime: 99.6, incidents: 1, avgResolutionMin: 240 } },
+    { id: 'modal', data: { score: 97, grade: 'excellent', uptime: 99.4, officialUptime: 99.4, incidents: 5, avgResolutionMin: 65 } },
+    // Publishes none — the row that used to read "Official · 100.00% uptime" beside a /60 score.
+    { id: 'openrouter', data: { score: 80, grade: 'good', uptime: 100, officialUptime: null, incidents: 0, avgResolutionMin: null } },
+    // In the legacy NO_PUBLIC_UPTIME set, yet publishes real uptime — used to read "Estimate".
+    { id: 'perplexity', data: { score: 68, grade: 'fair', uptime: 99.6, officialUptime: 100, incidents: 1, avgResolutionMin: 240 } },
   ]
-  const meta = { modal: { name: 'Modal' }, perplexity: { name: 'Perplexity' } }
+  const meta = { modal: { name: 'Modal' }, openrouter: { name: 'OpenRouter' }, perplexity: { name: 'Perplexity' } }
   const table = buildScoreTable(services, meta)
   assert.ok(table.includes('| Rank | Service | Score | Grade | Uptime Source | Why |'), 'header must use Uptime Source')
   assert.ok(!table.includes('Confidence'), 'Confidence column must be gone')
+  assert.ok(!table.includes('Estimate'), 'the "Estimate" label went with the estimate itself (aiwatch#713)')
+  const openrouterRow = table.split('\n').find(r => r.includes('OpenRouter'))
+  assert.ok(/\| No official uptime \|/.test(openrouterRow), `must not claim Official: ${openrouterRow}`)
+  assert.ok(!/100\.00% uptime/.test(openrouterRow), `must not quote the measured uptime: ${openrouterRow}`)
   const perplexityRow = table.split('\n').find(r => r.includes('Perplexity'))
-  assert.ok(/\| Estimate \|/.test(perplexityRow), `estimate cohort must be marked Estimate: ${perplexityRow}`)
+  assert.ok(/\| Official \|/.test(perplexityRow), `publishes real uptime → Official: ${perplexityRow}`)
   const modalRow = table.split('\n').find(r => r.includes('Modal'))
   assert.ok(/\| Official \|/.test(modalRow), `status-page service must be Official: ${modalRow}`)
 })
@@ -416,8 +457,15 @@ test('legacy archive (no field): normal service → daily-counter uptime', () =>
 test('new archive: NO_PUBLIC_UPTIME estimate service (bedrock 100) → null (no #29 stray-100 row)', () => {
   eq(officialUptimeFor({ id: 'bedrock', data: { uptime: 100, officialUptime: 100 } }), null)
 })
-test('new archive: NO_PUBLIC_UPTIME stays excluded even with a value (mistral)', () => {
-  eq(officialUptimeFor({ id: 'mistral', data: { uptime: 99.5, officialUptime: 99.5 } }), null)
+// aiwatch#951 — Mistral (Instatus) and Perplexity DO publish an official uptime. The old guard
+// dropped them from the table and labelled them "Estimate"; a modern archive is authoritative.
+test('new archive: mistral/perplexity keep their real official uptime', () => {
+  eq(officialUptimeFor({ id: 'mistral', data: { uptime: 87.29, officialUptime: 99.559 } }), 99.559)
+  eq(officialUptimeFor({ id: 'perplexity', data: { uptime: 99.98, officialUptime: 100 } }), 100)
+})
+test('new archive: a service publishing none is omitted, whatever its measured uptime', () => {
+  eq(officialUptimeFor({ id: 'openrouter', data: { uptime: 100, officialUptime: null } }), null)
+  eq(officialUptimeFor({ id: 'stability', data: { uptime: 100, officialUptime: null } }), null)
 })
 test('chatgpt is NOT in NO_PUBLIC_UPTIME — included via officialUptime despite uptimeSource=estimate', () => {
   // ChatGPT is also `uptimeSource: estimate` upstream, but must STAY in the table (the whole #586 point),
@@ -1763,6 +1811,195 @@ test('escapes a literal pipe in a component name so the row is not broken', () =
     svc: { components: [{ id: 'a', name: 'A | B', uptime: 97 }, { id: 'b', name: 'Web', uptime: 100 }] },
   } }, { svc: { name: 'Svc' } })
   assert.ok(out.includes('A \\| B'), 'pipe escaped')
+})
+
+// ── aiwatch#951: the archive is trusted, so an untrustworthy archive must be LOUD ────────
+console.log('\nfindUptimeInconsistencies / emitUptimeWarnings (aiwatch#951)')
+const MODERN_OK = [
+  { id: 'groq', data: { officialUptime: 100, scoreConfidence: 'high' } },
+  { id: 'openrouter', data: { officialUptime: null, scoreConfidence: 'medium', uptime: 100 } },
+]
+test('a correct modern archive produces no warnings', () => {
+  eq(findUptimeInconsistencies(MODERN_OK).length, 0)
+})
+test('flags an official uptime the Score did not consume (the #951 shape)', () => {
+  const msgs = findUptimeInconsistencies([
+    { id: 'stability', data: { officialUptime: 100, scoreConfidence: 'medium' } },
+  ])
+  eq(msgs.length, 1)
+  assert.ok(msgs[0].includes('stability'), msgs[0])
+  assert.ok(msgs[0].includes('scoreConfidence="medium"'), msgs[0])
+})
+test('flags an archive built before aiwatch#962 as UNVERIFIED (no scoreConfidence)', () => {
+  // Concretely: the aiwatch#962 deploy slipping past 2026-08-01 would let the OLD worker write
+  // July's archive with the sticky-last-non-null contamination, which looks identical to a good one.
+  const msgs = findUptimeInconsistencies([
+    { id: 'groq', data: { officialUptime: 100 } },
+    { id: 'stability', data: { officialUptime: 100 } },
+  ])
+  eq(msgs.length, 1)
+  assert.ok(msgs[0].includes('UNVERIFIED'), msgs[0])
+})
+test('a legacy archive with no officialUptime at all is not flagged (nothing to distrust)', () => {
+  eq(findUptimeInconsistencies([{ id: 'cohere', data: { uptime: 100 } }]).length, 0)
+})
+test('bedrock is never flagged — the hard guard already forces it to null', () => {
+  eq(findUptimeInconsistencies([{ id: 'bedrock', data: { officialUptime: 100, scoreConfidence: 'low' } }]).length, 0)
+})
+test('a partially-migrated archive still flags its contradictory rows', () => {
+  // `hasProvenance` is true (one service carries the field), so the UNVERIFIED line is suppressed —
+  // but a contradictory row must still be caught. Field-less rows are simply undecidable.
+  const msgs = findUptimeInconsistencies([
+    { id: 'groq', data: { officialUptime: 100, scoreConfidence: 'high' } },
+    { id: 'stability', data: { officialUptime: 100, scoreConfidence: 'medium' } },
+    { id: 'legacy', data: { officialUptime: 99 } },
+  ])
+  eq(msgs.length, 1)
+  assert.ok(msgs[0].includes('stability'), msgs[0])
+  assert.ok(!msgs.some(m => m.includes('UNVERIFIED')), 'provenance exists → no archive-level warning')
+})
+
+// FAIL-SAFE, not fail-loud: a warning in a CI log is not seen by whoever reviews the draft PR.
+// A value the Score never consumed is wrong by construction, so it must never reach the page.
+console.log('\ncontradictory archive rows are WITHHELD, not merely warned about (aiwatch#951)')
+const CONTRADICTORY = { id: 'stability', data: { incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'medium' } }
+test('officialUptimeFor withholds the value', () => {
+  eq(officialUptimeFor(CONTRADICTORY), null)
+})
+test('uptimeSourceLabel does not claim "Official"', () => {
+  eq(uptimeSourceLabel(CONTRADICTORY), 'No official uptime')
+})
+test('buildWhy does not quote the withheld figure, and claims nothing about the provider', () => {
+  // The archive DID carry a figure; we withheld it because it contradicted the Score. Saying
+  // "no published uptime" would assert a provider fact the archive contradicts — the same class of
+  // false claim as the "Official · 100.00%" this issue removes. Say only what we know.
+  eq(buildWhy(CONTRADICTORY, 'stability'), 'Zero incidents')
+})
+test('buildUptimeTable omits the row', () => {
+  eq(buildUptimeTable([CONTRADICTORY], { stability: { name: 'Stability AI' } }), '')
+})
+test('the caption does not call a withheld service a non-publisher', () => {
+  eq(buildUptimeExclusionNote([CONTRADICTORY], { stability: { name: 'Stability AI' } }), '')
+})
+test('a legacy regeneration never calls ChatGPT a non-publisher', () => {
+  // chatgpt is suppressed from a legacy table because its daily-counter `uptime` is known-bad, NOT
+  // because it publishes nothing (it publishes ~99%). The old hardcoded caption never listed it.
+  const legacy = [{ id: 'chatgpt', data: { uptime: 72.78 } }, { id: 'gemini', data: { uptime: 94 } }]
+  const note = buildUptimeExclusionNote(legacy, { chatgpt: { name: 'ChatGPT' }, gemini: { name: 'Gemini API' } })
+  eq(officialUptimeFor(legacy[0]), null)  // still out of the table…
+  assert.ok(!note.includes('ChatGPT'), `…but not a non-publisher: ${note}`)
+  assert.ok(note.includes('Gemini API'), note)
+})
+test('a consistent high-confidence row is untouched', () => {
+  const ok = { id: 'groq', data: { incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high' } }
+  eq(officialUptimeFor(ok), 100)
+  eq(uptimeSourceLabel(ok), 'Official')
+  eq(buildWhy(ok, 'groq'), 'Zero incidents, 100.00% uptime')
+})
+
+// The caption under the Official Uptime table used to hardcode the NO_PUBLIC_UPTIME names in prose —
+// a third copy of the taxonomy. It said "Mistral … excluded from this table" while Mistral sat IN it.
+console.log('\nbuildUptimeExclusionNote is rendered from the same gate as the table (aiwatch#951)')
+const NOTE_META = { bedrock: { name: 'Amazon Bedrock' }, xai: { name: 'xAI' }, openrouter: { name: 'OpenRouter' }, groq: { name: 'Groq Cloud' }, mistral: { name: 'Mistral API' } }
+test('names exactly the services the table omits, alphabetically', () => {
+  const svcs = [
+    { id: 'groq', data: { officialUptime: 100 } },
+    { id: 'mistral', data: { officialUptime: 99.559 } },
+    { id: 'bedrock', data: { officialUptime: 100 } },
+    { id: 'openrouter', data: { officialUptime: null } },
+  ]
+  const note = buildUptimeExclusionNote(svcs, NOTE_META)
+  assert.ok(note.includes('Amazon Bedrock, and OpenRouter') || note.includes('Amazon Bedrock and OpenRouter'), note)
+  assert.ok(!note.includes('Mistral'), `Mistral is IN the table now — the caption must not exclude it: ${note}`)
+  assert.ok(!note.includes('Groq'), note)
+})
+test('never contradicts buildUptimeTable — a service is never in both', () => {
+  // "Never both" is the real invariant, not "exactly one": a row we withhold (chatgpt legacy
+  // suppression, or a figure contradicting the Score) is in neither, and must not be explained as
+  // a provider that publishes nothing.
+  const svcs = [
+    { id: 'groq', data: { officialUptime: 100 } },
+    { id: 'mistral', data: { officialUptime: 99.559 } },
+    { id: 'openrouter', data: { officialUptime: null } },
+    { id: 'bedrock', data: { officialUptime: 100 } },
+  ]
+  const rows = buildUptimeTable(svcs, NOTE_META)
+  const note = buildUptimeExclusionNote(svcs, NOTE_META)
+  for (const s of svcs) {
+    const name = NOTE_META[s.id].name
+    const inTable = rows.includes(`<td>${name}</td>`)
+    const inNote = note.includes(name)
+    assert.ok(!(inTable && inNote), `${name}: listed in the table AND named as a non-publisher`)
+    assert.ok(inTable || inNote, `${name}: this fixture has no withheld rows, so it must appear somewhere`)
+  }
+})
+test('keeps the xAI explainer only when xAI is actually excluded', () => {
+  const withXai = buildUptimeExclusionNote([{ id: 'xai', data: { officialUptime: null } }], NOTE_META)
+  assert.ok(withXai.includes('status.x.ai'), withXai)
+  assert.ok(/xAI does not publish .* on its status page — it's excluded/.test(withXai), `singular grammar: ${withXai}`)
+  const withoutXai = buildUptimeExclusionNote([{ id: 'openrouter', data: { officialUptime: null } }], NOTE_META)
+  assert.ok(!withoutXai.includes('status.x.ai'), withoutXai)
+})
+test('collapses to an empty string when every service publishes uptime', () => {
+  eq(buildUptimeExclusionNote([{ id: 'groq', data: { officialUptime: 100 } }], NOTE_META), '')
+})
+
+console.log('\nNEVER_PUBLISHES_UPTIME stays in lockstep with NO_INCIDENT_FEED')
+test('the two sets encode the same providers (incident-feed-only → no uptime to publish)', () => {
+  // They live in different files for different reasons; if a future gcloud-incident-only service is
+  // added to one but not the other, the #29 stray-row / mislabel class of bug comes straight back.
+  const { NO_INCIDENT_FEED } = require('./generate-charts')
+  assert.deepEqual([...NO_INCIDENT_FEED].sort(), ['azureopenai', 'bedrock'])
+})
+test('emitUptimeWarnings annotates on stdout in CI, warns on stderr locally', () => {
+  // The annotation goes to stdout (matching lint-recurrence.js / @actions/core); the local
+  // fallback goes to stderr. Capture both channels separately so a swap can't pass silently.
+  const out = [], err = []
+  const realLog = console.log, realWarn = console.warn
+  console.log = m => out.push(m); console.warn = m => err.push(m)
+  let counts
+  try {
+    counts = [emitUptimeWarnings(['boom'], { GITHUB_ACTIONS: 'true' }), emitUptimeWarnings(['boom'], {})]
+  } finally { console.log = realLog; console.warn = realWarn }
+  eq(out.length, 1); eq(err.length, 1)
+  assert.ok(out[0].startsWith('::warning::'), out[0])
+  assert.ok(err[0].startsWith('[generate-report] WARNING: '), err[0])
+  assert.deepEqual(counts, [1, 1])
+})
+
+console.log('\nofficialUptimeFor — legible failure on the pre-#951 signature')
+test('throws a clear TypeError when handed a bare id string', () => {
+  assert.throws(() => officialUptimeFor('bedrock'), /expects a \{ id, data \} service/)
+})
+
+console.log('\nbuildUptimeTable row membership (aiwatch#951)')
+test('mistral/perplexity appear; openrouter/stability do not', () => {
+  const services = [
+    { id: 'mistral', data: { uptime: 87.29, officialUptime: 99.559 } },
+    { id: 'perplexity', data: { uptime: 99.98, officialUptime: 100 } },
+    { id: 'openrouter', data: { uptime: 100, officialUptime: null } },
+    { id: 'stability', data: { uptime: 100, officialUptime: null } },
+    { id: 'bedrock', data: { uptime: 100, officialUptime: 100 } },
+  ]
+  const meta = { mistral: { name: 'Mistral API' }, perplexity: { name: 'Perplexity' }, openrouter: { name: 'OpenRouter' }, stability: { name: 'Stability AI' }, bedrock: { name: 'Amazon Bedrock' } }
+  const rows = buildUptimeTable(services, meta)
+  assert.ok(rows.includes('Mistral API'), 'mistral publishes real uptime → row')
+  assert.ok(rows.includes('Perplexity'), 'perplexity publishes real uptime → row')
+  assert.ok(!rows.includes('OpenRouter'), 'openrouter publishes none → no row')
+  assert.ok(!rows.includes('Stability AI'), 'stability publishes none → no row')
+  assert.ok(!rows.includes('Amazon Bedrock'), 'hard guard survives a contaminated archive')
+})
+
+console.log('\nzero-incident split keys off the INCIDENT feed, not the uptime taxonomy (aiwatch#951)')
+test('perplexity with a zero-incident month is a confirmed zero, not "no incident feed"', () => {
+  const services = [
+    { id: 'perplexity', data: { incidents: 0, officialUptime: 100, scoreConfidence: 'high' } },
+    { id: 'bedrock', data: { incidents: 0, officialUptime: null, scoreConfidence: 'low' } },
+  ]
+  const { zeroIncLine } = buildIncidentTable(services, { perplexity: { name: 'Perplexity' }, bedrock: { name: 'Amazon Bedrock' } })
+  assert.ok(/Zero incidents \(1 services\):\*\* Perplexity/.test(zeroIncLine), zeroIncLine)
+  assert.ok(/No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), zeroIncLine)
+  assert.ok(!/No incident feed[^\n]*Perplexity/.test(zeroIncLine), `must not contradict its "Official" label: ${zeroIncLine}`)
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

@@ -37,21 +37,27 @@ const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
 const OUT_DIR_ROOT = path.join(__dirname, '..')
 
-// Services whose uptime is an estimate, not an official rolling-30-day metric read directly
-// from a status page — either no published metric (industry-average assumption) or a
-// poll/incident-derived figure. Marked "Estimate" in the Score table's Uptime Source column.
-// (#29 — `bedrock` was previously missing here, so it leaked a stray "100.00%" row.)
+// LEGACY guard, for archives written before aiwatch#586 added the per-service `officialUptime`
+// field. Those archives carry only the daily-counter `uptime`, so `officialUptimeFor` would let a
+// measured figure pose as an official one; these ids opt out. (#29 — `bedrock` was missing here, so
+// it leaked a stray "100.00%" row.)
 //
-// NOTE (aiwatch#586): the Official Uptime TABLE's VALUE now comes from the archive's per-service
-// `officialUptime` field (the status-page rolling-30d figure) instead of the daily-counter `uptime`,
-// which is what folds ChatGPT in with its real ~99% value (see `officialUptimeFor`). This set is
-// STILL the table's exclusion guard, though: the worker emits a non-null `officialUptime` for the
-// estimate-source members too (bedrock/azureopenai → synthetic 100), so without the guard #29's
-// stray "100.00%" row would return. The set also drives the Score table's "Estimate"/"Official"
-// label and the zero-incident framing.
+// It is NOT the uptime-source taxonomy any more (aiwatch#951). A hand-maintained list drifted in
+// both directions: Mistral and Perplexity publish real official uptime yet were labelled "Estimate"
+// and dropped from the Official Uptime table, while OpenRouter and Stability AI publish none yet
+// were labelled "Official · 100.00%" beside a Score that had been rescaled without any uptime.
+// Modern archives answer the question directly — `officialUptime` is non-null exactly when the Score
+// consumed one — so the label and the table now read the data. "Estimate" is gone as a concept:
+// aiwatch#713 removed the invented uptime it named.
 const NO_PUBLIC_UPTIME = new Set([
   'bedrock', 'azureopenai', 'deepgram', 'gemini', 'mistral', 'perplexity', 'xai',
 ])
+
+// Services with no uptime SOURCE at all — incident feeds only (the same pair aiwatch#263 excludes
+// from its Is-X-Down pages). They can never contribute an Official Uptime row, whatever the archive
+// says, so this survives a pre-aiwatch#951 archive that still carries their synthetic 100 (#29's
+// stray "100.00%" row). Deliberately narrow: it must NOT grow back into the drifted taxonomy above.
+const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 
 // (NO_INCIDENT_FEED / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
 // as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
@@ -166,14 +172,25 @@ function competitionRank(items, valueFn) {
 // ── "Why" text generation for Score Ranking ──────────────────────────
 // Formulaic — intentional. Human editors refine as needed.
 function buildWhy(svc, id) {
-  const { incidents, uptime, avgResolutionMin } = svc.data
+  const { incidents, avgResolutionMin } = svc.data
   const pieces = []
   if (incidents === 0) {
-    // Estimate-uptime service with zero incidents: there's no comparable 30-day % to cite,
-    // and "Zero incidents, 100% uptime" would overstate what we can actually measure (#29).
-    if (NO_PUBLIC_UPTIME.has(id)) return 'Zero incidents (no published 30-day uptime)'
-    pieces.push('Zero incidents')
-    if (uptime !== null && uptime !== undefined) pieces.push(`${Number(uptime).toFixed(2)}% uptime`)
+    // aiwatch#951 — cite the OFFICIAL figure, never the daily-counter `uptime`. A service that
+    // publishes no official uptime has no comparable % to quote, and quoting the measured one made
+    // "Zero incidents, 100.00% uptime" sit next to a Score rescaled as if no uptime existed
+    // (OpenRouter 80, Stability AI 76 — impossible under the formula, whose floor is 80 with uptime).
+    const official = officialUptimeFor(svc, id)
+    if (typeof official === 'number') {
+      pieces.push('Zero incidents', `${official.toFixed(2)}% uptime`)
+    } else if (publishesNoOfficialUptime(svc, id)) {
+      // "They publish none" — a statement about the provider.
+      return 'Zero incidents (no published uptime)'
+    } else {
+      // "We have no figure" — a statement about our data: a legacy archive, missing counters, or a
+      // figure we withheld because it contradicted the Score. Different claim; don't put words in
+      // the provider's mouth.
+      return 'Zero incidents'
+    }
   } else if (incidents === 1) {
     pieces.push('1 incident')
     if (avgResolutionMin) pieces.push(fmtDurationMin(avgResolutionMin))
@@ -202,13 +219,16 @@ function confidence(svc) {
   return 'Medium'
 }
 
-// Uptime Source label for the Score table: Official (read directly from a status page) vs
-// Estimate (no published 30-day metric; industry-average or poll-derived). #29 replaced the
-// prior "Confidence" column here — it marked estimate-uptime services as "High" and hid that
-// their score rests on an assumed uptime. ("Partial (Nd)" for mid-month additions stays a
-// manual edit; not derivable from the archive yet.)
-function uptimeSourceLabel(id) {
-  return NO_PUBLIC_UPTIME.has(id) ? 'Estimate' : 'Official'
+// Uptime Source label for the Score table. #29 replaced the prior "Confidence" column here — it
+// marked estimate-uptime services as "High" and hid that their score rested on an assumed uptime.
+// aiwatch#951 takes the next step: the label is derived from the data, not a hand-maintained list
+// that had drifted in both directions. "Official" = the archive carries a status-page figure, which
+// is exactly when the Score consumed it; otherwise "No official uptime", mirroring the dashboard's
+// `noOfficialUptime` wording. The old "Estimate" value is gone with the estimate itself (aiwatch#713).
+// ("Partial (Nd)" for mid-month additions stays a manual edit; not derivable from the archive yet.)
+function uptimeSourceLabel(svc, id = svc?.id) {
+  const official = officialUptimeFor(svc, id)
+  return official === null || official === undefined ? 'No official uptime' : 'Official'
 }
 
 // Ranking-exclusion note (#29). NO_INCIDENT_FEED services have neither an accessible uptime
@@ -257,7 +277,7 @@ function buildScoreTable(services, meta, period) {
   const ranked = competitionRank(withScore, s => s.data.score)
   const rows = ranked.map(r => {
     const s = r.item
-    return `| ${r.rankLabel} | ${serviceName(s.id, meta)} | ${s.data.score} | ${gradeLabel(s.data.grade)} | ${uptimeSourceLabel(s.id)} | ${buildWhy(s, s.id)} |`
+    return `| ${r.rankLabel} | ${serviceName(s.id, meta)} | ${s.data.score} | ${gradeLabel(s.data.grade)} | ${uptimeSourceLabel(s, s.id)} | ${buildWhy(s, s.id)} |`
   })
   return [
     '| Rank | Service | Score | Grade | Uptime Source | Why |',
@@ -289,28 +309,32 @@ function buildIncidentTable(services, meta) {
   })
 
   // Zero-incident services split (#29): a "confirmed zero" needs a real, CURRENT incident feed.
-  // Estimate-uptime services (NO_PUBLIC_UPTIME) with zero incidents are coverage-limited —
-  // a blank count reflects what AIWatch can see, not verified incident-free operation. STALE_SOURCE
-  // services (aiwatch#507) are also excluded from "confirmed": their feed is frozen, so a zero count
-  // is "nothing since the cutoff," not a verified incident-free month.
+  // The bucket keys off NO_INCIDENT_FEED (bedrock/azureopenai), NOT the uptime taxonomy. It used to
+  // use NO_PUBLIC_UPTIME, conflating two unrelated questions — whether a provider publishes an uptime
+  // %, and whether AIWatch can read its incidents. aiwatch#951 made that conflation visible: Perplexity
+  // publishes a real uptime and has a real incident feed, yet a zero-incident month would have printed
+  // "Official · Zero incidents, 100.00% uptime" in the Score table and, two sections later, "No incident
+  // feed: Perplexity — a blank incident count reflects monitoring coverage, not verified incident-free
+  // operation." Both about the same month. STALE_SOURCE services (aiwatch#507) stay excluded from
+  // "confirmed": their feed is frozen, so a zero count is "nothing since the cutoff".
   // Use isStaleSource (flag-OR-constant) — not the raw STALE_SOURCE constant — so a service marked
   // stale by the archive's incidentSourceStale flag is handled even though the constant is now empty
   // (aiwatch#618 emptied it; the May 2026 archive still carries the flag).
   const zero = services.filter(s => s.data.incidents === 0)
   const confirmed = zero
-    .filter(s => !NO_PUBLIC_UPTIME.has(s.id) && !isStaleSource(s))
+    .filter(s => !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
     .map(s => serviceName(s.id, meta))
-  // Stale sources are excluded from noFeed too (defensive — a future stale service that also lacks a
-  // public uptime feed must get the more-specific Stale-source line, not a double caveat).
+  // Stale sources are excluded from noFeed too (defensive — a future stale service that also lacks an
+  // incident feed must get the more-specific Stale-source line, not a double caveat).
   const noFeed = zero
-    .filter(s => NO_PUBLIC_UPTIME.has(s.id) && !isStaleSource(s))
+    .filter(s => NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
     .map(s => serviceName(s.id, meta))
   const zeroLines = []
   if (confirmed.length) {
     zeroLines.push(`**Zero incidents (${confirmed.length} services):** ${confirmed.join(', ')} — confirmed via their status-page incident feeds.`)
   }
   if (noFeed.length) {
-    zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (RSS / estimate-only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
+    zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (aggregated event JSON / RSS only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
   }
   // Stale-source caveat (aiwatch#507) — rendered whenever a stale service is in the report (by the
   // archive's incidentSourceStale flag or the STALE_SOURCE constant), regardless of incident count:
@@ -326,28 +350,144 @@ function buildIncidentTable(services, meta) {
   }
 }
 
-// #586 — resolve the value the "Official Uptime" table should display for a service: the
-// STATUS-PAGE rolling-30d figure (`officialUptime`), NOT the daily-counter `uptime` that feeds the
-// Score. Returns null when the service has no comparable published metric (→ omitted from the table).
-//   • NO_PUBLIC_UPTIME services are ALWAYS omitted (both paths). The worker emits a non-null
-//     `officialUptime` for the estimate-source ones too (bedrock/azureopenai carry a synthetic
-//     `uptime30d` of 100 — `services.ts` estimate source), which would otherwise leak the stray
-//     "100.00%" row #29 removed; gemini/mistral/perplexity/xai/deepgram already carry null. Gating
-//     on the maintained set (not `uptimeSource`) is deliberate: ChatGPT is ALSO `uptimeSource:
-//     'estimate'` but is NOT in the set, so it stays IN the table with its real ~99% figure.
-//   • New archives (≥2026-06) carry `officialUptime` explicitly: a number shows, null omits. This
-//     is what folds ChatGPT in — its daily-counter `uptime` is pessimistic (multi-component status
-//     marks it degraded whenever any sub-component has an incident, e.g. 72.78% in May), but its
-//     status-page `officialUptime` (~99%) is the real comparable figure.
-//   • Legacy archives (≤2026-05) lack the field (undefined) → fall back to the daily-counter
-//     `uptime`, but still suppress chatgpt (whose legacy `uptime` is the known-bad value this issue
-//     exists to hide), preserving the pre-#586 table + the manual May fixup on regeneration.
-function officialUptimeFor(s) {
-  if (NO_PUBLIC_UPTIME.has(s.id)) return null
+// aiwatch#951/#962 — a figure the Score did not consume is wrong by construction. The worker emits
+// `officialUptime` only at `scoreConfidence: 'high'`, so a non-null value beside any other confidence
+// means the archive contradicts itself. REFUSE the value rather than print "Official · 100.00%" beside
+// a Score that was rescaled over /60 without it — that contradiction is the whole bug. Fail-safe, not
+// fail-loud: a warning in a CI log is not seen by whoever reviews the generated draft.
+// Only decidable when the archive carries provenance; a pre-#962 archive has no `scoreConfidence`.
+function contradictsScore(s) {
+  const conf = s.data.scoreConfidence
+  return s.data.officialUptime != null && conf !== undefined && conf !== 'high'
+}
+
+// Does the PROVIDER publish no official uptime? A statement about THEM, and strictly narrower than
+// "`officialUptimeFor` returned null", which also covers our own reasons for withholding a figure —
+// the legacy chatgpt suppression, and a contradictory archive row. Conflating them would print
+// "ChatGPT does not publish a comparable uptime percentage" (it publishes ~99%) on any regeneration
+// of a legacy month. Never assert a provider fact the archive doesn't support.
+// Modern archive: `officialUptime: null` says it outright. Legacy: the maintained set is the only
+// evidence we have.
+function publishesNoOfficialUptime(s, id = s?.id) {
+  if (NEVER_PUBLISHES_UPTIME.has(id)) return true
   const o = s.data.officialUptime
-  if (o !== undefined) return o
-  if (s.id === 'chatgpt') return null
-  return s.data.uptime ?? null
+  if (o !== undefined) return o === null  // modern archive is authoritative
+  return NO_PUBLIC_UPTIME.has(id)         // legacy archive: the maintained set is the only evidence
+}
+
+// aiwatch#951 — the generator trusts the archive's `officialUptime`, so it says out loud when the
+// archive cannot be trusted. Two ways it can't be, and they get different treatment:
+//
+//   1. A CONTRADICTORY archive — DECIDABLE, so `contradictsScore` already withheld the value. This
+//      only reports what was withheld, so the omission isn't itself silent.
+//   2. An UNVERIFIABLE archive — NOT decidable, so this branch is deliberately fail-OPEN: it warns and
+//      renders the figures anyway. The `officialUptime` field predates the fix (aiwatch#586), so a month
+//      built by the OLD worker carries the field AND its sticky-last-non-null contamination,
+//      indistinguishable from a correct one. `scoreConfidence`'s absence is the only provenance marker.
+//      Withholding EVERY figure on that signal would blank the table for a probably-fine archive —
+//      including the 2026-06 one, whose 31 official figures are correct (hand-verified) but which was
+//      built before aiwatch#962 shipped, so it trips this branch. The escalation is human: the warning
+//      is item #1 on the draft-PR checklist. Concretely: if the aiwatch#962 deploy slips past
+//      2026-08-01, July's archive is contaminated and only that checklist stands between it and print.
+//
+// Returns human-readable messages; the caller decides how to surface them. Pure, so it is testable.
+function findUptimeInconsistencies(services) {
+  const messages = []
+  for (const s of services) {
+    // Read the raw fields, NOT officialUptimeFor — that already returned null for exactly these.
+    if (NEVER_PUBLISHES_UPTIME.has(s.id)) continue
+    if (contradictsScore(s)) {
+      messages.push(
+        `${s.id}: archive shows an official uptime of ${s.data.officialUptime} but scoreConfidence=` +
+        `"${s.data.scoreConfidence}" — the Score was computed without any uptime, so the figure has ` +
+        `been WITHHELD from the report (aiwatch#951). The archive is inconsistent; fix it at the source`,
+      )
+    }
+  }
+  const hasProvenance = services.some(s => s.data.scoreConfidence !== undefined)
+  if (!hasProvenance && services.some(s => s.data.officialUptime != null)) {
+    messages.push(
+      'this archive carries officialUptime but no scoreConfidence, so it was built before aiwatch#962 — ' +
+      'its "Official" figures are UNVERIFIED and cannot be checked from here. Confirm the worker fix was ' +
+      'deployed before this month was archived',
+    )
+  }
+  return messages
+}
+
+/** Surface them where a human will see them: a GitHub Actions annotation in CI, stderr otherwise.
+ *  stdout in CI, matching `lint-recurrence.js` and `@actions/core`'s own channel. */
+function emitUptimeWarnings(messages, env = process.env) {
+  for (const m of messages) {
+    if (env.GITHUB_ACTIONS) console.log(`::warning::${m}`)
+    else console.warn(`[generate-report] WARNING: ${m}`)
+  }
+  return messages.length
+}
+
+// #586 — resolve the value the "Official Uptime" table should display for a service: the
+// STATUS-PAGE figure (`officialUptime`; the window varies by page), NOT the daily-counter `uptime` that feeds the
+// Score. Returns null when the service has no comparable published metric (→ omitted from the table).
+// Also the single source of truth for `uptimeSourceLabel` and `buildWhy`'s zero-incident wording,
+// so those three can never disagree about whether a service publishes an official uptime.
+//   • Modern archives (≥2026-06, post-aiwatch#951) carry `officialUptime` explicitly and correctly:
+//     a number shows, null omits. The worker emits it ONLY when the Score consumed it, so a
+//     displayed "Official" figure can no longer sit beside a Score rescaled without one. This is
+//     also what folds ChatGPT in — its daily-counter `uptime` is pessimistic (multi-component status
+//     marks it degraded whenever any sub-component has an incident, e.g. 72.78% in May), but its
+//     status-page `officialUptime` (~99%) is the real comparable figure. The archive is authoritative
+//     here: do NOT re-gate on NO_PUBLIC_UPTIME, which wrongly drops Mistral and Perplexity (both
+//     publish a real official uptime) and wrongly kept bedrock/azureopenai's synthetic pre-#713 100.
+//   • Legacy archives (≤2026-05) lack the field (undefined) → fall back to the daily-counter
+//     `uptime`, and only there does NO_PUBLIC_UPTIME apply: without it a measured figure would pose
+//     as an official one. chatgpt is suppressed for the same reason (its legacy `uptime` is the
+//     known-bad value), preserving the pre-#586 table + the manual May fixup on regeneration.
+function officialUptimeFor(s, id = s?.id) {
+  if (typeof s === 'string') {
+    // The pre-aiwatch#951 signature was `(id)`. Fail with a legible message instead of
+    // "Cannot read properties of undefined (reading 'officialUptime')" halfway through a report.
+    throw new TypeError(`officialUptimeFor expects a { id, data } service, got the string "${s}"`)
+  }
+  if (NEVER_PUBLISHES_UPTIME.has(id)) return null
+  const o = s.data.officialUptime
+  if (o !== undefined) {
+    if (contradictsScore(s)) return null  // the Score never consumed it → refuse to print it
+    return o                              // modern archive: authoritative, null included
+  }
+  if (NO_PUBLIC_UPTIME.has(id)) return null
+  if (id === 'chatgpt') return null
+  return s.data.uptime ?? null           // legacy archive: the measured figure is the best we have
+}
+
+// The caption under the Official Uptime table names the providers that publish no uptime. It used to
+// be a hardcoded sentence in the template listing NO_PUBLIC_UPTIME verbatim — a third copy of the
+// taxonomy that aiwatch#951 found drifted, so it claimed Mistral was excluded while Mistral sat IN
+// the table. Now derived from `publishesNoOfficialUptime`.
+//
+// Deliberately NOT `officialUptimeFor(s) === null`, which is the table's gate: that is also null for
+// rows WE withhold (the legacy chatgpt suppression; a row whose figure contradicted the Score). Those
+// are absent from the table but are not non-publishers, and saying so would be a false claim about a
+// provider — the same class of error as the "Official · 100.00%" this issue exists to remove. So the
+// caption explains the providers, not every omission. Returns '' when none → the marker collapses.
+function buildUptimeExclusionNote(services, meta) {
+  const excluded = services
+    .filter(s => publishesNoOfficialUptime(s))
+    .map(s => serviceName(s.id, meta))
+    .sort((a, b) => a.localeCompare(b))
+  if (excluded.length === 0) return ''
+  const list = excluded.length === 1 ? excluded[0]
+    : excluded.length === 2 ? excluded.join(' and ')
+    : `${excluded.slice(0, -1).join(', ')}, and ${excluded[excluded.length - 1]}`
+  const one = excluded.length === 1
+  const clause = one
+    ? `does not publish a comparable uptime percentage on its status page — it's excluded`
+    : `do not publish a comparable uptime percentage on their status pages — they're excluded`
+  let note = `*${list} ${clause} from this table for that reason.`
+  // xAI is the one worth explaining: its page shows numbers, they just aren't comparable.
+  if (services.some(s => s.id === 'xai' && publishesNoOfficialUptime(s))) {
+    note += ` (xAI's [status page](https://status.x.ai) does expose per-endpoint live success rates measured since its monitoring system's last restart, but those numbers are not directly comparable to the figures above.)`
+  }
+  return `${note}*`
 }
 
 function buildUptimeTable(services, meta) {
@@ -818,6 +958,10 @@ function fillTemplate(template, month, archive, meta) {
   // Extract service array from archive
   const services = Object.entries(archive.services).map(([id, data]) => ({ id, data }))
 
+  // aiwatch#951 — the uptime columns now trust the archive. Say so out loud when the archive can't
+  // be trusted, rather than publishing fabricated "Official" figures silently (which is the bug).
+  emitUptimeWarnings(findUptimeInconsistencies(services))
+
   // Build tables
   const scoreTable = buildScoreTable(services, meta, month)
   const rankingNote = buildRankingNote(services, meta, month)
@@ -853,6 +997,13 @@ function fillTemplate(template, month, archive, meta) {
   // Incident Summary + Official Uptime use HTML <tbody>
   out = replaceTableBody(out, 'Incident Summary', incidentRows)
   out = replaceTableBody(out, 'Official Uptime', uptimeRows)
+  // aiwatch#951 — the caption naming who is missing from that table, rendered from the same gate.
+  const uptimeExclusionNote = buildUptimeExclusionNote(services, meta)
+  if (uptimeExclusionNote) {
+    out = out.replace(/<!-- UPTIME_EXCLUSION_NOTE -->/, uptimeExclusionNote)
+  } else {
+    out = out.replace(/\n*<!-- UPTIME_EXCLUSION_NOTE -->\n*/, '\n\n')
+  }
 
   // Zero-incidents line — replace the placeholder comment
   out = out.replace(
@@ -1531,8 +1682,12 @@ module.exports = {
   isRecentlyAdded,
   buildIncidentTable,
   officialUptimeFor,
+  publishesNoOfficialUptime,
+  findUptimeInconsistencies,
+  emitUptimeWarnings,
   buildStaleSourceCaveat,
   buildUptimeTable,
+  buildUptimeExclusionNote,
   buildLatencyTable,
   buildBySourceTable,
   buildBySeverityTable,
