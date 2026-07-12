@@ -3,8 +3,12 @@ const {
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
   buildMoverExclude, notableMoversForChart,
+  uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
+  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS,
 } = require('./generate-charts')
 const assert = require('assert')
+const { spawnSync } = require('child_process')
+const path = require('path')
 
 let passed = 0
 let failed = 0
@@ -631,6 +635,413 @@ test('computeNotableMovers surfaces an MTTR-driven mover ONLY when the current e
   // Score-table-only current entry (the old bug path) → MTTR null → flat Score → NOT a mover
   const withRows = computeNotableMovers(buildTrendSeries([prior, rowsCurrent]))
   assert.ok(!withRows.some(m => m.id === 'gemini'), 'gemini vanishes when current entry lacks MTTR — why the CLI must use toMonthEntry')
+})
+
+// ── aiwatch-reports#77 — heatmap lookback window ──────────────────
+// The /api/uptime `days` param is a lookback anchored to TODAY. The old code passed
+// `daysInMonth`, so a chart built D days after month-end lost the month's first D days.
+
+const JUL10 = new Date(Date.UTC(2026, 6, 10)) // 2026-07-10
+
+test('uptimeLookbackDays reaches back to the month\'s first day', () => {
+  // June 1 → July 10 inclusive = 40 days. The old code passed 30 and started the chart on June 11.
+  assert.strictEqual(uptimeLookbackDays('2026-06', JUL10), 40)
+  assert.notStrictEqual(uptimeLookbackDays('2026-06', JUL10), 30, 'must not pass daysInMonth')
+})
+
+test('uptimeLookbackDays: generated on the last day of the month → exactly daysInMonth', () => {
+  // The one case where the old bug was invisible.
+  assert.strictEqual(uptimeLookbackDays('2026-06', new Date(Date.UTC(2026, 5, 30))), 30)
+})
+
+test('uptimeLookbackDays: generated on the 1st → 1 day (in-progress month)', () => {
+  assert.strictEqual(uptimeLookbackDays('2026-07', new Date(Date.UTC(2026, 6, 1))), 1)
+})
+
+test('uptimeLookbackDays regressions the months the bug actually truncated', () => {
+  // April and May were both generated after month-end, so days=daysInMonth landed the window
+  // mid-month: April's chart starts on the 5th, May's on the 3rd, while their headers read
+  // "April 1–30" / "May 1–31". These are the windows those runs SHOULD have requested.
+  assert.strictEqual(uptimeLookbackDays('2026-04', new Date(Date.UTC(2026, 4, 4))), 34) // Apr 1 → May 4
+  assert.strictEqual(uptimeLookbackDays('2026-05', new Date(Date.UTC(2026, 5, 2))), 33) // May 1 → Jun 2
+})
+
+test('March is NOT a victim — its late start was real, not truncation', () => {
+  // The first March chart (git 3aa29a2, committed 2026-03-27) is subtitled "March 20–27". With
+  // days=31 its window reached back to 2026-02-25 — it COULD see March 1–19 and found nothing.
+  // Monitoring genuinely began 2026-03-20, and the report header says so ("Period: March 20–31").
+  const firstGen = new Date(Date.UTC(2026, 2, 27))
+  assert.strictEqual(uptimeLookbackSpan('2026-03', firstGen), 27, 'the window already reached March 1')
+  assert.ok(uptimeLookbackSpan('2026-03', firstGen) < 31, 'days=31 over-reached into February')
+})
+
+test('uptimeLookbackDays clamps to the endpoint cap', () => {
+  const farFuture = new Date(Date.UTC(2027, 0, 1))
+  assert.strictEqual(uptimeLookbackDays('2026-06', farFuture), UPTIME_MAX_LOOKBACK_DAYS)
+})
+
+test('uptimeLookbackDays rejects a month that has not started', () => {
+  assert.throws(() => uptimeLookbackDays('2026-08', JUL10), /has not started/)
+})
+
+test('uptimeLookbackDays rejects a malformed monthKey', () => {
+  assert.throws(() => uptimeLookbackDays('2026-13', JUL10), /invalid monthKey/)
+  assert.throws(() => uptimeLookbackDays('nonsense', JUL10), /invalid monthKey/)
+})
+
+test('window errors carry no internal fn name — the CLI already prefixes them', () => {
+  // The CLI prints `✗ Cannot determine the uptime window: ${err.message}`; a `uptimeLookbackSpan:`
+  // prefix inside the message produced a double-prefixed line naming a helper the operator
+  // cannot act on.
+  for (const bad of ['2026-13', '2027-01']) {
+    assert.throws(() => uptimeLookbackDays(bad, JUL10), err => !/uptimeLookback/.test(err.message))
+  }
+})
+
+// ── coverage gate ────────────────────────────────────────────────
+
+const fullJune = Object.fromEntries(
+  Array.from({ length: 30 }, (_, i) => [`2026-06-${String(i + 1).padStart(2, '0')}`, { claude: {} }]),
+)
+
+test('missingMonthDays: full coverage → no gap', () => {
+  assert.deepStrictEqual(missingMonthDays(fullJune, '2026-06', 30, JUL10), [])
+})
+
+test('missingMonthDays names the exact days the old bug dropped', () => {
+  const truncated = { ...fullJune }
+  for (let d = 1; d <= 9; d++) delete truncated[`2026-06-0${d}`]
+  const missing = missingMonthDays(truncated, '2026-06', 30, JUL10)
+  assert.strictEqual(missing.length, 9)
+  assert.strictEqual(missing[0], '2026-06-01')
+  assert.strictEqual(missing[8], '2026-06-09')
+})
+
+test('missingMonthDays: an interior hole is a gap too', () => {
+  const holed = { ...fullJune }
+  delete holed['2026-06-15']
+  assert.deepStrictEqual(missingMonthDays(holed, '2026-06', 30, JUL10), ['2026-06-15'])
+})
+
+test('missingMonthDays: future days of an in-progress month are not missing', () => {
+  const julSoFar = Object.fromEntries(
+    Array.from({ length: 10 }, (_, i) => [`2026-07-${String(i + 1).padStart(2, '0')}`, { claude: {} }]),
+  )
+  // July has 31 days; only 1–10 have happened. No gap.
+  assert.deepStrictEqual(missingMonthDays(julSoFar, '2026-07', 31, JUL10), [])
+  // Drop July 3 → that one IS missing.
+  delete julSoFar['2026-07-03']
+  assert.deepStrictEqual(missingMonthDays(julSoFar, '2026-07', 31, JUL10), ['2026-07-03'])
+})
+
+// ── subtitle honesty ─────────────────────────────────────────────
+
+test('heatmap subtitle states the span actually rendered, not the whole month', () => {
+  const names = ['Claude']
+  // Starts on the 1st but ends on the 20th (in-progress month rendered with --allow-partial).
+  const svg = generateUptimeHeatmapSvg(names, fullJune, 30, '2026-06', 1, 20)
+  assert.ok(svg.includes('June 1–20'), 'must say 1–20')
+  assert.ok(!svg.includes('June 1–30'), 'old code printed 1–daysInMonth whenever it started on the 1st')
+})
+
+test('heatmap subtitle covers the full month when data does', () => {
+  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 1, 30)
+  assert.ok(svg.includes('June 1–30'))
+})
+
+test('elapsedMonthDays: a finished month is fully elapsed', () => {
+  assert.strictEqual(elapsedMonthDays('2026-06', 30, JUL10), 30)
+})
+
+test('elapsedMonthDays: an in-progress month stops at today', () => {
+  assert.strictEqual(elapsedMonthDays('2026-07', 31, JUL10), 10)
+})
+
+test('zero coverage is distinguishable from a partial gap', () => {
+  // The guard the CLI uses: missing.length === elapsedMonthDays → nothing at all was fetched.
+  // A month past retention returns no days; --allow-partial must not paint 31 gray columns
+  // captioned as the full month.
+  const none = missingMonthDays({}, '2026-03', 31, JUL10)
+  assert.strictEqual(none.length, elapsedMonthDays('2026-03', 31, JUL10), 'all 31 days missing = zero coverage')
+
+  const partial = { ...fullJune }
+  for (let d = 1; d <= 9; d++) delete partial[`2026-06-0${d}`]
+  assert.notStrictEqual(missingMonthDays(partial, '2026-06', 30, JUL10).length, elapsedMonthDays('2026-06', 30, JUL10))
+})
+
+test('explainWindow distinguishes the endpoint cap from a data hole', () => {
+  // 2026-04 on 2026-07-10 needs a 101-day lookback → clamped → first 11 days unreachable.
+  // Assert the load-bearing NUMBERS and the two-way classifier token, not the exact prose.
+  const clamped = explainWindow('2026-04', JUL10)
+  assert.match(clamped, /101/)          // the uncapped span it needed
+  assert.match(clamped, /11/)           // the days it cannot reach
+  assert.match(clamped, /unreachable/)  // classifier: the endpoint's ?days= cap
+
+  // 2026-06 needs 40 days — inside retention, so any gap is the data's fault, not the window's.
+  const inside = explainWindow('2026-06', JUL10)
+  assert.match(inside, /40/)
+  assert.ok(!/unreachable/.test(inside), 'classifier: not a cap')
+})
+
+test('uptimeLookbackSpan is uncapped; uptimeLookbackDays is capped', () => {
+  assert.strictEqual(uptimeLookbackSpan('2026-04', JUL10), 101)
+  assert.strictEqual(uptimeLookbackDays('2026-04', JUL10), UPTIME_MAX_LOOKBACK_DAYS)
+  // Below the cap the two agree.
+  assert.strictEqual(uptimeLookbackSpan('2026-06', JUL10), uptimeLookbackDays('2026-06', JUL10))
+})
+
+// ── a day key that exists but carries nothing must not count as coverage ─────
+// Two reviewers found this independently: `{}` is truthy, so a `!history[key]` gate would pass a
+// month of empty days and render a full grid of gray columns at exit 0 — reintroducing
+// the very silent failure #77 exists to remove.
+
+test('hasDayData rejects every empty shape', () => {
+  for (const empty of [undefined, null, {}, [], 0, '', false]) {
+    assert.strictEqual(hasDayData(empty), false, `${JSON.stringify(empty)} must not count as data`)
+  }
+  assert.strictEqual(hasDayData({ claude: { up: 288, total: 288 } }), true)
+})
+
+test('a month of {} day-entries is zero coverage, not full coverage', () => {
+  const allEmpty = Object.fromEntries(
+    Array.from({ length: 31 }, (_, i) => [`2026-03-${String(i + 1).padStart(2, '0')}`, {}]),
+  )
+  // The old truthiness check would have found 0 missing days here.
+  assert.strictEqual(Object.keys(allEmpty).filter(k => !allEmpty[k]).length, 0)
+  // The gate must see all 31 as missing → zero coverage → refuse even with --allow-partial.
+  const missing = missingMonthDays(allEmpty, '2026-03', 31, JUL10)
+  assert.strictEqual(missing.length, 31)
+  assert.strictEqual(missing.length, elapsedMonthDays('2026-03', 31, JUL10), 'zero coverage')
+})
+
+test('a single hollow day inside an otherwise full month is a gap', () => {
+  const holed = { ...fullJune, '2026-06-15': {} }
+  assert.deepStrictEqual(missingMonthDays(holed, '2026-06', 30, JUL10), ['2026-06-15'])
+})
+
+// ── one clock for the whole run ──────────────────────────────────────────────
+test('the three window fns agree when handed the same `today`', () => {
+  // They each default to `new Date()`; the CLI threads one captured clock through all of them so a
+  // midnight-UTC crossing during the 30s fetch cannot split the window from the coverage check.
+  const midnightish = new Date(Date.UTC(2026, 6, 10, 23, 59, 59))
+  assert.strictEqual(uptimeLookbackDays('2026-06', midnightish), 40)
+  assert.strictEqual(elapsedMonthDays('2026-06', 30, midnightish), 30)
+  assert.deepStrictEqual(missingMonthDays(fullJune, '2026-06', 30, midnightish), [])
+})
+
+test('an uncomputable uptime ratio renders gray, never red', () => {
+  // Absence must not be painted as an outage. {} and {ok:0,total:0} both give NaN.
+  const GRAY = '#21262d', RED = '#ef4444', GREEN = '#3fb950'
+  // Key on the cell's semantic signature (cellSize=16), NOT its x-position: an x-anchored regex
+  // silently latches onto a legend swatch when padding or labelWidth changes.
+  const cellColor = dayValue => {
+    const svg = generateUptimeHeatmapSvg(['Claude'], { '2026-06-01': dayValue }, 1, '2026-06', 1, 1)
+    const cells = [...svg.matchAll(/<rect [^>]*width="16"[^>]*fill="(#[0-9a-f]{6})"/g)]
+    assert.strictEqual(cells.length, 1, 'exactly one data cell for a 1-service 1-day heatmap')
+    return cells[0][1]
+  }
+  assert.strictEqual(cellColor({ claude: { ok: 288, total: 288 } }), GREEN)
+  assert.strictEqual(cellColor({ claude: {} }), GRAY, '{} used to render RED via NaN')
+  assert.strictEqual(cellColor({ claude: { ok: 0, total: 0 } }), GRAY, '0/0 is NaN, not an outage')
+  assert.strictEqual(cellColor({ claude: null }), GRAY)
+  // A genuine outage still renders red.
+  assert.strictEqual(cellColor({ claude: { ok: 0, total: 288 } }), RED)
+})
+
+// ── the gate's ORDER is the contract (aiwatch-reports#77) ────────────────────
+// The predicate tests above prove zero-coverage is *distinguishable* from a partial gap. These
+// prove the CLI's decision consults it FIRST. A refactor letting --allow-partial short-circuit
+// ahead of the zero-coverage check would render an empty chart captioned as a full month — the
+// exact silent failure #77 exists to kill — while every other test stayed green.
+
+const partialJune = (() => {
+  const h = { ...fullJune }
+  for (let d = 1; d <= 9; d++) delete h[`2026-06-0${d}`]
+  return h
+})()
+
+test('gate: zero coverage refuses even WITH --allow-partial', () => {
+  const v = heatmapGate({}, '2026-03', 31, JUL10, { allowPartial: true })
+  assert.strictEqual(v.action, 'refuse')
+  assert.strictEqual(v.reason, 'zero-coverage', 'the flag must not reclassify this as partial')
+})
+
+test('gate: a partial gap refuses WITHOUT the flag, renders WITH it', () => {
+  assert.strictEqual(heatmapGate(partialJune, '2026-06', 30, JUL10, { allowPartial: false }).action, 'refuse')
+  const allowed = heatmapGate(partialJune, '2026-06', 30, JUL10, { allowPartial: true })
+  assert.strictEqual(allowed.action, 'render')
+  assert.strictEqual(allowed.reason, 'partial', 'a rendered partial chart must still be labelled partial')
+})
+
+test('gate: full coverage renders with no flag and reports `complete`', () => {
+  const v = heatmapGate(fullJune, '2026-06', 30, JUL10)
+  assert.strictEqual(v.action, 'render')
+  assert.strictEqual(v.reason, 'complete')
+  assert.deepStrictEqual(v.missing, [])
+})
+
+test('gate: a month of {} entries is zero coverage, not full coverage', () => {
+  const hollow = Object.fromEntries(
+    Array.from({ length: 30 }, (_, i) => [`2026-06-${String(i + 1).padStart(2, '0')}`, {}]),
+  )
+  assert.strictEqual(heatmapGate(hollow, '2026-06', 30, JUL10, { allowPartial: true }).reason, 'zero-coverage')
+})
+
+test('gate: a response carrying only adjacent-month days is zero coverage', () => {
+  // The most operationally likely "API returned something, but nothing usable" case.
+  const wrongMonth = { '2026-05-30': { claude: { ok: 288, total: 288 } }, '2026-07-01': { claude: { ok: 1, total: 1 } } }
+  const v = heatmapGate(wrongMonth, '2026-06', 30, JUL10, { allowPartial: true })
+  assert.strictEqual(v.reason, 'zero-coverage')
+  assert.strictEqual(v.missing.length, 30)
+})
+
+test('describeMissing names one day without an ellipsis, many with a span', () => {
+  assert.strictEqual(describeMissing(['2026-06-15'], '2026-06'), '1 day of 2026-06 absent from the API response (2026-06-15)')
+  assert.match(describeMissing(['2026-06-01', '2026-06-02'], '2026-06'), /^2 days .*\(2026-06-01 … 2026-06-02\)/)
+})
+
+test('describeMissing is total — an empty list never prints "(undefined)"', () => {
+  for (const empty of [[], null, undefined]) {
+    const out = describeMissing(empty, '2026-06')
+    assert.ok(!/undefined/.test(out), `describeMissing(${JSON.stringify(empty)}) leaked undefined: ${out}`)
+  }
+})
+
+// ── calendar edges ───────────────────────────────────────────────────────────
+
+test('daysInMonthOf handles leap February', () => {
+  assert.strictEqual(daysInMonthOf('2024-02'), 29)
+  assert.strictEqual(daysInMonthOf('2026-02'), 28)
+})
+
+test('uptimeLookbackSpan spans a leap February correctly', () => {
+  assert.strictEqual(uptimeLookbackSpan('2024-02', new Date(Date.UTC(2024, 2, 1))), 30) // 29 + Mar 1
+})
+
+test('monthKey must be zero-padded — an unpadded key silently mismatches history', () => {
+  // `2026-6` passes the 1..12 range check but builds `2026-6-01` keys that match nothing.
+  // Documented, not supported: the CLI derives monthKey from a 2-digit directory name.
+  const missing = missingMonthDays({ '2026-06-01': { claude: { ok: 1, total: 1 } } }, '2026-6', 30, JUL10)
+  assert.strictEqual(missing[0], '2026-6-01', 'keys are built from the caller\'s monthKey verbatim')
+})
+
+test('elapsedMonthDays on the 1st of the month is 1', () => {
+  assert.strictEqual(elapsedMonthDays('2026-07', 31, new Date(Date.UTC(2026, 6, 1))), 1)
+})
+
+// ── subtitle: the late-START half of the contract ────────────────────────────
+
+test('heatmap subtitle states a LATE start span', () => {
+  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 12, 30)
+  assert.ok(svg.includes('June 12–30'), 'a --allow-partial chart must name its true start')
+  assert.ok(!svg.includes('June 1–30'))
+})
+
+// ── CLI early-exit paths (spawn) ─────────────────────────────────────────────
+// Everything below `require.main === module` is otherwise untested. These three exits happen
+// BEFORE the network fetch, so they need no report file, no fixture, and no mock. The coverage
+// gate itself is covered by heatmapGate's unit tests above — the CLI only prints its verdict.
+
+const SCRIPT = path.join(__dirname, 'generate-charts.js')
+const runCli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd: path.dirname(__dirname) })
+
+test('CLI rejects an unknown flag with exit 1', () => {
+  const r = runCli('--allow-parital', '2026-05/index.md')  // a plausible typo
+  assert.strictEqual(r.status, 1)
+  assert.match(r.stderr, /Unknown option\(s\): --allow-parital/)
+})
+
+test('CLI with no report path exits 1 and prints usage', () => {
+  const r = runCli('--allow-partial')
+  assert.strictEqual(r.status, 1)
+  assert.match(r.stderr, /Usage: node scripts\/generate-charts\.js/)
+  assert.match(r.stderr, /--allow-partial/, 'usage must document the flag')
+})
+
+test('CLI accepts the flag in either position', () => {
+  // Both orderings must reach the same next failure (a missing report file), not an arg-parse error.
+  for (const args of [['--allow-partial', 'nope-9999-99/index.md'], ['nope-9999-99/index.md', '--allow-partial']]) {
+    const r = runCli(...args)
+    assert.strictEqual(r.status, 1)
+    assert.match(r.stderr, /Cannot read report file/, `argv order ${args.join(' ')} must parse`)
+    assert.ok(!/Unknown option/.test(r.stderr))
+  }
+})
+
+test('the gray legend names the color by what it means, not one of its causes', () => {
+  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 1, 30)
+  assert.ok(svg.includes('No data'), 'gray covers mid-month onboarding AND unmeasured days')
+  assert.ok(!svg.includes('Added Later'), 'the old label named only the onboarding case')
+})
+
+test('explainWindow never claims more lost days than the month has', () => {
+  // span - CAP counts days before the window opens; for a month that ended before the window even
+  // begins it exceeds daysInMonth. "the first 42 days of 2026-03" is not a sentence about March.
+  const march = explainWindow('2026-03', JUL10)
+  assert.match(march, /all 31 days of 2026-03/)
+  assert.ok(!/first 42/.test(march))
+  assert.ok(!/first \d+ days? of 2026-03/.test(march), 'a wholly-unreachable month is not "the first N"')
+
+  // A partially-reachable month still reports its leading gap. Pin the COUNT, not the adverb.
+  assert.match(explainWindow('2026-04', JUL10), /the first 11 days of 2026-04 are/)
+})
+
+test('explainWindow uses a singular noun for a one-day gap', () => {
+  // 2026-04 seen on 2026-06-30: span = 91, cap 90 → exactly one day lost.
+  const oneDay = explainWindow('2026-04', new Date(Date.UTC(2026, 5, 30)))
+  assert.match(oneDay, /the first day of 2026-04 is/)
+  assert.ok(!/the first 1 day/.test(oneDay), '"the first 1 day" is stilted; the count is redundant at 1')
+  assert.ok(!/day of 2026-04 are/.test(oneDay), 'noun agreed but the verb did not')
+})
+
+// ── dataSpan: the span rendered must equal the span that has data ────────────
+
+test('dataSpan finds a late start and a full end', () => {
+  const h = { ...fullJune }
+  for (let d = 1; d <= 11; d++) delete h[`2026-06-${String(d).padStart(2, '0')}`]
+  assert.deepStrictEqual(dataSpan(h, '2026-06', 30), { firstDataDay: 12, lastDataDay: 30 })
+})
+
+test('dataSpan stops at today for an in-progress month', () => {
+  const h = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`2026-07-${String(i + 1).padStart(2, '0')}`, { claude: {} , x: {} }]))
+  assert.deepStrictEqual(dataSpan(h, '2026-07', 31), { firstDataDay: 1, lastDataDay: 10 })
+})
+
+test('dataSpan treats a hollow leading day as absent, like the gate does', () => {
+  // If this used a truthy check instead of hasDayData, firstDataDay would be 1 and the chart would
+  // open with an all-gray column the gate had already declared missing.
+  const h = { ...fullJune, '2026-06-01': {}, '2026-06-02': {} }
+  assert.strictEqual(dataSpan(h, '2026-06', 30).firstDataDay, 3)
+})
+
+test('dataSpan returns null when nothing has data', () => {
+  assert.strictEqual(dataSpan({}, '2026-06', 30), null)
+})
+
+test('dataSpan handles a single day of data', () => {
+  assert.deepStrictEqual(dataSpan({ '2026-06-17': { claude: {} } }, '2026-06', 30), { firstDataDay: 17, lastDataDay: 17 })
+})
+
+// ── explainWindow arithmetic boundaries ─────────────────────────────────────
+
+test('explainWindow: lost === daysInMonth - 1 still says "the first N", not "all"', () => {
+  // 2026-05 seen on 2026-08-28: span 120, lost = min(30, 31) = 30 — one day short of the whole month.
+  const almost = explainWindow('2026-05', new Date(Date.UTC(2026, 7, 28)))
+  assert.match(almost, /the first 30 days of 2026-05/)
+  assert.ok(!/all 31 days/.test(almost), 'the last day is still reachable')
+  // One day later it flips.
+  assert.match(explainWindow('2026-05', new Date(Date.UTC(2026, 7, 29))), /all 31 days of 2026-05/)
+})
+
+test('explainWindow: a leap February past the window reports 29 days', () => {
+  assert.match(explainWindow('2024-02', new Date(Date.UTC(2024, 6, 1))), /all 29 days of 2024-02/)
+})
+
+test('explainWindow: span exactly at the cap is inside the window, span+1 is not', () => {
+  // 2026-04's first day is exactly 90 days before 2026-06-29 → span 90 → within.
+  assert.strictEqual(uptimeLookbackSpan('2026-04', new Date(Date.UTC(2026, 5, 29))), 90)
+  assert.ok(!/unreachable/.test(explainWindow('2026-04', new Date(Date.UTC(2026, 5, 29)))))
+  assert.match(explainWindow('2026-04', new Date(Date.UTC(2026, 5, 30))), /unreachable/)
 })
 
 // ── Summary ──────────────────────────────────────────────
