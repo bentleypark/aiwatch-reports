@@ -533,6 +533,17 @@ function computeScoreMovers(trend, opts = {}) {
   return { declining, improving, firstMonth, lastMonth }
 }
 
+/**
+ * Median of a numeric array (sorted copy; deterministic). null for an empty array. Scales each
+ * mover axis by its own typical magnitude (aiwatch-reports#78).
+ */
+function medianOf(values) {
+  if (!values.length) return null
+  const s = [...values].sort((a, b) => a - b)
+  const m = s.length >> 1
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
 // Delta of a sparse metric over the months that actually have data: first-present →
 // last-present. { first, last, delta } where delta is null for <2 present points (a value,
 // not a trend) and { null, null, null } when the metric is never present.
@@ -621,8 +632,11 @@ function buildMoverExclude(archiveServices, month) {
 // surfaces; that's the "should I keep relying on this?" signal a composite score hides.
 // `uptime` is intentionally excluded (see toMonthEntry: mixed sources / #586 over-count make it
 // misleading and it hijacks the ranking). Each row carries all three deltas + which axis moved
-// most (`emphasize`) so the renderer can bold it. Magnitudes are normalized to comparable units:
-// 10 score pts ≈ 60 min MTTR ≈ 120 min downtime ≈ 1.0.
+// most (`emphasize`) so the renderer can bold it. Each axis is normalized by its OWN typical
+// move this window (median absolute delta among services that moved on it,
+// aiwatch-reports#78), so "1.0" means "a typical move for this axis" — NOT a fixed physical
+// quantity. The old fixed divisors (/10, /60, /120) let downtime's hundreds-of-hours swings
+// win every time (16/16 movers across both windows).
 function computeNotableMovers(trend, opts = {}) {
   const { limit = 5, nameFor = id => id, exclude = new Set() } = opts
   const { months, series } = trend
@@ -630,26 +644,47 @@ function computeNotableMovers(trend, opts = {}) {
   const firstMonth = months[0]
   const lastMonth = months[months.length - 1]
 
-  const rows = []
+  // PASS 1 — collect every candidate's raw deltas. A candidate needs a Score at both window ends
+  // so a mid-window-added service isn't a fake mover.
+  const candidates = []
   for (const id of Object.keys(series)) {
     if (exclude.has(id)) continue // services the report doesn't rank (no-incident-feed / stale source)
     const pts = series[id].points
     const f = pts.find(p => p.month === firstMonth)
     const l = pts.find(p => p.month === lastMonth)
-    // Require Score at both ends so a mid-window-added service isn't a fake mover.
     if (!f || !l || f.score === null || l.score === null) continue
 
-    const scoreDelta = l.score - f.score
-    // MTTR / downtime are sparse (null in a zero-incident month — common in a partial month
-    // like a mid-month-onboarded March), so measure their delta over the months that HAVE
-    // data (first-present → last-present), not the strict window endpoints. A single present
-    // point → delta null (a value, not a trend). Score always uses the window endpoints.
-    const mttr = presentDelta(pts, 'mttr')
-    const downtime = presentDelta(pts, 'downtime')
+    // MTTR / downtime are sparse (null in a zero-incident month — common in a partial month like a
+    // mid-month-onboarded March), so measure their delta over the months that HAVE data
+    // (first-present → last-present), not the strict window endpoints. A single present point →
+    // delta null (a value, not a trend). Score always uses the window endpoints.
+    candidates.push({ id, f, l, pts, scoreDelta: l.score - f.score, mttr: presentDelta(pts, 'mttr'), downtime: presentDelta(pts, 'downtime') })
+  }
 
-    const nScore = Math.abs(scoreDelta) / 10
-    const nMttr = mttr.delta !== null ? Math.abs(mttr.delta) / 60 : 0
-    const nDowntime = downtime.delta !== null ? Math.abs(downtime.delta) / 120 : 0
+  // Per-axis SCALE = median absolute delta among services that actually moved on that axis
+  // (aiwatch-reports#78). "1.0" then means "a typical move for this axis", so downtime's
+  // hundreds-of-hours swings no longer dwarf a Score change the way the old fixed /10, /60, /120
+  // divisors did (they bolded downtime for 16 of 16 movers across both windows). Median (not mean)
+  // so one outlier can't set the scale. Non-zero movers only, so the scale is positive by
+  // construction and an axis nobody moved on simply contributes 0.
+  // CAVEAT: on a sparse axis (only 2-3 movers, possible for MTTR/downtime in a low-incident
+  // window) the median rests on a tiny sample, so a small absolute change that is merely large
+  // RELATIVE to that median can rank high — a milder mirror of the bug this fixes. Real windows are
+  // dense (~28 candidates); revisit with a scale floor or a min-movers gate if it ever bites.
+  const absMovers = (pick) => candidates.map(pick).filter(d => d !== null).map(Math.abs).filter(x => x > 0)
+  const scoreScale = medianOf(absMovers(c => c.scoreDelta))
+  const mttrScale = medianOf(absMovers(c => c.mttr.delta))
+  const downtimeScale = medianOf(absMovers(c => c.downtime.delta))
+  const norm = (delta, scale) => (delta !== null && scale) ? Math.abs(delta) / scale : 0
+
+  // PASS 2 — normalize and rank.
+  const rows = []
+  for (const { id, f, l, pts, scoreDelta, mttr, downtime } of candidates) {
+    // norm(0, scale) === 0 already, so score needs no per-axis zero-guard; the scale side
+    // (absMovers) is what keeps zeros out of the medians.
+    const nScore = norm(scoreDelta, scoreScale)
+    const nMttr = norm(mttr.delta, mttrScale)
+    const nDowntime = norm(downtime.delta, downtimeScale)
     const notability = Math.max(nScore, nMttr, nDowntime)
     if (notability === 0) continue // nothing moved meaningfully
 
@@ -864,6 +899,7 @@ module.exports = {
   generateTrendSvg, spreadLabelYs, nameToId, ID_TO_NAME, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
   SCORE_WITHHELD, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
+  medianOf,
 }
 
 // ── CLI ──────────────────────────────────────────────────

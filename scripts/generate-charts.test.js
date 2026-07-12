@@ -2,7 +2,7 @@ const {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
-  buildMoverExclude, notableMoversForChart,
+  buildMoverExclude, notableMoversForChart, medianOf,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS,
 } = require('./generate-charts')
@@ -341,13 +341,21 @@ test('excludes a service that did not move on any axis', () => {
 })
 
 test('direction follows the headline (emphasized) axis, not score', () => {
-  // Score +1 (slightly up) but downtime regresses 12h → 49h — the row must read 🔻 (declining),
-  // keying off the bolded downtime, not the small score gain.
-  const mistralish = [
-    { month: '2026-04', daysInMonth: 30, daysCollected: 30, services: { svc: { score: 77, grade: 'Good', mttr: 8, downtime: 735 } } },
-    { month: '2026-05', daysInMonth: 31, daysCollected: 31, services: { svc: { score: 78, grade: 'Good', mttr: 19, downtime: 2938 } } },
+  // Score +1 (slightly up) but downtime regresses hard — the row must read down (declining), keying
+  // off the bolded downtime, not the small score gain. Normalization is a CROSS-SERVICE statistic
+  // (median move per axis, aiwatch-reports#78), so the target needs peers: with a single candidate
+  // every moved axis normalizes to 1.0 and ties. These peers make a typical downtime move small, so
+  // the target's 37h regression stands out as the headline.
+  const mk = (sc, mt, dt) => ({ score: sc, grade: 'Good', mttr: mt, downtime: dt })
+  const trend = [
+    { month: '2026-04', daysInMonth: 30, daysCollected: 30, services: {
+      tgt: mk(77, 8, 735), p1: mk(80, 30, 200), p2: mk(60, 40, 300), p3: mk(90, 20, 150), p4: mk(70, 25, 250),
+    } },
+    { month: '2026-05', daysInMonth: 31, daysCollected: 31, services: {
+      tgt: mk(78, 19, 2938), p1: mk(78, 33, 210), p2: mk(57, 44, 315), p3: mk(87, 22, 158), p4: mk(66, 28, 262),
+    } },
   ]
-  const m = computeNotableMovers(buildTrendSeries(mistralish))[0]
+  const m = computeNotableMovers(buildTrendSeries(trend)).find(r => r.id === 'tgt')
   eq(m.score.delta, 1)
   eq(m.emphasize, 'downtime')
   eq(m.declining, true) // headline = downtime regression
@@ -1045,6 +1053,52 @@ test('explainWindow: span exactly at the cap is inside the window, span+1 is not
 })
 
 // ── Summary ──────────────────────────────────────────────
+
+test('medianOf: sorted-copy, even/odd, empty', () => {
+  eq(medianOf([3, 1, 2]), 2)
+  eq(medianOf([4, 1, 3, 2]), 2.5)
+  eq(medianOf([]), null)
+  const a = [3, 1, 2]; medianOf(a); eq(a[0], 3) // does not mutate input
+})
+
+test('normalization no longer lets downtime always win the emphasis (aiwatch-reports#78)', () => {
+  // `scorer` moves +12 on Score and +3h on downtime. Under the OLD fixed divisors that is
+  // nScore 1.2 vs nDowntime 1.5 → downtime wins (a 3h swing outweighs a 12-point Score jump, the
+  // whole bug). Median normalization scales each axis by its own typical move (score median 4,
+  // downtime median 180m here), giving nScore 3.0 vs nDowntime 1.0 → Score keeps its headline.
+  const mk = (sc, dt) => ({ score: sc, grade: 'Good', mttr: 10, downtime: dt })
+  const trend = [
+    { month: '2026-04', daysInMonth: 30, daysCollected: 30, services: {
+      scorer: mk(50, 300), dt1: mk(80, 300), dt2: mk(60, 320), dt3: mk(70, 310),
+    } },
+    { month: '2026-05', daysInMonth: 31, daysCollected: 31, services: {
+      scorer: mk(62, 480), dt1: mk(80, 480), dt2: mk(64, 520), dt3: mk(74, 470), // scorer +12 score/+3h down; dt1 flat score/+3h down; dt2/dt3 +4 score/big down
+    } },
+  ]
+  const movers = computeNotableMovers(buildTrendSeries(trend))
+  const scorer = movers.find(m => m.id === 'scorer')
+  assert.ok(scorer, 'the big Score mover must surface')
+  eq(scorer.emphasize, 'score') // under the OLD divisors this was 'downtime'
+  // And the emphasis is not monolithic: a flat-Score / big-downtime service still bolds downtime.
+  eq(movers.find(m => m.id === 'dt1').emphasize, 'downtime')
+})
+
+test('an axis nobody moved on contributes 0 — no divide-by-zero', () => {
+  // Every service has identical MTTR/downtime; only Score moves. Scale for mttr/downtime is
+  // undefined (no movers) → those axes score 0 for everyone, and the run does not throw / NaN.
+  const mk = sc => ({ score: sc, grade: 'Good', mttr: 15, downtime: 100 })
+  const trend = [
+    { month: '2026-04', daysInMonth: 30, daysCollected: 30, services: { a: mk(60), b: mk(70), c: mk(80) } },
+    { month: '2026-05', daysInMonth: 31, daysCollected: 31, services: { a: mk(66), b: mk(71), c: mk(90) } },
+  ]
+  const movers = computeNotableMovers(buildTrendSeries(trend))
+  for (const m of movers) {
+    assert.ok(Number.isFinite(m.notability), `notability must be finite: ${m.notability}`)
+    eq(m.emphasize, 'score')
+  }
+  // c moved most on Score (+10 vs +6/+1) → ranks first.
+  eq(movers[0].id, 'c')
+})
 
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)
