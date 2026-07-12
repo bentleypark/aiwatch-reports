@@ -1034,8 +1034,15 @@ function fillTemplate(template, month, archive, meta) {
   const nxt = nextMonthName(month)
   const publishMonth = nxt.name
 
-  // Extract service array from archive
-  const services = Object.entries(archive.services).map(([id, data]) => ({ id, data }))
+  // Extract service array from archive. aiwatch#993 — normalize each service's score/grade to the
+  // CALENDAR-MONTH value here, at the single load point, so the ranking table, score chart, Summary
+  // and buildWhy all read the same number the trend/Notable-Movers do (which resolve it in
+  // toMonthEntry). Legacy archives without monthlyScore keep their build-day snapshot via the
+  // fallback. scoreConfidence / officialUptime gating are left untouched — a separate signal.
+  const services = Object.entries(archive.services).map(([id, data]) => {
+    const { score, grade } = charts.resolveMonthlyScore(data)
+    return { id, data: { ...data, score, grade } }
+  })
 
   // aiwatch#951 — the uptime columns now trust the archive. Say so out loud when the archive can't
   // be trusted, rather than publishing fabricated "Official" figures silently (which is the bug).
@@ -1190,11 +1197,16 @@ function archiveToAnalysisRows(archive, meta) {
   const incidents = []
   for (const [id, data] of Object.entries(archive.services || {})) {
     const name = meta[id]?.name || id
-    if (data.score !== null && data.score !== undefined) {
+    // aiwatch#993 — the auto-draft Summary/TL;DR narrates these score NUMBERS, so they must be the
+    // calendar-month value the ranking table shows, not the build-day snapshot. Normalize the same
+    // way the main load point (the `services` array) does, or the draft says "84/100" while the
+    // table says "77".
+    const { score, grade } = charts.resolveMonthlyScore(data)
+    if (score !== null && score !== undefined) {
       scores.push({
         Service: name,
-        Score: String(data.score),
-        Grade: gradeLabel(data.grade),
+        Score: String(score),
+        Grade: gradeLabel(grade),
         Confidence: confidence({ data }),
       })
     }

@@ -430,13 +430,43 @@ function rosterForMonth(categoryOrder, archiveServiceIds) {
 
 // Normalize an archive-like object into a trend month-entry. `daysCollected`
 // (when present) drives the partial-month flag; absent → assumed full.
+/**
+ * aiwatch#993 — resolve a service's report Score/grade from the archive. Prefer the CALENDAR-MONTH
+ * value (`monthlyScore`/`monthlyGrade`, computed at build time over the same window as MTTR/downtime)
+ * so every score in a monthly report shares one window; fall back to the build-day rolling snapshot
+ * (`score`/`grade`) for archives written before #993, which carry neither monthly field. Used by BOTH
+ * the trend/Notable-Movers path (toMonthEntry) and the report's ranking table / chart / Summary, so
+ * the same month never shows two different scores. NOTE: a 3-month trend spanning the #993 cutover
+ * mixes monthly-window points (post-#993 archives) with snapshot points (legacy archives, via the
+ * fallback) — unavoidable since old archives cannot be back-filled, and not a bug.
+ */
+function resolveMonthlyScore(s) {
+  if (!s) return { score: null, grade: null }
+  // A MODERN archive always writes `monthlyScore` (the worker emits it even when null — a month it
+  // deliberately WITHHELD for insufficient signal, #713). So key PRESENCE, not the value, marks a
+  // modern archive: honor its value verbatim (number → use it; null → stay withheld, never borrow
+  // the build-day snapshot, which would rank the service on data from outside the month). Only a
+  // LEGACY archive (no `monthlyScore` key at all) falls back to the snapshot `score`/`grade`.
+  if ('monthlyScore' in s) {
+    return {
+      score: typeof s.monthlyScore === 'number' ? s.monthlyScore : null,
+      grade: s.monthlyGrade || null,
+    }
+  }
+  return {
+    score: typeof s.score === 'number' ? s.score : null,
+    grade: s.grade || null,
+  }
+}
+
 function toMonthEntry(month, archiveLike) {
   if (!archiveLike || !archiveLike.services) return null
   const services = {}
   for (const [id, s] of Object.entries(archiveLike.services)) {
+    const resolved = resolveMonthlyScore(s)
     services[id] = {
-      score: s && typeof s.score === 'number' ? s.score : null,
-      grade: s && s.grade ? s.grade : null,
+      score: resolved.score,
+      grade: resolved.grade,
       // MTTR + total downtime feed the Notable Movers decomposition — both incident-feed
       // MEASURED values, consistent across services. The archive's `uptime` field is
       // deliberately NOT used: it mixes per-service sources (group aggregates like ChatGPT's
@@ -892,7 +922,7 @@ ${partialNote}
 module.exports = {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   // trend (aiwatch-reports#41)
-  monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows,
+  monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
