@@ -16,6 +16,11 @@ on:
       report_path:
         description: 'Report file path (e.g., 2026-04/index.md)'
         required: true
+      allow_partial:
+        description: 'Render even if the uptime API misses days of the month (#77). Only for a month whose head is past the 90-day uptime-history window (endpoint cap + counter TTL) — the chart will state the narrower span it actually covers.'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   generate:
@@ -51,7 +56,15 @@ jobs:
       - name: Generate charts
         env:
           REPORT_PATH: ${{ steps.report.outputs.path }}
-        run: node scripts/generate-charts.js "$REPORT_PATH"
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+        run: |
+          # #77 — a coverage gap hard-exits by default so a month can never silently lose its
+          # opening days. A deliberately-partial regeneration must be opted into.
+          if [ "$ALLOW_PARTIAL" = "true" ]; then
+            node scripts/generate-charts.js "$REPORT_PATH" --allow-partial
+          else
+            node scripts/generate-charts.js "$REPORT_PATH"
+          fi
 
       - name: Commit and push
         env:

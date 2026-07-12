@@ -129,10 +129,12 @@ ${naText}
 }
 
 // ── Uptime Heatmap (real data) ───────────────────────────
-function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, monthKey, monitoringStartDay, lastDataDay) {
-  // Only render days with actual data (monitoringStartDay to lastDataDay)
+function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, monthKey, firstDataDay, lastDataDay) {
+  // Render the span the caller vouched for. The caller asserts month coverage before getting here
+  // (aiwatch-reports#77), so a late START means a deliberate --allow-partial run, not an unnoticed
+  // short fetch. An early END is still normal: an in-progress month legitimately stops at today.
   const endDay = lastDataDay || daysInMonth
-  const visibleDays = endDay - monitoringStartDay + 1
+  const visibleDays = endDay - firstDataDay + 1
 
   const cellSize = 16
   const cellGap = 3
@@ -145,7 +147,7 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
 
   // Day number headers — only visible days
   const dayHeaders = Array.from({ length: visibleDays }, (_, i) => {
-    const dayNum = monitoringStartDay + i
+    const dayNum = firstDataDay + i
     const x = padding.left + labelWidth + i * (cellSize + cellGap)
     const interval = visibleDays <= 15 ? 3 : 5
     const show = i === 0 || dayNum % interval === 1 || i === visibleDays - 1
@@ -166,20 +168,20 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     const svcId = nameToId(name)
 
     const cells = Array.from({ length: visibleDays }, (_, i) => {
-      const dayNum = monitoringStartDay + i
+      const dayNum = firstDataDay + i
       const x = padding.left + labelWidth + i * (cellSize + cellGap)
       const dateKey = `${monthKey}-${String(dayNum).padStart(2, '0')}`
       const dayData = uptimeHistory[dateKey]?.[svcId]
 
+      // A ratio we cannot compute is ABSENCE, not an outage. `{}` and `{ok:0,total:0}` both yield
+      // NaN, which used to fall through to COLORS.down — painting a missing measurement red.
+      // Gray is the only honest color for "we did not measure this" (aiwatch-reports#77).
+      const ratio = dayData ? dayData.ok / dayData.total : NaN
       let color
-      if (!dayData) {
-        color = COLORS.noData
-      } else {
-        const ratio = dayData.ok / dayData.total
-        if (ratio >= 0.99) color = COLORS.operational
-        else if (ratio >= 0.90) color = COLORS.heatDegraded
-        else color = COLORS.down
-      }
+      if (!Number.isFinite(ratio)) color = COLORS.noData
+      else if (ratio >= 0.99) color = COLORS.operational
+      else if (ratio >= 0.90) color = COLORS.heatDegraded
+      else color = COLORS.down
 
       return `  <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${color}" opacity="0.85"/>`
     }).join('\n')
@@ -193,7 +195,9 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     { color: COLORS.operational, label: 'Operational' },
     { color: COLORS.heatDegraded, label: 'Degraded' },
     { color: COLORS.down, label: 'Down' },
-    { color: COLORS.noData, label: 'Added Later' },
+    // Gray means "not measured that day" — a service onboarded mid-month, a day with no counters,
+    // or a ratio we cannot compute. "Added Later" named only the first of the three.
+    { color: COLORS.noData, label: 'No data' },
   ]
   const legend = legendItems.map((item, i) => {
     const x = padding.left + i * 110
@@ -207,9 +211,9 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
 
   const [yr, mo] = monthKey.split('-').map(Number)
   const monthName = new Date(yr, mo - 1).toLocaleString('en-US', { month: 'long' })
-  const subtitle = monitoringStartDay > 1
-    ? `${monthName} ${monitoringStartDay}–${endDay} — based on AIWatch polling (5-min intervals)`
-    : `${monthName} 1–${daysInMonth} — based on AIWatch polling (5-min intervals)`
+  // Always state the span actually rendered. The old branch printed `1–daysInMonth` whenever
+  // the chart started on the 1st, even when it ended early (in-progress month).
+  const subtitle = `${monthName} ${firstDataDay}–${endDay} — based on AIWatch polling (5-min intervals)`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <style>
@@ -255,6 +259,144 @@ function monthsBefore(month, count) {
   return out
 }
 
+// The /api/uptime endpoint's `days` is a LOOKBACK WINDOW anchored to today: `days=N` returns
+// [today-N+1, today]. It is not a count of days in some target month. Passing `daysInMonth`
+// conflated the two, so a chart built after month-end silently began where the window happened to
+// land — April's chart started on the 5th and May's on the 3rd while both headers read "1–30"/"1–31"
+// (aiwatch-reports#77). Derive the window from the month's first day instead.
+// 90 is BOTH limits at once, which is why widening the request would not help: /api/uptime caps
+// ?days= at 90 (worker index.ts:3994), AND the `history:<date>` daily counters it reads are written
+// with a 90-day KV TTL (index.ts:237). A month whose first day is more than 90 days before
+// generation is unreachable through the endpoint and its counters are already evicted — there is no
+// deeper source to point a wider window at.
+const UPTIME_MAX_LOOKBACK_DAYS = 90
+
+/** Days from `monthKey`'s first day through today, inclusive — before the retention cap. */
+function uptimeLookbackSpan(monthKey, today = new Date()) {
+  const [y, m] = String(monthKey).split('-').map(Number)
+  if (!y || !m || m < 1 || m > 12) throw new Error(`invalid monthKey ${monthKey} (expected YYYY-MM)`)
+  const first = Date.UTC(y, m - 1, 1)
+  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  if (now < first) throw new Error(`${monthKey} has not started yet`)
+  return Math.floor((now - first) / 86_400_000) + 1
+}
+
+/** Lookback window to request, capped at retention. Below the cap it equals uptimeLookbackSpan. */
+function uptimeLookbackDays(monthKey, today = new Date()) {
+  return Math.min(uptimeLookbackSpan(monthKey, today), UPTIME_MAX_LOOKBACK_DAYS)
+}
+
+/**
+ * A day counts as covered only if it carries at least one service's counters. `{}` is the trap: it
+ * is truthy, so an empty day-entry slips through a `!history[key]` check and renders as an all-gray
+ * column — a chart with zero data that still passes the coverage gate. (`null`/`undefined` are
+ * already falsy; guarded here so the predicate is total.)
+ */
+function hasDayData(entry) {
+  return !!entry && typeof entry === 'object' && Object.keys(entry).length > 0
+}
+
+/**
+ * Days of `monthKey` that the API response does not cover. Days still in the future are not
+ * missing — an in-progress month legitimately ends at today.
+ */
+function missingMonthDays(history, monthKey, daysInMonth, today = new Date()) {
+  const [y, m] = String(monthKey).split('-').map(Number)
+  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  const missing = []
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (Date.UTC(y, m - 1, d) > now) break
+    const key = `${monthKey}-${String(d).padStart(2, '0')}`
+    if (!hasDayData(history[key])) missing.push(key)
+  }
+  return missing
+}
+
+/** Days of `monthKey` that have already happened (the whole month, unless it is in progress). */
+function elapsedMonthDays(monthKey, daysInMonth, today = new Date()) {
+  const [y, m] = String(monthKey).split('-').map(Number)
+  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  let n = 0
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (Date.UTC(y, m - 1, d) > now) break
+    n++
+  }
+  return n
+}
+
+/**
+ * One line naming the actual cause: a retention clamp (the month's head is unreachable, and no flag
+ * brings it back) versus a hole inside a window we did fetch. The two need opposite responses, so
+ * the message must not blur them.
+ */
+function explainWindow(monthKey, today = new Date()) {
+  const span = uptimeLookbackSpan(monthKey, today)
+  if (span <= UPTIME_MAX_LOOKBACK_DAYS) {
+    return `Requested days=${span}, within the ${UPTIME_MAX_LOOKBACK_DAYS}-day history window, so the gap is in the data itself.`
+  }
+  const preamble = `Reaching ${monthKey}-01 needs a ${span}-day lookback, but uptime history only goes ` +
+    `back ${UPTIME_MAX_LOOKBACK_DAYS} days (endpoint cap + counter TTL)`
+  // `span - CAP` counts days before the window opens, which can exceed the month itself — a month
+  // that ended before the window even begins loses ALL of its days, not "the first 42 of 31".
+  const daysInMonth = daysInMonthOf(monthKey)
+  const lost = Math.min(span - UPTIME_MAX_LOOKBACK_DAYS, daysInMonth)
+  if (lost >= daysInMonth) return `${preamble} — all ${daysInMonth} days of ${monthKey} are permanently unreachable.`
+  const subject = lost === 1 ? `the first day of ${monthKey} is` : `the first ${lost} days of ${monthKey} are`
+  return `${preamble} — ${subject} permanently unreachable.`
+}
+
+/**
+ * Decide whether a heatmap may be rendered. PURE — the CLI only prints and exits on this verdict.
+ *
+ * The ORDER is the contract, not an implementation detail: zero coverage is refused BEFORE
+ * `allowPartial` is consulted, so no flag can produce an empty chart captioned as a full month.
+ * That precedence is what a refactor could silently invert, which is why it lives here under test
+ * rather than inline in the CLI.
+ *
+ * @returns {{action:'render'|'refuse', reason:'complete'|'partial'|'zero-coverage', missing:string[]}}
+ */
+function heatmapGate(history, monthKey, daysInMonth, today, { allowPartial = false } = {}) {
+  const missing = missingMonthDays(history, monthKey, daysInMonth, today)
+  if (missing.length === 0) return { action: 'render', reason: 'complete', missing }
+  if (missing.length === elapsedMonthDays(monthKey, daysInMonth, today)) {
+    return { action: 'refuse', reason: 'zero-coverage', missing }
+  }
+  if (!allowPartial) return { action: 'refuse', reason: 'partial', missing }
+  return { action: 'render', reason: 'partial', missing }
+}
+
+/**
+ * Human-readable summary of a gate verdict's missing days. Total by construction: an empty list is
+ * not a gap to describe, and rendering it as "0 day(s) … (undefined)" would put a bug in an error
+ * message. The CLI only calls this when `reason !== 'complete'`; this keeps that safe for any caller.
+ */
+function describeMissing(missing, monthKey) {
+  if (!missing || missing.length === 0) return `no missing days in ${monthKey}`
+  const span = missing.length > 1 ? `${missing[0]} … ${missing[missing.length - 1]}` : missing[0]
+  const noun = missing.length === 1 ? 'day' : 'days'
+  return `${missing.length} ${noun} of ${monthKey} absent from the API response (${span})`
+}
+
+/**
+ * First and last day of `monthKey` that carry data. PURE. Shares `hasDayData` with the gate, so the
+ * span rendered can never disagree with the span the gate vouched for — the last piece of #77 logic
+ * that lived inline in the CLI, where a reverted truthy check or an off-by-one scan went unseen.
+ * Returns null when nothing has data (the gate refuses that case before this is reached).
+ */
+function dataSpan(history, monthKey, daysInMonth) {
+  const dayKey = d => `${monthKey}-${String(d).padStart(2, '0')}`
+  let first = null
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (hasDayData(history[dayKey(d)])) { first = d; break }
+  }
+  if (first === null) return null
+  let last = first
+  for (let d = daysInMonth; d >= first; d--) {
+    if (hasDayData(history[dayKey(d)])) { last = d; break }
+  }
+  return { firstDataDay: first, lastDataDay: last }
+}
+
 function daysInMonthOf(month) {
   const [y, m] = month.split('-').map(Number)
   return new Date(y, m, 0).getDate()
@@ -275,7 +417,7 @@ function readDataArchive(month, dataDir) {
 // PURE. Filter the full category-ordered id list down to the roster that EXISTED in the
 // report month — the ids present in that month's `_data/{month}.json` archive (the #909
 // `existedInMonth` set). Drops services added AFTER the month (which would otherwise
-// render as blank "Added Later" heatmap rows, aiwatch-reports#63), while KEEPING
+// render as blank gray heatmap rows, aiwatch-reports#63), while KEEPING
 // score-excluded-but-existed services (bedrock/azureopenai/characterai + the mid-month-
 // added ones) — they still have that month's uptime. Criterion is archive membership,
 // NOT "has a score". Fail-open: a null/empty roster (missing or corrupt snapshot) returns
@@ -708,6 +850,8 @@ module.exports = {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   // trend (aiwatch-reports#41)
   monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows,
+  uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
+  heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
   generateTrendSvg, spreadLabelYs, nameToId, ID_TO_NAME, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
@@ -716,10 +860,19 @@ module.exports = {
 
 // ── CLI ──────────────────────────────────────────────────
 if (require.main === module) {
-  const file = process.argv[2]
+  const argv = process.argv.slice(2)
+  // Accept the flag in any position so `--allow-partial 2026-03/index.md` works too.
+  const allowPartial = argv.includes('--allow-partial')
+  const unknown = argv.filter(a => a.startsWith('--') && a !== '--allow-partial')
+  if (unknown.length) {
+    console.error(`Unknown option(s): ${unknown.join(', ')}`)
+    process.exit(1)
+  }
+  const file = argv.find(a => !a.startsWith('--'))
   if (!file) {
-    console.error('Usage: node scripts/generate-charts.js <report.md>')
+    console.error('Usage: node scripts/generate-charts.js <report.md> [--allow-partial]')
     console.error('Example: node scripts/generate-charts.js 2026-03/index.md')
+    console.error('  --allow-partial  render even if the API response misses days of the month')
     process.exit(1)
   }
 
@@ -794,7 +947,19 @@ if (require.main === module) {
   }
 
   // Uptime heatmap — fetch real data from API
-  const API_URL = 'https://aiwatch-worker.p2c2kbf.workers.dev/api/uptime?days=' + daysInMonth
+  // One clock for the whole run: the fetch can take 30s, and re-reading `new Date()` afterwards
+  // could cross midnight UTC and shift the elapsed-day count under us.
+  const today = new Date()
+  let lookbackDays
+  try {
+    lookbackDays = uptimeLookbackDays(monthKey, today)
+  } catch (err) {
+    // Matches this file's convention (one actionable line, not a stack dump) — reachable from a
+    // real path: `2026-13/index.md` parses, and `2027-01/index.md` is simply in the future.
+    console.error(`✗ Cannot determine the uptime window: ${err.message}`)
+    process.exit(1)
+  }
+  const API_URL = 'https://aiwatch-worker.p2c2kbf.workers.dev/api/uptime?days=' + lookbackDays
   console.log(`Fetching uptime data from ${API_URL}...`)
 
   fetch(API_URL, { signal: AbortSignal.timeout(30000) })
@@ -809,23 +974,43 @@ if (require.main === module) {
         process.exit(1)
       }
 
-      // Detect monitoring start day (first day with data)
-      let monitoringStartDay = 1
-      for (let d = 1; d <= daysInMonth; d++) {
-        const key = `${monthKey}-${String(d).padStart(2, '0')}`
-        if (history[key]) { monitoringStartDay = d; break }
+      // aiwatch-reports#77 — a day absent from the response means NOT FETCHED or OUTSIDE
+      // RETENTION. It never means "monitoring had not started".
+      const gate = heatmapGate(history, monthKey, daysInMonth, today, { allowPartial })
+      if (gate.reason !== 'complete') {
+        const msg = describeMissing(gate.missing, monthKey)
+        if (gate.reason === 'zero-coverage') {
+          // Do NOT assert "outside retention" here: the same verdict is reached by a transient API
+          // failure, a response carrying only adjacent-month days, and a current month whose first
+          // daily counter has not been written yet. Two of those are fixed by re-running.
+          console.error(`✗ Heatmap has NO data for any elapsed day of ${monthKey}: ${msg}`)
+          console.error(`  ${explainWindow(monthKey, today)}`)
+          console.error(`  Possible causes: the month is older than the ${UPTIME_MAX_LOOKBACK_DAYS}-day history window, the API returned nothing usable,`)
+          console.error(`  or ${monthKey} is the current month and no daily counter exists yet.`)
+          console.error(`  --allow-partial buys a narrower chart, never an empty one. Nothing to render.`)
+          process.exit(1)
+        }
+        if (gate.action === 'refuse') {
+          console.error(`✗ Heatmap coverage gap: ${msg}`)
+          console.error(`  ${explainWindow(monthKey, today)}`)
+          console.error(`  If the gap is genuine, re-run with --allow-partial to render a narrower chart on purpose.`)
+          process.exit(1)
+        }
+        console.warn(`⚠ Heatmap coverage gap: ${msg} — rendering a partial chart (--allow-partial)`)
       }
 
-      // Detect last day with data
-      let lastDataDay = daysInMonth
-      for (let d = daysInMonth; d >= monitoringStartDay; d--) {
-        const key = `${monthKey}-${String(d).padStart(2, '0')}`
-        if (history[key]) { lastDataDay = d; break }
+      // The gate above guarantees at least one day has data, so dataSpan cannot return null;
+      // fail loudly rather than render a chart from a span we did not compute.
+      const span = dataSpan(history, monthKey, daysInMonth)
+      if (!span) {
+        console.error(`✗ Internal: coverage gate passed but no day of ${monthKey} carries data.`)
+        process.exit(1)
       }
+      const { firstDataDay, lastDataDay } = span
 
       // Roster = services that EXISTED in the report month (that month's archive keys),
       // not the current live CATEGORY_ORDER — otherwise services added AFTER the month
-      // (e.g. turbopuffer / Twelve Labs for a June report) render as blank "Added Later"
+      // (e.g. turbopuffer / Twelve Labs for a June report) render as blank gray
       // rows (aiwatch-reports#63). Score-excluded-but-existed services stay (the criterion
       // is archive membership, not "has a score"). Fail-open to the full list if absent.
       const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
@@ -835,14 +1020,16 @@ if (require.main === module) {
       )
       const serviceNames = rosterIds.map(id => ID_TO_NAME[id]).filter(Boolean)
 
-      const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, monitoringStartDay, lastDataDay)
+      const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, firstDataDay, lastDataDay)
       const heatmapPath = path.join(outDir, 'uptime-heatmap.svg')
       fs.writeFileSync(heatmapPath, heatmapSvg + '\n', 'utf-8')
       console.log(`✓ ${heatmapPath}`)
-      console.log(`\nDone! Monitoring data: day ${monitoringStartDay}–${lastDataDay} (${lastDataDay - monitoringStartDay + 1} days)`)
+      console.log(`\nDone! Heatmap span: ${monthKey}-${String(firstDataDay).padStart(2, '0')} … ${monthKey}-${String(lastDataDay).padStart(2, '0')} (${lastDataDay - firstDataDay + 1} days)`)
     })
     .catch(err => {
-      console.error('Failed to fetch uptime data:', err.message)
+      // This catch spans the whole chain, not just the network call — a write EACCES or a render
+      // throw lands here too. Stay neutral rather than sending the reader after the network.
+      console.error('✗ Heatmap generation failed:', err.message)
       process.exit(1)
     })
 }
