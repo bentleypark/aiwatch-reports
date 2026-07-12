@@ -113,6 +113,12 @@ tr:nth-child(odd) { background: transparent !important; }
     overflow: hidden !important;
   }
   .recommendations td {
+    /* box-sizing:border-box so width:100% INCLUDES the 12px side padding — content-box added
+       it on top, pushing the cell ~24px past the card so tr{overflow:hidden} clipped the Why
+       text's right edge (aiwatch-reports). */
+    box-sizing: border-box !important;
+    display: block !important;
+    width: 100% !important;
     border: none !important;
     border-bottom: 1px solid var(--border) !important;
     padding: 8px 12px !important;
