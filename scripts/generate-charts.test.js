@@ -381,7 +381,7 @@ test('returns [] for a single month', () => {
   eq(computeNotableMovers(buildTrendSeries([NOTABLE_ENTRIES[2]])).length, 0)
 })
 
-test('excludes services the report does not rank (NO_INCIDENT_FEED / stale)', () => {
+test('excludes services the report does not rank (SCORE_WITHHELD / stale)', () => {
   // bedrock moves hard on every axis but is in the exclude set → must never surface as a mover,
   // mirroring the Score table's exclusion (else the trend contradicts the rest of the report).
   const withBedrock = NOTABLE_ENTRIES.map((e, i) => ({
@@ -539,15 +539,15 @@ test('generateTrendSvg emits two same-final-Score movers at different label ys (
 // ── buildMoverExclude (moved from generate-report.js, aiwatch-reports#67) ──
 console.log('\nbuildMoverExclude')
 
-test('excludes NO_INCIDENT_FEED / stale / recently-added, keeps established; null → empty', () => {
+test('excludes SCORE_WITHHELD / stale / recently-added, keeps established; null → empty', () => {
   const services = {
-    bedrock: { score: 90 },                             // NO_INCIDENT_FEED
+    bedrock: { score: 90 },                             // SCORE_WITHHELD
     deepseek: { score: 88, incidentSourceStale: true }, // stale (archive flag)
     fal: { score: 77, addedAt: '2026-06-24' },          // added IN the report month
     claude: { score: 71 },                              // established → kept
   }
   const ex = buildMoverExclude(services, '2026-06')
-  assert.ok(ex.has('bedrock'), 'bedrock (NO_INCIDENT_FEED) excluded')
+  assert.ok(ex.has('bedrock'), 'bedrock (SCORE_WITHHELD) excluded')
   assert.ok(ex.has('deepseek'), 'stale source excluded')
   assert.ok(ex.has('fal'), 'recently-added (addedAt in report month) excluded')
   assert.ok(!ex.has('claude'), 'established service kept')
