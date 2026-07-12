@@ -18,6 +18,8 @@ const {
   buildStaleSourceCaveat,
   buildUptimeTable,
   buildUptimeExclusionNote,
+  kramdownAnchor,
+  anchorForHeading,
   buildLatencyTable,
   buildBySourceTable,
   buildBySeverityTable,
@@ -171,7 +173,7 @@ test('legacy archive (no officialUptime field) falls back to the maintained set'
 })
 
 console.log('\nbuildRankingNote (#29)')
-test('names the NO_INCIDENT_FEED services excluded from the ranking', () => {
+test('names the score-withheld services excluded from the ranking', () => {
   const services = [
     { id: 'modal', data: { score: 97 } },
     { id: 'bedrock', data: { score: 90 } },
@@ -208,17 +210,24 @@ test('buildScoreTable drops a stale service from the ranking', () => {
   assert.ok(table.includes('Cohere API'), 'non-stale service still ranked')
   assert.ok(!table.includes('DeepSeek API'), 'stale service dropped from the Score table')
 })
-test('buildRankingNote names stale + no-feed in separate clauses with distinct reasons', () => {
+test('buildRankingNote names stale + score-withheld in separate clauses with distinct reasons', () => {
   const services = [
     { id: 'modal', data: { score: 97 } },
-    { id: 'bedrock', data: { score: 90 } },                       // NO_INCIDENT_FEED
+    { id: 'bedrock', data: { score: 90 } },                       // SCORE_WITHHELD
     { id: 'deepseek', data: { score: 88, incidentSourceStale: true } }, // STALE_SOURCE
   ]
   const meta = { modal: { name: 'Modal' }, bedrock: { name: 'Amazon Bedrock' }, deepseek: { name: 'DeepSeek API' } }
   const note = buildRankingNote(services, meta)
   assert.ok(note.includes('1 of 3 services ranked'), `got: ${note}`)
   assert.ok(/Amazon Bedrock is excluded from this ranking/.test(note), `no-feed clause: ${note}`)
-  assert.ok(/no reliable incident feed/.test(note), `no-feed reason: ${note}`)
+  // aiwatch-reports#75 — the reason is the WITHHELD SCORE, not a missing feed. Bedrock's incidents
+  // come from the AWS Health events JSON (aiwatch#677) and are archived; Azure's from its RSS.
+  assert.ok(!/no reliable incident feed/.test(note), `must not claim a missing feed: ${note}`)
+  assert.ok(/no official uptime metric and no direct latency probe/.test(note), `reason: ${note}`)
+  assert.ok(/withholds a Score/.test(note), note)
+  assert.ok(/Incidents are still tracked/.test(note), note)
+  // The singular must keep the negation — an earlier draft read "it publishes an official uptime metric".
+  assert.ok(!/ publishes an official uptime metric/.test(note), `negation lost: ${note}`)
   assert.ok(/DeepSeek API is excluded from this ranking/.test(note), `stale clause: ${note}`)
   assert.ok(/incident feed is frozen/.test(note), `stale reason: ${note}`)
 })
@@ -337,7 +346,7 @@ test('header is "Uptime Source" (not "Confidence"); the column reads the archive
   const modalRow = table.split('\n').find(r => r.includes('Modal'))
   assert.ok(/\| Official \|/.test(modalRow), `status-page service must be Official: ${modalRow}`)
 })
-test('excludes NO_INCIDENT_FEED services (Bedrock/Azure) from the ranking (#29)', () => {
+test('excludes SCORE_WITHHELD services (Bedrock/Azure) from the ranking (#29)', () => {
   const services = [
     { id: 'modal', data: { score: 97, grade: 'excellent', uptime: 99.4, incidents: 5, avgResolutionMin: 65 } },
     { id: 'bedrock', data: { score: 90, grade: 'excellent', uptime: 100, incidents: 0, avgResolutionMin: null } },
@@ -356,7 +365,7 @@ test('excludes services with zero incidents from the table body', () => {
   assert.ok(!tableRows.includes('Cohere API'), 'zero-incident service should be excluded')
   assert.ok(tableRows.includes('Claude API'), 'non-zero-incident service should appear')
   assert.ok(zeroIncLine.includes('Cohere API'), 'zero-inc line should list Cohere')
-  assert.ok(zeroIncLine.startsWith('**Zero incidents (1 services):**'), `got: ${zeroIncLine}`)
+  assert.ok(zeroIncLine.startsWith('**Zero incidents (1 service):**'), `singular agreement: ${zeroIncLine}`)
 })
 test('sorts by incident count desc', () => {
   const { tableRows } = buildIncidentTable(sampleServices, sampleMeta)
@@ -365,7 +374,7 @@ test('sorts by incident count desc', () => {
   assert.ok(claudeIdx > 0 && openaiIdx > 0, 'both should appear')
   assert.ok(claudeIdx < openaiIdx, 'Claude (9 inc) should appear before OpenAI (1 inc)')
 })
-test('splits zero-incident services into confirmed vs no-feed (estimate) (#29)', () => {
+test('every zero-incident service with a live feed is a confirmed zero (aiwatch-reports#75)', () => {
   const services = [
     { id: 'cohere', data: { score: 89, incidents: 0, uptime: 100, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null } },
     { id: 'bedrock', data: { score: 90, incidents: 0, uptime: 100, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null } },
@@ -373,8 +382,10 @@ test('splits zero-incident services into confirmed vs no-feed (estimate) (#29)',
   const meta = { cohere: { name: 'Cohere API' }, bedrock: { name: 'Amazon Bedrock' } }
   const { zeroIncLine } = buildIncidentTable(services, meta)
   // Official-uptime zero → confirmed; estimate-uptime zero (bedrock) → "No incident feed"
-  assert.ok(/\*\*Zero incidents \(1 services\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed line: ${zeroIncLine}`)
-  assert.ok(/\*\*No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), `no-feed line: ${zeroIncLine}`)
+  // aiwatch-reports#75 — the "No incident feed" bucket is gone. Bedrock's feed is real (AWS Health
+  // events JSON, aiwatch#677) and archived, so its zero is as observed as Cohere's.
+  assert.ok(/\*\*Zero incidents \(2 services\):\*\* Cohere API, Amazon Bedrock — confirmed/.test(zeroIncLine), `confirmed line: ${zeroIncLine}`)
+  assert.ok(!/No incident feed/.test(zeroIncLine), `bucket must be gone: ${zeroIncLine}`)
 })
 
 // aiwatch#507 — a status page that migrated to an unreachable platform freezes its feed, so neither
@@ -388,8 +399,8 @@ test('STALE_SOURCE: caveat renders with a NONZERO count (3 partial-month inciden
   const meta = { deepseek: { name: 'DeepSeek API' } }
   const { tableRows, zeroIncLine } = buildIncidentTable(services, meta)
   assert.ok(tableRows.includes('DeepSeek API'), 'still listed in the incident table (data is real, just dated)')
-  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API is /.test(zeroIncLine), `stale line: ${zeroIncLine}`)
-  assert.ok(/floor, not a verified picture\./.test(zeroIncLine), 'self-contained caveat')
+  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API — AIWatch can no longer read its incident feed/.test(zeroIncLine), `stale line: ${zeroIncLine}`)
+  assert.ok(/floor rather than a verified picture\./.test(zeroIncLine), 'self-contained caveat')
   assert.ok(!/#\d+/.test(zeroIncLine), 'no reader-facing internal issue number')
 })
 test('STALE_SOURCE: a frozen ZERO count is NOT labelled "confirmed zero" (flag set)', () => {
@@ -400,17 +411,58 @@ test('STALE_SOURCE: a frozen ZERO count is NOT labelled "confirmed zero" (flag s
   const meta = { cohere: { name: 'Cohere API' }, deepseek: { name: 'DeepSeek API' } }
   const { zeroIncLine } = buildIncidentTable(services, meta)
   // deepseek's zero must NOT appear in the confirmed list…
-  assert.ok(/\*\*Zero incidents \(1 services\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed: ${zeroIncLine}`)
-  assert.ok(!/Zero incidents.*DeepSeek/.test(zeroIncLine), 'deepseek not in confirmed-zero')
+  assert.ok(/\*\*Zero incidents \(1 service\):\*\* Cohere API — confirmed/.test(zeroIncLine), `confirmed: ${zeroIncLine}`)
+  assert.ok(!/Zero incidents.*DeepSeek/.test(zeroIncLine), 'deepseek not in confirmed-zero (frozen feed)')
   // …it appears in the stale-source caveat instead
   assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API/.test(zeroIncLine), `stale: ${zeroIncLine}`)
 })
 test('buildStaleSourceCaveat: singular vs plural agreement, empty → ""', () => {
   eq(buildStaleSourceCaveat([]), '')
   const one = buildStaleSourceCaveat(['DeepSeek API'])
-  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API is /.test(one), `singular: ${one}`)
+  assert.ok(/\*\*Stale source \(1 service\):\*\* DeepSeek API — AIWatch can no longer read its incident feed, which is frozen/.test(one), `singular: ${one}`)
   const two = buildStaleSourceCaveat(['DeepSeek API', 'Foo API'])
-  assert.ok(/\*\*Stale source \(2 services\):\*\* DeepSeek API, Foo API are /.test(two), `plural: ${two}`)
+  assert.ok(/\*\*Stale source \(2 services\):\*\* DeepSeek API, Foo API — AIWatch can no longer read their incident feeds, which are frozen/.test(two), `plural: ${two}`)
+})
+// The caveat used to assert a CAUSE and a SCORE, and was wrong about both.
+test('buildStaleSourceCaveat claims no cause — the flag says frozen, not why', () => {
+  const c = buildStaleSourceCaveat(['Character.AI'])
+  // DeepSeek's status page was bot-walled (aiwatch#507); Character.AI's was 401-deactivated
+  // (aiwatch#689/#800). One sentence cannot name both, so it names neither.
+  assert.ok(!/migrated/.test(c), `must not guess the cause: ${c}`)
+  assert.ok(!/platform/.test(c), c)
+})
+test('buildStaleSourceCaveat asserts nothing about whether a Score exists', () => {
+  const c = buildStaleSourceCaveat(['Character.AI'])
+  // The old line said the Score "reflects data up to that cutoff" — but a stale service may have no
+  // Score at all (withheld at low confidence). Nor may we claim it IS withheld: a stale service with
+  // a probe keeps a real number. Only the ranking exclusion is unconditionally true.
+  assert.ok(!/Score reflect/.test(c), `must not claim a partial Score: ${c}`)
+  assert.ok(!/withheld/.test(c), `must not claim the Score was withheld either: ${c}`)
+  assert.ok(/removes the service from the Score ranking/.test(c), c)
+  assert.ok(/floor/.test(c) && /cutoff/.test(c), c)
+})
+// The identical false cause lived one function up, where it was reachable for a stale service that
+// still carries a score (DeepSeek, May 2026 — stale yet ranked #4 before the exclusion landed).
+test('buildRankingNote names no cause for a stale service either', () => {
+  const note = buildRankingNote(
+    [{ id: 'deepseek', data: { score: 88, incidentSourceStale: true } }],
+    { deepseek: { name: 'DeepSeek API' } },
+    '2026-05',
+  )
+  assert.ok(/DeepSeek API is excluded from this ranking/.test(note), note)
+  assert.ok(/incident feed is frozen/.test(note), note)
+  assert.ok(!/migrated/.test(note), `must not guess the cause: ${note}`)
+  assert.ok(!/platform/.test(note), note)
+})
+test('buildRankingNote no longer cites the industry-average assumption aiwatch#713 deleted', () => {
+  const note = buildRankingNote(
+    [{ id: 'bedrock', data: { score: 73 } }, { id: 'azureopenai', data: { score: 90 } }],
+    { bedrock: { name: 'Amazon Bedrock' }, azureopenai: { name: 'Azure OpenAI' } },
+    '2026-05',
+  )
+  assert.ok(/excluded from this ranking/.test(note), note)
+  assert.ok(!/industry-average/.test(note), `AIWatch invents no uptime (aiwatch#713): ${note}`)
+  assert.ok(!/assumption/.test(note), note)
 })
 
 console.log('\nbuildUptimeTable')
@@ -1447,7 +1499,7 @@ const pathT = require('path')
 
 // Write two prior-month _data snapshots to a temp dir, then render the section for a current
 // month supplied via the archive arg. The archive carries a normal mover (codex, declining hard)
-// AND an excluded estimate-only mover (bedrock, NO_INCIDENT_FEED) that ALSO moves hard.
+// AND an excluded estimate-only mover (bedrock, SCORE_WITHHELD) that ALSO moves hard.
 function withTrendFixture(fn) {
   const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-test-'))
   try {
@@ -1487,7 +1539,7 @@ test('renders a ## 3-Month Trend section with the Notable Movers list', () => {
   })
 })
 
-test('excludes a NO_INCIDENT_FEED service (bedrock) from the rendered movers — the round-2 fix', () => {
+test('excludes a SCORE_WITHHELD service (bedrock) from the rendered movers — the round-2 fix', () => {
   withTrendFixture(dir => {
     const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
     assert.ok(!out.includes('Amazon Bedrock'), 'estimate-only bedrock must NOT surface as a trend mover')
@@ -1763,6 +1815,19 @@ test('loadPriorNarrative skips months with no index.md (never throws)', () => {
 // ── buildComponentReliabilitySection (aiwatch#605 Phase 3b) ─────────
 console.log('\nbuildComponentReliabilitySection (#605 Phase 3b)')
 const crMeta = { services: {} }
+// aiwatch-reports#73 — per-component counting is younger than the report, and a service whose status
+// page goes dark stops contributing days. The intro must not call the window "monthly".
+test('the intro claims no monthly window (the ratio covers only the readable days)', () => {
+  const out = buildComponentReliabilitySection(
+    { services: { deepgram: { components: [{ id: 'a', name: 'A', uptime: 65.81 }, { id: 'b', name: 'B', uptime: 100 }] } } },
+    { deepgram: { name: 'Deepgram' } },
+  )
+  assert.ok(out.includes('## Component Reliability'), out)
+  assert.ok(!/monthly per-component/.test(out), `the window is not the month: ${out.slice(0, 300)}`)
+  assert.ok(/over the days AIWatch could read its status page/.test(out), out)
+  // …and it must point the reader at the definition, since this number is not the service uptime.
+  assert.ok(/About This Report/.test(out), out)
+})
 test('omits the section when no service has components', () => {
   eq(buildComponentReliabilitySection({ services: { openai: { score: 90 } } }, crMeta), '')
   eq(buildComponentReliabilitySection({}, crMeta), '')
@@ -1944,12 +2009,39 @@ test('collapses to an empty string when every service publishes uptime', () => {
   eq(buildUptimeExclusionNote([{ id: 'groq', data: { officialUptime: 100 } }], NOTE_META), '')
 })
 
-console.log('\nNEVER_PUBLISHES_UPTIME stays in lockstep with NO_INCIDENT_FEED')
+// aiwatch-reports#74 — the template used to hand-slug this anchor and ask a human to substitute a
+// lowercase [month]/[year] that the generator never replaced. April and May were substituted by hand;
+// June shipped `#aiwatch-score--[month]-[year]-reliability-rankings`, a dead link.
+console.log('\nkramdownAnchor / anchorForHeading (aiwatch-reports#74)')
+test('reproduces the ids Jekyll actually emitted for the June 2026 report', () => {
+  // Captured from the rendered HTML — all 22 heading ids matched this rule.
+  eq(kramdownAnchor('AIWatch Score — June 2026 Reliability Rankings'), 'aiwatch-score--june-2026-reliability-rankings')
+  eq(kramdownAnchor('API Response Time — Monthly p75'), 'api-response-time--monthly-p75')
+  eq(kramdownAnchor('Official Uptime (Primary Component)'), 'official-uptime-primary-component')
+})
+test('an em-dash (and an &) is DELETED, so its surrounding spaces become a double hyphen', () => {
+  // The gotcha the old template comment tried to explain in prose, now executable.
+  eq(kramdownAnchor('A — B'), 'a--b')
+  eq(kramdownAnchor('Detection & RTT Degradation'), 'detection--rtt-degradation')
+})
+test('leading digits survive', () => {
+  eq(kramdownAnchor('3-Month Trend'), '3-month-trend')
+  eq(kramdownAnchor('1. Codex — one incident'), '1-codex--one-incident')
+})
+test('anchorForHeading derives from the heading that actually shipped', () => {
+  const md = '# t\n\n## AIWatch Score — May 2026 Reliability Rankings\n\nbody\n'
+  eq(anchorForHeading(md, /^## (AIWatch Score .*)$/m), 'aiwatch-score--may-2026-reliability-rankings')
+})
+test('anchorForHeading throws rather than emitting a dead link', () => {
+  assert.throws(() => anchorForHeading('# nothing here\n', /^## (AIWatch Score .*)$/m), /no heading matched/)
+})
+
+console.log('\nNEVER_PUBLISHES_UPTIME stays in lockstep with SCORE_WITHHELD')
 test('the two sets encode the same providers (incident-feed-only → no uptime to publish)', () => {
   // They live in different files for different reasons; if a future gcloud-incident-only service is
   // added to one but not the other, the #29 stray-row / mislabel class of bug comes straight back.
-  const { NO_INCIDENT_FEED } = require('./generate-charts')
-  assert.deepEqual([...NO_INCIDENT_FEED].sort(), ['azureopenai', 'bedrock'])
+  const { SCORE_WITHHELD } = require('./generate-charts')
+  assert.deepEqual([...SCORE_WITHHELD].sort(), ['azureopenai', 'bedrock'])
 })
 test('emitUptimeWarnings annotates on stdout in CI, warns on stderr locally', () => {
   // The annotation goes to stdout (matching lint-recurrence.js / @actions/core); the local
@@ -1991,15 +2083,254 @@ test('mistral/perplexity appear; openrouter/stability do not', () => {
 })
 
 console.log('\nzero-incident split keys off the INCIDENT feed, not the uptime taxonomy (aiwatch#951)')
-test('perplexity with a zero-incident month is a confirmed zero, not "no incident feed"', () => {
+test('perplexity with a zero-incident month is a confirmed zero', () => {
   const services = [
     { id: 'perplexity', data: { incidents: 0, officialUptime: 100, scoreConfidence: 'high' } },
     { id: 'bedrock', data: { incidents: 0, officialUptime: null, scoreConfidence: 'low' } },
   ]
   const { zeroIncLine } = buildIncidentTable(services, { perplexity: { name: 'Perplexity' }, bedrock: { name: 'Amazon Bedrock' } })
-  assert.ok(/Zero incidents \(1 services\):\*\* Perplexity/.test(zeroIncLine), zeroIncLine)
-  assert.ok(/No incident feed \(1 services\):\*\* Amazon Bedrock/.test(zeroIncLine), zeroIncLine)
-  assert.ok(!/No incident feed[^\n]*Perplexity/.test(zeroIncLine), `must not contradict its "Official" label: ${zeroIncLine}`)
+  assert.ok(/Zero incidents \(2 services\):\*\* Perplexity, Amazon Bedrock — confirmed/.test(zeroIncLine), zeroIncLine)
+  assert.ok(!/No incident feed/.test(zeroIncLine), `the bucket rested on a false premise: ${zeroIncLine}`)
+})
+
+
+// ── report-wide ratchet (aiwatch-reports#75) ────────────────────────────────
+// The per-function `!/…/` guards elsewhere pin a claim's absence from ONE builder's output. Half the
+// ten corrected claims live in _templates/monthly-report.md — static prose no builder produces, so
+// nothing stopped them returning there. fillTemplate splices every builder INTO that template, so a
+// single full render ratchets both surfaces at once.
+console.log('\nreport-wide false-claim ratchet (#75)')
+
+const REAL_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+const REAL_ARCHIVE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-05.json'), 'utf-8'))
+
+const RETIRED_CLAIMS = [
+  [/no reliable incident feed/i,          'bedrock reads AWS Health events JSON (aiwatch#677); azureopenai an Azure RSS'],
+  [/migrated to a platform/i,             'cause-free stale caveat — we do not know why a feed froze'],
+  [/industry-average/i,                   'aiwatch#713 deleted the invented uptime estimate'],
+  [/monthly per-component/i,              'Component Reliability is a poll ratio, not a monthly per-component figure'],
+  [/derived from p75 probe RTT/i,         'computeResponsiveness reads ProbeSummary.p50 + cvCombined; ProbeSummary has no p75'],
+  [/reflect all affected components per service/i, 'counts are published incidents; Anthropic is single-component but posts per model'],
+  [/single-component figures/i,           'parseIncidentIoUptime is worst-of a component LIST; BetterStack averages resources'],
+  [/scored — and ranked — on what can actually be measured/i, 'a low-confidence service is withheld, not ranked'],
+  [/Score reflect/i,                      'removed overclaim'],
+  [/still has a probe \(Gemini, xAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
+  [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
+  [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
+  [/Partial \(Nd\)/,                     'uptimeSourceLabel emits only Official / No official uptime; #45 excludes short-window services instead'],
+]
+
+/**
+ * The real 2026-05 archive has no stale-flagged service and no `components`, so a render of it
+ * never emits the stale caveat or the Component Reliability intro — three of the nine regexes below
+ * would pass vacuously. Force every conditional section to render.
+ */
+function archiveExercisingEverySection(base) {
+  const a = JSON.parse(JSON.stringify(base))
+  const ids = Object.keys(a.services)
+  a.services[ids[0]].incidentSourceStale = true            // → stale caveat + stale ranking clause
+  a.services[ids[1]].components = [                        // → Component Reliability section
+    { name: 'API', uptime: 98.7 }, { name: 'Console', uptime: 99.99 },
+  ]
+  a.services[ids[2]] = { ...a.services[ids[2]], score: null, scoreConfidence: 'low' } // → withheld clause (data path)
+  return a
+}
+
+test('no retired false claim survives a full report render', () => {
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
+})
+
+test('the ratchet actually exercises every conditional section', () => {
+  // Guard the guard: if a future template change drops one of these sections, the regexes that
+  // target it start passing for the wrong reason.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), {})
+  assert.match(out, /excluded from this ranking/, 'withheld/stale ranking clause must render')
+  assert.match(out, /no longer read/, 'stale caveat must render')
+  assert.match(out, /Component Reliability/, 'component reliability section must render')
+  for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
+})
+
+test('a full render leaves no unresolved placeholder or dead anchor', () => {
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const leftovers = out.match(/\[[A-Z_]{4,}\]/g) || []
+  assert.deepStrictEqual(leftovers, [], `unsubstituted placeholders: ${leftovers.join(', ')}`)
+  assert.ok(!/#aiwatch-score--\[/.test(out), 'the AIWatch Score anchor must not embed a placeholder')
+})
+
+console.log('\nwithheld membership tracks the DATA, not a hardcoded id-set (#75)')
+
+const mkSvc = (id, score, conf) => ({ id, data: { score, grade: score ? 'good' : null, uptime: null, incidents: 0, avgResolutionMin: null, ...(conf ? { scoreConfidence: conf } : {}) } })
+const WMETA = { modal: { name: 'Modal' }, bedrock: { name: 'Amazon Bedrock' }, azureopenai: { name: 'Azure OpenAI' }, newlow: { name: 'New Low Svc' } }
+
+test('a modern archive (score=null, confidence=low) still explains the exclusion', () => {
+  // aiwatch#713 withholds by emitting score:null; `scored = filter(score !== null)` dropped them
+  // FIRST, so the note collapsed to '' — the ranking lost bedrock/azureopenai with no reason given.
+  // The June 2026 archive already has this shape.
+  const note = buildRankingNote([mkSvc('modal', 97, 'high'), mkSvc('bedrock', null, 'low'), mkSvc('azureopenai', null, 'low')], WMETA, '2026-07')
+  assert.notStrictEqual(note, '', 'the note must not collapse on a modern archive')
+  assert.ok(note.includes('Amazon Bedrock') && note.includes('Azure OpenAI'), note)
+  assert.match(note, /1 of 3 services ranked/, 'the denominator counts every service considered')
+})
+
+test('the withheld clause keeps its negation in the PLURAL branch', () => {
+  // SCORE_WITHHELD has two members, so production always renders the plural — the singular guard
+  // never runs on the shipped sentence.
+  const note = buildRankingNote([mkSvc('modal', 97, 'high'), mkSvc('bedrock', null, 'low'), mkSvc('azureopenai', null, 'low')], WMETA, '2026-07')
+  assert.ok(/are excluded/.test(note), `plural branch not taken: ${note}`)
+  assert.ok(!/ publish an official uptime metric/.test(note), `plural negation lost: ${note}`)
+  assert.ok(!/ have (a )?direct latency probe/.test(note), `plural negation lost: ${note}`)
+  assert.ok(/no official uptime/.test(note) && /no direct latency probe/.test(note), note)
+})
+
+test('a NEW low-confidence service is named even though the id-set is stale', () => {
+  const note = buildRankingNote([mkSvc('modal', 97, 'high'), mkSvc('newlow', null, 'low')], WMETA, '2026-07')
+  assert.ok(note.includes('New Low Svc'), `a low-confidence service outside SCORE_WITHHELD vanished silently: ${note}`)
+})
+
+test('a legacy archive (score=90, no scoreConfidence) still uses the id-set', () => {
+  const note = buildRankingNote([mkSvc('modal', 97), mkSvc('bedrock', 90)], WMETA, '2026-07')
+  assert.ok(note.includes('Amazon Bedrock'), `the id-set must still cover pre-scoreConfidence archives: ${note}`)
+  assert.match(note, /1 of 2 services ranked/)
+})
+
+test('the stale clause agrees in number', () => {
+  const st = id => ({ id, data: { score: 70, grade: 'good', uptime: null, incidents: 0, avgResolutionMin: null, incidentSourceStale: true } })
+  const ok = { id: 'm', data: { score: 90, grade: 'excellent', uptime: 99, incidents: 0, avgResolutionMin: null } }
+  const meta = { a: { name: 'DeepSeek API' }, b: { name: 'Character.AI' }, m: { name: 'Modal' } }
+  assert.match(buildRankingNote([ok, st('a')], meta, '2026-07'), /its incident feed is frozen/)
+  const two = buildRankingNote([ok, st('a'), st('b')], meta, '2026-07')
+  assert.match(two, /their incident feeds are frozen/)
+  assert.ok(!/their incident feed is/.test(two), 'plural subject took a singular verb')
+})
+
+
+test('a frozen-feed service with a null Score is still named and still counted', () => {
+  // The twin of the withheld bug: `stale = scored.filter(...)` also ran behind a `score !== null`
+  // prefilter, so Character.AI (frozen feed, no uptime, no probe that month → null Score) vanished
+  // from the ranking, from the stale clause, AND from the denominator. June 2026 printed
+  // "30 of 38 services ranked" for an archive holding 41.
+  const frozenNull = { id: 'characterai', data: { score: null, grade: null, uptime: null, incidents: 0, avgResolutionMin: null, incidentSourceStale: true } }
+  const ok = { id: 'modal', data: { score: 90, grade: 'excellent', uptime: 99, incidents: 0, avgResolutionMin: null } }
+  const meta = { characterai: { name: 'Character.AI' }, modal: { name: 'Modal' } }
+  const note = buildRankingNote([ok, frozenNull], meta, '2026-07')
+  assert.ok(note.includes('Character.AI'), `a null-Score stale service vanished: ${note}`)
+  assert.match(note, /1 of 2 services ranked/, 'it must remain in the denominator')
+  assert.match(note, /its incident feed is frozen/, 'and be explained by the STALE clause, not the withheld one')
+})
+
+test('every service lands in exactly one group — ranked, withheld, stale, or recent', () => {
+  const mk = (id, over) => ({ id, data: { score: 80, grade: 'good', uptime: 99, incidents: 0, avgResolutionMin: null, ...over } })
+  const services = [
+    mk('modal'),                                                     // ranked
+    mk('bedrock', { score: null, scoreConfidence: 'low' }),          // withheld (data)
+    mk('azureopenai', { score: 88 }),                                // withheld (legacy id-set)
+    mk('characterai', { score: null, incidentSourceStale: true }),   // stale, null score
+    mk('deepseek', { incidentSourceStale: true }),                   // stale, has score
+    mk('newsvc', { addedAt: '2026-07-15' }),                         // recent (field is addedAt)
+  ]
+  const meta = Object.fromEntries(services.map(s => [s.id, { name: s.id }]))
+  const note = buildRankingNote(services, meta, '2026-07')
+  // 6 services: 1 ranked + 2 withheld + 2 stale + 1 recent
+  assert.match(note, /1 of 6 services ranked/, note)
+  for (const id of ['bedrock', 'azureopenai', 'characterai', 'deepseek', 'newsvc']) {
+    assert.ok(note.includes(id), `${id} was excluded without explanation: ${note}`)
+  }
+  // A withheld service must not ALSO appear in the stale clause.
+  const staleClause = note.slice(note.indexOf('can no longer read'))
+  assert.ok(!staleClause.includes('bedrock'), 'withheld service double-listed as stale')
+})
+
+
+test('uptimeSourceLabel emits exactly two labels — there is no Partial', () => {
+  // The template taught a third label the generator cannot produce. Its one historical use was
+  // hand-typed as "Partial (9-day)" (not the "(Nd)" the legend showed), and reports#45 now excludes
+  // a short-window service from the ranking entirely rather than labelling its row.
+  const labels = new Set([
+    uptimeSourceLabel({ id: 'groq', data: { officialUptime: 100, scoreConfidence: 'high' } }, 'groq'),
+    uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null } }, 'openrouter'),
+    uptimeSourceLabel({ id: 'bedrock', data: {} }, 'bedrock'),
+  ])
+  assert.deepStrictEqual([...labels].sort(), ['No official uptime', 'Official'])
+  for (const l of labels) assert.ok(!/Partial/.test(l), `unexpected label: ${l}`)
+})
+
+
+test('every About This Report link names the bullet it points at', () => {
+  // The bullets carry no anchors of their own (kramdown only auto-ids headings), so the link lands
+  // at the section top and the "→ Bullet" suffix is the only thing telling a reader where to look.
+  // Three of six references omitted it.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), {})
+  const links = [...out.matchAll(/\[([^\]]*About This Report[^\]]*)\]\(#about-this-report\)/g)].map(m => m[1])
+  assert.ok(links.length >= 3, `expected several methodology links, found ${links.length}`)
+  for (const text of links) {
+    assert.match(text, /^About This Report → \S/, `link text must name its bullet: "${text}"`)
+  }
+})
+
+
+test('the stale caveat truncates the incident COUNT, never the uptime', () => {
+  // AIWatch keeps polling a stale-feed service: Character.AI's June incident feed froze on 15 Jun,
+  // yet its daily ok/total counters were recorded all 30 days (measured uptime 98.03). An official
+  // uptime, when the page stops publishing one, goes ABSENT rather than partial. The old caveat
+  // said "the incident count and uptime cover only the window up to that cutoff" — the data says no.
+  const caveat = buildStaleSourceCaveat(['Character.AI'])
+  assert.match(caveat, /The incident count covers only the window/)
+  assert.ok(!/count and uptime/.test(caveat), 'uptime is not truncated by a frozen incident feed')
+  assert.ok(!/treat them as a floor/.test(caveat), 'one truncated quantity takes a singular pronoun')
+  assert.match(caveat, /treat it as a floor/)
+})
+
+
+test('the Score is named and linked where a reader first meets a number', () => {
+  // Summary is three sections above the AIWatch Score heading, yet it opens with bare figures like
+  // "44/100". A first-time reader met the numbers before the metric had a name.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const summary = out.slice(out.indexOf('## Summary'), out.indexOf('## Recommendations'))
+  assert.match(summary, /\*\*AIWatch Score\*\* \(0–100\)/, 'Summary must name the metric')
+  assert.match(summary, /\(#aiwatch-score--/, 'and link to its definition')
+  assert.ok(!summary.includes('[SCORE_ANCHOR]'), 'the anchor placeholder must resolve')
+  // The definition must precede the first score in the body.
+  assert.ok(summary.indexOf('AIWatch Score') < summary.indexOf('- **Most reliable**'), 'definition comes first')
+})
+
+
+test('the API Response Time section carries ONE prose block, and it is true', () => {
+  // The intro and a trailing "> **Note**:" footnote grew separately around the same table, each
+  // half-explaining the method. Merged into the intro; the footnote is gone.
+  // June 2026: 13 of 41 services had no probe; 10 of them were ranked, Modal at #2 with a 95.
+  // The old footnote named three of the thirteen and claimed all were "excluded from rankings".
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const start = out.indexOf('## API Response Time')
+  const section = out.slice(start, out.indexOf('\n## ', start + 5))
+  assert.ok(!/^> \*\*Note\*\*: Probe RTT/m.test(section), 'the footnote must not return')
+
+  const intro = section.split('\n').find(l => l.startsWith('These p75 figures'))
+  assert.ok(intro, 'the section must open with its one prose block')
+  // Everything the footnote used to carry now lives here, once.
+  assert.match(intro, /Cloudflare Workers edge every 5 minutes/, 'measurement method')
+  assert.match(intro, /not inference latency/, 'the disclaimer readers need')
+  assert.match(intro, /median \(p50\) probe RTT/, 'and the p75-is-not-the-Score-input correction')
+  assert.match(intro, /no row here/, 'a probe-less service is absent from THIS table')
+  assert.match(intro, /does not drop it from the Score ranking/, 'and that is all this needs to say')
+  assert.ok(!/are excluded from rankings/.test(intro), 'the false causal claim must stay dead')
+  // Never claim the Score is "unaffected": `unsupported` drops the Responsiveness component and
+  // rescales the remaining 80 points onto 100. Composition changes; only the penalty is absent.
+  assert.ok(!/unaffected|costs it nothing/.test(intro), `no-probe still reshapes the Score: ${intro}`)
+  assert.ok(!/withheld/.test(intro), 'the withheld rule belongs to the ranking note, not here')
+  for (const name of ['Bedrock', 'Azure OpenAI', 'Modal']) {
+    assert.ok(!intro.includes(name), `hardcoded service name in a rule that should be derived: ${name}`)
+  }
+})
+
+
+test('every resolved SCORE_ANCHOR link keeps its leading #', () => {
+  // `[SCORE_ANCHOR]` resolves to a bare id, so the template must write `(#[SCORE_ANCHOR])`.
+  // Omitting the # yields `](aiwatch-score--june-…)` — a relative-path link that 404s silently.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const links = [...out.matchAll(/\]\(([^)]*aiwatch-score--[^)]*)\)/g)].map(m => m[1])
+  assert.ok(links.length >= 2, `expected several Score links, found ${links.length}`)
+  for (const href of links) assert.ok(href.startsWith('#'), `anchor link lost its #: ${href}`)
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

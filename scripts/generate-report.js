@@ -31,7 +31,7 @@ const charts = require('./generate-charts')  // trend core (aiwatch-reports#41)
 // Mover-exclusion predicates now live in generate-charts.js (single source of truth) so the
 // Notable Movers TABLE (here) and the trend CHART (charts.js CLI) exclude the SAME services
 // (aiwatch-reports#67). Imported here; re-exported below so existing report.test.js callers work.
-const { NO_INCIDENT_FEED, isStaleSource, isRecentlyAdded } = charts
+const { SCORE_WITHHELD, isStaleSource, isRecentlyAdded } = charts
 
 const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf.workers.dev'
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
@@ -59,7 +59,7 @@ const NO_PUBLIC_UPTIME = new Set([
 // stray "100.00%" row). Deliberately narrow: it must NOT grow back into the drifted taxonomy above.
 const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 
-// (NO_INCIDENT_FEED / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
+// (SCORE_WITHHELD / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
 // as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
 
 // Services without direct probe coverage (excluded from API Response Time ranking).
@@ -141,6 +141,28 @@ function fmtDurationMin(mins) {
 
 function serviceName(id, meta) {
   return meta[id]?.name || id
+}
+
+// aiwatch-reports#74 — Kramdown's `generate_id`, reimplemented: delete every character outside
+// [A-Za-z0-9 -], turn spaces into hyphens, downcase. Leading digits are KEPT ("3-Month Trend" →
+// `3-month-trend`). The consequence people trip on: an em-dash is *deleted*, not replaced, so the
+// spaces around it survive and collapse into a DOUBLE hyphen — `AIWatch Score — June 2026 …`
+// becomes `#aiwatch-score--june-2026-…`. Same for `&`. Verified against all 22 heading ids Jekyll
+// emitted for the June 2026 report.
+function kramdownAnchor(heading) {
+  return [...heading]
+    .filter(c => /[A-Za-z0-9 -]/.test(c))
+    .join('')
+    .replace(/ /g, '-')
+    .toLowerCase()
+}
+
+/** Anchor of the first heading in `md` matching `re` (capture group 1 = the heading text).
+ *  Derived from the text that actually shipped, so it cannot drift from the heading. */
+function anchorForHeading(md, re) {
+  const m = md.match(re)
+  if (!m) throw new Error(`anchorForHeading: no heading matched ${re}`)
+  return kramdownAnchor(m[1])
 }
 
 // ── Ranking helpers ──────────────────────────────────────────────────
@@ -225,55 +247,96 @@ function confidence(svc) {
 // that had drifted in both directions. "Official" = the archive carries a status-page figure, which
 // is exactly when the Score consumed it; otherwise "No official uptime", mirroring the dashboard's
 // `noOfficialUptime` wording. The old "Estimate" value is gone with the estimate itself (aiwatch#713).
-// ("Partial (Nd)" for mid-month additions stays a manual edit; not derivable from the archive yet.)
+// There is deliberately NO third label. A "Partial (Nd)" label used to be hand-typed for a
+// mid-month addition, but reports#45 EXCLUDES such a service from the ranking outright, so the
+// label named a row that can no longer exist — and its one real use read "Partial (9-day)",
+// not the "(Nd)" the legend taught. Removed from the template with the rest of the drifted prose.
 function uptimeSourceLabel(svc, id = svc?.id) {
   const official = officialUptimeFor(svc, id)
   return official === null || official === undefined ? 'No official uptime' : 'Official'
 }
 
-// Ranking-exclusion note (#29). NO_INCIDENT_FEED services have neither an accessible uptime
-// metric nor a reliable incident feed, so they're dropped from the Score ranking and called
-// out above the table. Returns '' when none are excluded (the marker then collapses).
+// Ranking-exclusion note (#29). SCORE_WITHHELD services publish no official uptime and have no
+// latency probe, so the worker withholds their Score entirely; they're dropped from the ranking and
+// called out above the table. Returns '' when none are excluded (the marker then collapses).
 // Joins display names with " and " for two, commas otherwise.
 function joinNames(svcs, meta) {
   const names = svcs.map(s => serviceName(s.id, meta))
   return names.length === 2 ? names.join(' and ') : names.join(', ')
 }
 
+/**
+ * A service whose Score the worker withholds. aiwatch#713 withholds by emitting `score: null` at
+ * `scoreConfidence: 'low'` — so a modern archive marks these by DATA, and reading them off the
+ * hardcoded id-set alone both goes stale on a new low-confidence service AND (worse) finds nothing
+ * once a `score !== null` filter has already dropped them. Legacy archives predate `scoreConfidence`
+ * and still carry the invented estimate (bedrock score=90), so the id-set remains the fallback.
+ */
+function isScoreWithheld(s) {
+  return SCORE_WITHHELD.has(s.id) || (s.data.score === null && s.data.scoreConfidence === 'low')
+}
+
 function buildRankingNote(services, meta, period) {
-  const scored = services.filter(s => s.data.score !== null)
-  const noFeed = scored.filter(s => NO_INCIDENT_FEED.has(s.id))
-  // STALE_SOURCE that isn't already a no-feed service (avoid double-listing) — #591.
-  const stale = scored.filter(s => isStaleSource(s) && !NO_INCIDENT_FEED.has(s.id))
-  // reports#45 — recently-added (partial-month) services, excluding any already covered above.
-  const recent = scored.filter(s => isRecentlyAdded(s, period) && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
-  if (noFeed.length === 0 && stale.length === 0 && recent.length === 0) return ''
-  const ranked = scored.length - noFeed.length - stale.length - recent.length
+  // Partition ALL services, never a `score !== null` prefilter. Every excluded group can carry a
+  // null score — withheld ones by aiwatch#713, and a frozen-feed service because it has no uptime
+  // and (in its month) no probe. Filtering on score first made each group's own members invisible
+  // to the clause that exists to explain them: the June 2026 archive silently dropped bedrock,
+  // azureopenai AND Character.AI from both the ranking and the note, printing "30 of 38" for 41
+  // services.
+  const withheld = services.filter(isScoreWithheld)
+  // STALE_SOURCE that isn't already withheld (avoid double-listing) — #591.
+  const stale = services.filter(s => !isScoreWithheld(s) && isStaleSource(s))
+  const rest = services.filter(s => !isScoreWithheld(s) && !isStaleSource(s))
+  // reports#45 — recently-added (partial-month) services.
+  const recent = rest.filter(s => isRecentlyAdded(s, period))
+  const rankedSvcs = rest.filter(s => !isRecentlyAdded(s, period) && s.data.score !== null)
+  // Warn BEFORE the early return: a service with no Score and no exclusion reason is exactly the
+  // silent drop this function exists to prevent, and it can be the ONLY anomaly — in which case the
+  // "nothing excluded" return below would swallow the warning too.
+  const unexplained = rest.filter(s => !isRecentlyAdded(s, period) && s.data.score === null)
+  if (unexplained.length) {
+    console.warn(`::warning::buildRankingNote: ${unexplained.map(s => s.id).join(', ')} have no Score and no exclusion reason — omitted from the ranking without explanation`)
+  }
+  if (withheld.length === 0 && stale.length === 0 && recent.length === 0) return ''
+  const ranked = rankedSvcs.length
+  const considered = ranked + withheld.length + stale.length + recent.length
   const clauses = []
-  if (noFeed.length) {
-    const verb = noFeed.length === 1 ? 'is' : 'are'
-    clauses.push(`**${joinNames(noFeed, meta)} ${verb} excluded from this ranking** — neither publishes an accessible uptime metric, so their Score would otherwise inherit an industry-average assumption rather than a measured value, and AIWatch has no reliable incident feed for them (see "No incident feed" under [Incident Summary](#incident-summary))`)
+  if (withheld.length) {
+    const verb = withheld.length === 1 ? 'is' : 'are'
+    // Two claims removed here. "Industry-average assumption" — aiwatch#713 deleted the invented
+    // uptime. "No reliable incident feed" — false: bedrock reads the AWS Health public events JSON
+    // (aiwatch#677) and azureopenai an Azure RSS feed; both are archived. What they lack is an
+    // official uptime AND a probe, so `score.ts` can measure 2 of 4 components and withholds the
+    // Score at `confidence: 'low'` rather than over-state one.
+    // Phrased without a subject pronoun: an earlier draft read "it publishes an official uptime
+    // metric and has a direct latency probe" in the singular — the negation vanished with the plural.
+    clauses.push(`**${joinNames(withheld, meta)} ${verb} excluded from this ranking** — no official uptime metric and no direct latency probe, so AIWatch can measure only two of the Score's four components and withholds a Score rather than rank on insufficient signal. Incidents are still tracked (see [Incident Summary](#incident-summary))`)
   }
   if (stale.length) {
     const verb = stale.length === 1 ? 'is' : 'are'
     const poss = stale.length === 1 ? 'its' : 'their'
-    clauses.push(`**${joinNames(stale, meta)} ${verb} excluded from this ranking** — ${poss} status source migrated to a platform AIWatch can't reach, so the incident feed is frozen and the Score would be inflated by an empty 30-day window (see "Stale source" under [Incident Summary](#incident-summary))`)
+    // Cause-free, for the same reason as buildStaleSourceCaveat: the flag says the feed is frozen,
+    // not why. DeepSeek's page was bot-walled (aiwatch#507); Character.AI's was deactivated (#689/#800).
+    // One clause, one pointer. The full explanation is the canonical "Stale source" caveat under
+    // Incident Summary; restating it here made a reader meet the same paragraph three times.
+    const feed = stale.length === 1 ? 'incident feed is' : 'incident feeds are'
+    clauses.push(`**${joinNames(stale, meta)} ${verb} excluded from this ranking** — ${poss} ${feed} frozen, so the Score would rest on a partial month (see "Stale source" under [Incident Summary](#incident-summary))`)
   }
   if (recent.length) {
     const verb = recent.length === 1 ? 'is' : 'are'
     const poss = recent.length === 1 ? 'it was' : 'they were'
     clauses.push(`**${joinNames(recent, meta)} ${verb} excluded from this ranking** — ${poss} added to AIWatch mid-month, so the partial-month Score rests on insufficient coverage; ${recent.length === 1 ? 'it rejoins' : 'they rejoin'} once a full month of data accrues`)
   }
-  return `*${ranked} of ${scored.length} services ranked. ${clauses.join('. ')}.*`
+  return `*${ranked} of ${considered} services ranked. ${clauses.join('. ')}.*`
 }
 
 // ── Table builders ───────────────────────────────────────────────────
 function buildScoreTable(services, meta, period) {
-  // Drop NO_INCIDENT_FEED services (no uptime metric + no reliable incidents), STALE_SOURCE services
+  // Drop SCORE_WITHHELD services (no uptime metric + no reliable incidents), STALE_SOURCE services
   // (#591 — frozen feed inflates the Score from an empty window), and recently-added services
   // (reports#45 — partial-month coverage would rank off insufficient data) from the ranking; all are
   // surfaced in the ranking-exclusion note + the Incident Summary ("No incident feed" / "Stale source").
-  const withScore = services.filter(s => s.data.score !== null && !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s) && !isRecentlyAdded(s, period))
+  const withScore = services.filter(s => s.data.score !== null && !isScoreWithheld(s) && !isStaleSource(s) && !isRecentlyAdded(s, period))
   const ranked = competitionRank(withScore, s => s.data.score)
   const rows = ranked.map(r => {
     const s = r.item
@@ -286,13 +349,29 @@ function buildScoreTable(services, meta, period) {
   ].join('\n')
 }
 
-// aiwatch#507 — caveat line for STALE_SOURCE services (frozen status feed). Pure + exported so the
+// aiwatch#507 — caveat line for services whose status feed is frozen. Pure + exported so the
 // singular/plural agreement is unit-testable without mutating the maintained set. '' for empty input.
+//
+// It used to name a CAUSE — "a status page that migrated to a platform AIWatch can't reach
+// server-side" — which is the DeepSeek case (bot-walled Flashduty, aiwatch#507) and false for the
+// other one: Character.AI's Statuspage was 401-DEACTIVATED (aiwatch#689/#800). The flag says the feed
+// is frozen; it does not say why. State the observable fact and stop.
+//
+// It also claimed "the incident count, uptime, and Score reflect only data up to that cutoff". Whether
+// a Score exists at all is not this function's to assert: the worker withholds it (null) only at
+// `scoreConfidence: 'low'`, so a stale service that still carries a probe keeps a real number. What IS
+// unconditionally true is that `buildScoreTable` drops every stale service from the ranking. Say that,
+// and say nothing about the Score's existence — asserting a number that may not be there is the
+// mirror-image of the error being fixed.
 function buildStaleSourceCaveat(names) {
   if (!names.length) return ''
   const n = names.length
-  const verb = n === 1 ? 'is' : 'are'
-  return `**Stale source (${n} service${n === 1 ? '' : 's'}):** ${names.join(', ')} ${verb} served from a status page that migrated to a platform AIWatch can't reach server-side, so the feed is frozen at the last reachable fetch. The incident count, uptime, and Score reflect only data up to that cutoff — not the full month — so treat the figures as a floor, not a verified picture.`
+  const one = n === 1
+  // Only the INCIDENT COUNT is truncated. AIWatch keeps polling status, so its measured uptime still
+  // covers the whole month; an official uptime, if the page stops publishing one, goes absent rather
+  // than partial. Character.AI's June proves it: incident feed frozen 15 Jun, daily counters recorded
+  // all 30 days. Saying "and uptime" made a claim the data contradicts.
+  return `**Stale source (${n} service${one ? '' : 's'}):** ${names.join(', ')} — AIWatch can no longer read ${one ? 'its incident feed, which is' : 'their incident feeds, which are'} frozen at the last reachable fetch. The incident count covers only the window up to that cutoff, not the full month, so treat it as a floor rather than a verified picture. A frozen feed also removes ${one ? 'the service' : 'these services'} from the Score ranking.`
 }
 
 function buildIncidentTable(services, meta) {
@@ -308,33 +387,30 @@ function buildIncidentTable(services, meta) {
     return `<tr><td>${serviceName(s.id, meta)}</td><td>${inc}</td><td>${totalWithLongest}</td><td class="hide-mobile">${longest}</td><td class="hide-mobile">${avg}</td></tr>`
   })
 
-  // Zero-incident services split (#29): a "confirmed zero" needs a real, CURRENT incident feed.
-  // The bucket keys off NO_INCIDENT_FEED (bedrock/azureopenai), NOT the uptime taxonomy. It used to
-  // use NO_PUBLIC_UPTIME, conflating two unrelated questions — whether a provider publishes an uptime
-  // %, and whether AIWatch can read its incidents. aiwatch#951 made that conflation visible: Perplexity
-  // publishes a real uptime and has a real incident feed, yet a zero-incident month would have printed
-  // "Official · Zero incidents, 100.00% uptime" in the Score table and, two sections later, "No incident
-  // feed: Perplexity — a blank incident count reflects monitoring coverage, not verified incident-free
-  // operation." Both about the same month. STALE_SOURCE services (aiwatch#507) stay excluded from
-  // "confirmed": their feed is frozen, so a zero count is "nothing since the cutoff".
+  // Zero-incident services (#29): a "confirmed zero" needs a real, CURRENT incident feed. Exactly one
+  // condition disqualifies a service — a FROZEN feed (aiwatch#507): its zero means "nothing since the
+  // cutoff", not "nothing happened". The stale-source caveat below covers those.
+  //
+  // There used to be a second bucket, "No incident feed", for bedrock/azureopenai, asserting AIWatch
+  // had no reliable feed for them so their blank count was "monitoring coverage, not verified
+  // incident-free operation". That was false. `worker/src/services.ts` reads bedrock's AWS Health
+  // public events JSON (aiwatch#677 — one event per incident, real start and end timestamps) and
+  // azureopenai's Azure RSS; both are archived, and bedrock's June 2026 archive carries a genuine
+  // incident. Their zero is as observed as anyone else's. What they lack is an official uptime and a
+  // probe — a Score problem, not a feed problem — and `buildRankingNote` says so.
+  //
   // Use isStaleSource (flag-OR-constant) — not the raw STALE_SOURCE constant — so a service marked
   // stale by the archive's incidentSourceStale flag is handled even though the constant is now empty
   // (aiwatch#618 emptied it; the May 2026 archive still carries the flag).
   const zero = services.filter(s => s.data.incidents === 0)
   const confirmed = zero
-    .filter(s => !NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
-    .map(s => serviceName(s.id, meta))
-  // Stale sources are excluded from noFeed too (defensive — a future stale service that also lacks an
-  // incident feed must get the more-specific Stale-source line, not a double caveat).
-  const noFeed = zero
-    .filter(s => NO_INCIDENT_FEED.has(s.id) && !isStaleSource(s))
+    .filter(s => !isStaleSource(s))
     .map(s => serviceName(s.id, meta))
   const zeroLines = []
   if (confirmed.length) {
-    zeroLines.push(`**Zero incidents (${confirmed.length} services):** ${confirmed.join(', ')} — confirmed via their status-page incident feeds.`)
-  }
-  if (noFeed.length) {
-    zeroLines.push(`**No incident feed (${noFeed.length} services):** ${noFeed.join(', ')} — AIWatch has no reliable incident feed for these (aggregated event JSON / RSS only), so a blank incident count reflects monitoring coverage, not verified incident-free operation.`)
+    const n = confirmed.length
+    const via = n === 1 ? 'its status-page incident feed' : 'their status-page incident feeds'
+    zeroLines.push(`**Zero incidents (${n} service${n === 1 ? '' : 's'}):** ${confirmed.join(', ')} — confirmed via ${via}.`)
   }
   // Stale-source caveat (aiwatch#507) — rendered whenever a stale service is in the report (by the
   // archive's incidentSourceStale flag or the STALE_SOURCE constant), regardless of incident count:
@@ -753,7 +829,10 @@ function buildComponentReliabilitySection(archive, meta) {
   return [
     '## Component Reliability',
     '',
-    "> AIWatch is the only monitor publishing a **monthly per-component uptime ranking**. This surfaces each multi-surface service's weakest component this month — the surface most likely to be your bottleneck, which a single service-level uptime number hides.",
+    // The window is NOT the month: per-component counting is younger than the report, and a service
+    // whose status page goes dark simply stops contributing days (aiwatch-reports#73). Say "the days
+    // AIWatch could read its status page", which is what the ratio actually measures.
+    "> AIWatch is the only monitor publishing a **per-component uptime ranking**. This surfaces each multi-surface service's weakest component over the days AIWatch could read its status page — the surface most likely to be your bottleneck, which a single service-level uptime number hides. It is a different measurement from the Official Uptime table; see [About This Report → Component Reliability](#about-this-report).",
     '',
     '| Service | Weakest Component | Uptime | Components |',
     '|---|---|---|---|',
@@ -770,7 +849,7 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   if (entries.length < 2) return ''
 
   const trend = charts.buildTrendSeries(entries)
-  // Exclude the services the Score ranking itself excludes (NO_INCIDENT_FEED + stale source,
+  // Exclude the services the Score ranking itself excludes (SCORE_WITHHELD + stale source,
   // per buildScoreTable / the #29 note) so a trend mover never contradicts a report that
   // elsewhere states it does not rank that service. Estimate-only bedrock/azureopenai scores
   // CAN move month-to-month, so this isn't hypothetical. Keyed off the CURRENT month's archive.
@@ -785,7 +864,7 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   const parts = [
     `## ${span}-Month Trend`,
     '',
-    `AIWatch Score direction over the last ${span} months (${entries[0].month} → ${month}). The chart shows the composite-Score direction for every service; **Notable Movers** below decompose the biggest changes into the incident-measured metrics that actually drive a "keep relying on this?" decision — recovery time (MTTR) and total downtime — since a flat Score can hide a recovery-time regression.`,
+    `AIWatch Score direction over the last ${span} months (${entries[0].month} → ${month}). The lines plot each service's composite Score. **Notable Movers** below are NOT ranked by these lines — a service earns its place, and its order, by the largest change on *any* of three axes (Score, recovery time, or total downtime), which is why one with a small Score move can top the list on a downtime swing the chart cannot show.`,
     '',
     `![AIWatch Score ${span}-month trend](../assets/${month}/trend-chart.svg)`,
     '',
@@ -980,6 +1059,16 @@ function fillTemplate(template, month, archive, meta) {
   out = out.replace(/\[LAST_DAY\]/g, String(lastDay))
   out = out.replace(/\[PUBLISH_MONTH\]/g, publishMonth)
   out = out.replace(/\[NEXT_MONTH\]/g, nxt.name)
+
+  // aiwatch-reports#74 — resolve `[SCORE_ANCHOR]` from the heading that actually shipped, rather
+  // than hand-slugging it in the template. The old template asked a human to substitute a lowercase
+  // `[month]`/`[year]` inside the anchor (the generator only substitutes the UPPERCASE forms), and
+  // June 2026 was published with a literal `#aiwatch-score--[month]-[year]-…` dead link.
+  // Only resolved when the placeholder is present; when it is, a missing heading THROWS rather than
+  // emitting another dead link (a template with neither is fine — several tests use one).
+  if (out.includes('[SCORE_ANCHOR]')) {
+    out = out.replace(/\[SCORE_ANCHOR\]/g, anchorForHeading(out, /^## (AIWatch Score .*)$/m))
+  }
 
   // Draft — human reviewer flips to true before merge
   out = out.replace(/^published: true$/m, 'published: false')
@@ -1688,6 +1777,8 @@ module.exports = {
   buildStaleSourceCaveat,
   buildUptimeTable,
   buildUptimeExclusionNote,
+  kramdownAnchor,
+  anchorForHeading,
   buildLatencyTable,
   buildBySourceTable,
   buildBySeverityTable,
