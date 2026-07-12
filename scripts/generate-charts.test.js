@@ -2,7 +2,7 @@ const {
   generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
-  buildMoverExclude, notableMoversForChart, medianOf,
+  buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS,
 } = require('./generate-charts')
@@ -454,6 +454,37 @@ test('toMonthEntry computes daysInMonth + carries daysCollected', () => {
   eq(e.daysInMonth, 31)
   eq(e.daysCollected, 12)
   eq(e.services.claude.score, 71)
+})
+
+test('resolveMonthlyScore honors a present-but-null monthlyScore (withheld ≠ legacy fallback)', () => {
+  // The load-bearing distinction: key PRESENT + null = the worker withheld this month → stay null.
+  // key ABSENT = pre-#993 archive → fall back to the snapshot. Conflating them would rank a service
+  // on the build-day snapshot for a month whose score was deliberately withheld.
+  eq(resolveMonthlyScore({ score: 90, monthlyScore: null, monthlyGrade: null }).score, null)
+  eq(resolveMonthlyScore({ score: 90 }).score, 90)
+})
+
+test('resolveMonthlyScore: monthlyScore/grade win, snapshot is the fallback (aiwatch#993)', () => {
+  eq(resolveMonthlyScore({ score: 44, grade: 'Fair', monthlyScore: 61, monthlyGrade: 'Good' }).score, 61)
+  eq(resolveMonthlyScore({ score: 44, grade: 'Fair', monthlyScore: 61, monthlyGrade: 'Good' }).grade, 'Good')
+  eq(resolveMonthlyScore({ score: 55, grade: 'Fair' }).score, 55, 'legacy archive falls back')
+  eq(resolveMonthlyScore({ score: 55, grade: 'Fair' }).grade, 'Fair')
+  eq(resolveMonthlyScore({ score: 44, grade: 'Fair', monthlyScore: null, monthlyGrade: null }).score, null, 'a modern archive that WITHHELD the month stays null, does not borrow the snapshot')
+  eq(resolveMonthlyScore({ score: 44, grade: 'Fair' }).score, 44, 'a LEGACY archive (no monthlyScore key) falls back to the snapshot')
+  eq(resolveMonthlyScore(null).score, null)
+})
+
+test('toMonthEntry prefers monthlyScore over the snapshot score (aiwatch#993)', () => {
+  // The calendar-month Score (#993) is window-aligned with MTTR/downtime, so the trend/Movers must
+  // use it when present, and fall back to the build-day `score` snapshot for legacy archives.
+  const withMonthly = toMonthEntry('2026-06', { services: { x: { score: 44, monthlyScore: 61, grade: 'Fair' } } })
+  eq(withMonthly.services.x.score, 61, 'monthlyScore wins')
+
+  const legacy = toMonthEntry('2026-05', { services: { x: { score: 55, grade: 'Fair' } } })
+  eq(legacy.services.x.score, 55, 'no monthlyScore falls back to the snapshot score')
+
+  const withheld = toMonthEntry('2026-06', { services: { x: { score: 44, monthlyScore: null, monthlyGrade: null, grade: 'Fair' } } })
+  eq(withheld.services.x.score, null, 'a withheld month (present monthlyScore: null) stays null, not the snapshot 44')
 })
 
 test('toMonthEntry returns null when services are missing', () => {

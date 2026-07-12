@@ -38,6 +38,7 @@ const {
   fillTemplate,
 } = require('./generate-report')
 const assert = require('assert')
+const charts = require('./generate-charts')
 
 let passed = 0
 let failed = 0
@@ -197,6 +198,25 @@ test('archive flag drives staleness; STALE_SOURCE constant is empty since aiwatc
   eq(isStaleSource({ id: 'deepseek', data: { incidentSourceStale: true } }), true) // May archive: flag still set → stale
   eq(isStaleSource({ id: 'deepseek', data: {} }), false)                           // #618 — removed from STALE_SOURCE; absent flag ⇒ not stale (June+)
   eq(isStaleSource({ id: 'cohere', data: {} }), false)                             // neither
+})
+
+console.log('\naiwatch#993 — the ranking table and the trend use the SAME calendar-month score')
+test('ranking table shows monthlyScore, matching what toMonthEntry feeds Notable Movers', () => {
+  // The report normalizes at load (generate-report.js line ~959) via charts.resolveMonthlyScore, so
+  // buildScoreTable receives the monthly value. Reproduce that mapping and assert the table shows 61
+  // (monthly), not 44 (the build-day snapshot) — and that toMonthEntry hands the trend the same 61,
+  // so the same month can never show two different scores.
+  const archive = { services: { deepgram: { score: 44, grade: 'Degrading', monthlyScore: 61, monthlyGrade: 'Fair', uptime: 90, incidents: 6, avgResolutionMin: 456, officialUptime: 99 } } }
+  const services = Object.entries(archive.services).map(([id, data]) => {
+    const { score, grade } = charts.resolveMonthlyScore(data)
+    return { id, data: { ...data, score, grade } }
+  })
+  const table = buildScoreTable(services, { deepgram: { name: 'Deepgram' } }, '2026-06')
+  assert.ok(/\| 61 \|/.test(table), `ranking table must show the monthly score 61: ${table}`)
+  assert.ok(!/\| 44 \|/.test(table), `must NOT show the snapshot score 44: ${table}`)
+
+  const entry = charts.toMonthEntry('2026-06', archive)
+  assert.strictEqual(entry.services.deepgram.score, 61, 'trend/Movers use the same monthly score')
 })
 
 console.log('\nbuildScoreTable + buildRankingNote — stale exclusion (#591)')
@@ -1214,6 +1234,20 @@ console.log('\nintegration: 2026-04 archive end-to-end')
 const fs = require('fs')
 const path = require('path')
 
+  test('archiveToAnalysisRows narrates the monthly score, not the snapshot (aiwatch#993 bypass)', () => {
+    // The auto-draft Summary/TL;DR is built from these rows. If they carried the snapshot score, the
+    // draft would say "84/100" while the ranking table shows the monthly 77 — the two-window
+    // disagreement #993 removes. Reverting the resolveMonthlyScore call here reintroduces it.
+    const archive = { services: {
+      openai: { score: 84, grade: 'good', monthlyScore: 77, monthlyGrade: 'good', incidents: 1, officialUptime: 99 },
+    } }
+    const { scores } = archiveToAnalysisRows(archive, { openai: { name: 'OpenAI API' } })
+    const row = scores.find(r => r.Service === 'OpenAI API')
+    assert.ok(row, 'openai must appear in the analysis rows')
+    assert.strictEqual(row.Score, '77', `must narrate the monthly score, got ${row.Score}`)
+  })
+
+
 test('archiveToAnalysisRows on the real April snapshot yields expected counts', () => {
   const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
   const { scores, incidents } = archiveToAnalysisRows(archive, {})
@@ -1225,6 +1259,23 @@ test('archiveToAnalysisRows on the real April snapshot yields expected counts', 
   // Score column passes through as a numeric string the analyzer can parseInt
   for (const s of scores) assert.ok(/^\d+$/.test(s.Score), `non-integer Score leaked: ${s.Score}`)
 })
+
+  test('full render uses monthlyScore in the ranking table (aiwatch#993 wiring at load)', () => {
+    // End-to-end guard for the line-~959 normalization: inject a monthlyScore that differs from the
+    // snapshot on a ranked service and confirm the RENDERED Score table shows the monthly value.
+    // Reverting the load-point normalization makes this fail (the table would show 84, the snapshot).
+    const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+    archive.services.openai = { ...archive.services.openai, score: 84, grade: 'good', monthlyScore: 77, monthlyGrade: 'good' }
+    const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+    const meta = {}
+    for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+    const { fillTemplate } = require('./generate-report')
+    const out = fillTemplate(tmpl, '2026-04', archive, meta)
+    const openaiRow = out.split('\n').find(l => l.startsWith('|') && /openai/.test(l))
+    assert.ok(openaiRow, 'openai must have a ranking row')
+    assert.ok(/\| 77 \|/.test(openaiRow), 'ranking row must show the monthly score 77: ' + openaiRow)
+    assert.ok(!/\| 84 \|/.test(openaiRow), 'must not show the snapshot score 84: ' + openaiRow)
+  })
 
 test('full pipeline against real April archive — Opening reflects 24 of 31, no "undefined" leakage', () => {
   const archive = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
