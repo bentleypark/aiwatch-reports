@@ -588,6 +588,18 @@ test('excludes NO_PROBE services', () => {
   const table = buildLatencyTable(services, { bedrock: { name: 'Amazon Bedrock' } })
   assert.ok(!table.includes('Amazon Bedrock'), 'bedrock should be excluded')
 })
+test('a probed service with a real p75 (e.g. Pinecone) is included; only bedrock/azure are dropped', () => {
+  // Pinecone was previously (wrongly) in NO_PROBE despite the Worker probing it (control-plane RTT)
+  // and archiving a non-null avgLatencyMs — dropping it from the p75 table disagreed with both the
+  // archive and the live dashboard latency ranking. It must now render.
+  const services = [
+    { id: 'pinecone', data: { avgLatencyMs: 844 } },
+    { id: 'bedrock', data: { avgLatencyMs: 999 } },
+  ]
+  const table = buildLatencyTable(services, { pinecone: { name: 'Pinecone' }, bedrock: { name: 'Amazon Bedrock' } })
+  assert.ok(table.includes('Pinecone'), `pinecone has a probe p75 → must appear: ${table}`)
+  assert.ok(!table.includes('Amazon Bedrock'), 'bedrock (genuinely no probe) still excluded')
+})
 test('uses competition ranking for ties (not sequential)', () => {
   // Two services tied at 230ms must both render with "N=" suffix; third slot skips to 3.
   const services = [
