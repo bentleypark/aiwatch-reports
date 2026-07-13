@@ -629,6 +629,12 @@ function buildByServiceTable(byService, limit = 5) {
 
 function buildTimelineDetails(timeline) {
   if (!Array.isArray(timeline) || timeline.length === 0) return ''
+  // #291 timelines exist to show PROGRESSION (detected → fix_released → severity_changed → …).
+  // A timeline whose only stage is the initial `detected` carries no progression: it merely
+  // duplicates the `Detected:` bullet above it, or — when the alert's first-ever sighting predates
+  // this month's collection window — contradicts it with an earlier date (aiwatch-reports#87).
+  // Render only when a non-`detected` stage exists.
+  if (!timeline.some(e => e && e.stage && e.stage !== 'detected')) return ''
   const rows = timeline.map(e =>
     `| ${e.stage ?? '—'} | ${fmtIso(e.at)} | ${e.severity ?? '—'} | ${e.fixedVersion ?? '—'} |`,
   )

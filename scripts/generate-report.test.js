@@ -754,13 +754,41 @@ test('returns empty string when timeline is undefined', () => {
   eq(buildTimelineDetails(undefined), '')
 })
 test('renders em dash when severity or fix version is missing', () => {
-  const out = buildTimelineDetails([{ stage: 'detected', at: '2026-04-15' }])
-  assert.ok(out.includes('detected | 2026-04-15 | — | —'), `missing fields: ${out}`)
+  // Needs a non-`detected` stage so the timeline renders at all (#87 progression gate); the
+  // fix_released row omits severity + fixedVersion to exercise the em-dash fallback.
+  const out = buildTimelineDetails([
+    { stage: 'detected', at: '2026-04-15', severity: 'high' },
+    { stage: 'fix_released', at: '2026-04-20' },
+  ])
+  assert.ok(out.includes('fix_released | 2026-04-20 | — | —'), `missing fields: ${out}`)
 })
 test('renders em dash for missing stage so undefined never appears in a table cell', () => {
-  const out = buildTimelineDetails([{ at: '2026-04-15' }])
+  // A real progression stage makes the block render; the malformed stageless entry must still
+  // print em-dash, not "undefined".
+  const out = buildTimelineDetails([
+    { stage: 'fix_released', at: '2026-04-20', severity: 'high', fixedVersion: '1.0.0' },
+    { at: '2026-04-15' },
+  ])
   assert.ok(!out.includes('undefined'), `stage fallback: ${out}`)
   assert.ok(out.includes('— | 2026-04-15 | — | —'), `stage = em dash: ${out}`)
+})
+// aiwatch-reports#87 — suppress single-`detected` timelines (no progression → noise, and a
+// first-sighting `detected` date can contradict the this-month `Detected:` bullet).
+test('suppresses a timeline whose only stage is the initial detected (#87)', () => {
+  eq(buildTimelineDetails([{ stage: 'detected', at: '2026-05-13', severity: 'high' }]), '')
+})
+test('suppresses when no non-detected stage exists, even across multiple entries (#87)', () => {
+  // a malformed stageless entry does not count as progression
+  eq(buildTimelineDetails([{ stage: 'detected', at: '2026-05-13' }, { at: '2026-05-14' }]), '')
+})
+test('still renders once a non-detected stage appears — real progression (#87)', () => {
+  const out = buildTimelineDetails([
+    { stage: 'detected', at: '2026-05-13', severity: 'high' },
+    { stage: 'fix_released', at: '2026-05-20', severity: 'high', fixedVersion: '0.8.0' },
+  ])
+  assert.ok(out.includes('<details'), `renders: ${out}`)
+  assert.ok(out.includes('detected | 2026-05-13'), `keeps detected row: ${out}`)
+  assert.ok(out.includes('fix_released | 2026-05-20 | high | 0.8.0'), `progression row: ${out}`)
 })
 
 console.log('\nbuildTopFindings')
@@ -769,7 +797,11 @@ test('renders OSV finding with timeline expansion', () => {
     title: 'GHSA-1234 langchain SSRF', url: 'https://example.com/x',
     source: 'osv', severity: 'high', service: 'langchain',
     detectedAt: '2026-04-10T12:00:00Z',
-    timeline: [{ stage: 'detected', at: '2026-04-10T12:00:00Z', severity: 'high' }],
+    // needs a non-`detected` stage to render at all (#87 progression gate)
+    timeline: [
+      { stage: 'detected', at: '2026-04-10T12:00:00Z', severity: 'high' },
+      { stage: 'fix_released', at: '2026-04-14T12:00:00Z', severity: 'high', fixedVersion: '0.3.1' },
+    ],
   }])
   assert.ok(out.includes('### Top Findings'), `top heading: ${out}`)
   assert.ok(out.includes('1. [GHSA-1234 langchain SSRF](https://example.com/x)'), `link title: ${out}`)
@@ -781,7 +813,12 @@ test('omits timeline section for HN findings even if timeline field set (defensi
   const out = buildTopFindings([{
     title: 'HN post', url: 'https://news.ycombinator.com/item?id=1',
     source: 'hackernews', severity: 'medium', detectedAt: '2026-04-12',
-    timeline: [{ stage: 'detected', at: '2026-04-12' }], // shouldn't happen but be safe
+    // multi-stage so ONLY the HN source-gate can suppress it (not the #87 progression gate) —
+    // proves the source check, not an incidental single-detected suppression
+    timeline: [
+      { stage: 'detected', at: '2026-04-12' },
+      { stage: 'fix_released', at: '2026-04-15', fixedVersion: '2.0.0' },
+    ], // shouldn't happen but be safe
   }])
   assert.ok(!out.includes('<details'), `HN must never render timeline: ${out}`)
 })
