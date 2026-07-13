@@ -1941,6 +1941,33 @@ test('renders one weakest-component row per qualifying service, weakest-first', 
   assert.ok(out.includes('| ChatGPT | Conversations | 99.20% | 2 |'), 'weakest component + uptime + count')
   assert.ok(!out.includes('Groq'), 'all-healthy service skipped')
 })
+// aiwatch-reports#91 — a service the Score ranking excludes (withheld / stale-source / mid-month
+// add) must not appear in Component Reliability either: its per-component window is partial/frozen
+// and not comparable to the full-window rows (Character.AI, status page deactivated mid-June).
+test('excludes a stale-source service even if its weakest component would qualify (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    openai: { components: [{ id: 'l', name: 'Login', uptime: 99.66 }, { id: 'c', name: 'Chat', uptime: 99.98 }] },
+    characterai: { incidentSourceStale: true, components: [{ id: 'x', name: 'Character.AI', uptime: 98.46 }, { id: 'y', name: 'Y', uptime: 100 }] },
+  } }, { openai: { name: 'OpenAI API' }, characterai: { name: 'Character.AI' } }, '2026-06')
+  assert.ok(out.includes('OpenAI API'), `keeps ranked service: ${out}`)
+  assert.ok(!out.includes('Character.AI'), `drops stale-source service: ${out}`)
+})
+test('excludes a Score-withheld service (bedrock/azure id-set) from the table (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    openai: { components: [{ id: 'l', name: 'Login', uptime: 99.66 }, { id: 'c', name: 'Chat', uptime: 99.98 }] },
+    bedrock: { components: [{ id: 'x', name: 'US-East', uptime: 97.0 }, { id: 'y', name: 'EU', uptime: 100 }] },
+  } }, { openai: { name: 'OpenAI API' }, bedrock: { name: 'Amazon Bedrock' } }, '2026-06')
+  assert.ok(out.includes('OpenAI API'), `keeps ranked service: ${out}`)
+  assert.ok(!out.includes('Bedrock'), `drops withheld service: ${out}`)
+})
+test('the intro calls the table a breakdown, not a ranking, and disclaims Score membership (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    deepgram: { components: [{ id: 'a', name: 'A', uptime: 65.81 }, { id: 'b', name: 'B', uptime: 100 }] },
+  } }, { deepgram: { name: 'Deepgram' } }, '2026-06')
+  assert.ok(!/only monitor/.test(out), `no unverifiable "only monitor" claim: ${out}`)
+  assert.ok(!/uptime ranking/.test(out), `not called a ranking: ${out}`)
+  assert.ok(/is not a Score input/.test(out), `discloses it is not scored: ${out}`)
+})
 test('skips a single-component service (needs >=2)', () => {
   eq(buildComponentReliabilitySection({ services: {
     solo: { components: [{ id: 'a', name: 'API', uptime: 98 }] },
