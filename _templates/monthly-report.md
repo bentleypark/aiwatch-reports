@@ -84,7 +84,7 @@ published: true
 
 > *"Which AI service is safest to rely on in production?"*
 
-Combines four components — Uptime (40%), Incident affected days (25%), Recovery speed (15%), Responsiveness (20%, derived from each service's median (p50) probe RTT and its RTT stability). The [API Response Time — Monthly p75](#api-response-time--monthly-p75) table below is a separate network-latency reference, not the Responsiveness input; full breakdown of weights, fallbacks, and penalties is in [About This Report → AIWatch Score](#about-this-report). [How it's calculated →](https://ai-watch.dev/#about-score)
+Combines four components — Uptime (40%), Incident affected days (25%), Recovery speed (15%), Responsiveness (20%, derived from each service's median (p50) probe RTT and its RTT stability). The [API Response Time — Monthly p75](#api-response-time--monthly-p75) table below is a separate network-latency reference, not the Responsiveness input; full breakdown of weights, fallbacks, and penalties is in [About This Report → AIWatch Score](#about-this-report). [How it's calculated →](https://ai-watch.dev/methodology#score)
 
 <!-- SCORE_RANKING_NOTE -->
 
@@ -208,7 +208,7 @@ Actionable takeaways per service. Descriptive context for each event lives in ea
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
 * **Monitoring Frequency:** All 43 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
-* **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). A service with no probe endpoint is scored on the remaining components rescaled to 100, with **no penalty**. A service that has a probe but fewer than 7 days of samples gets that same rescale **plus a 5% penalty** until its probe data matures. Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+* **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). A service with no probe endpoint is scored on the remaining components rescaled to 100, with **no penalty**. A service that has a probe but fewer than 7 days of samples gets that same rescale **plus a 5% penalty** until its probe data matures. Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
 * **Uptime Source:** *Official* = the service publishes a rolling uptime % that AIWatch reads directly from its status page (the window varies by page — 30 or 90 days). *No official uptime* = the provider publishes no comparable figure. AIWatch **invents none**: the Score simply drops its 40-point Uptime component and is rescaled over the remaining signals (incidents, recovery, responsiveness), A service that still has a probe is scored and ranked on what can be measured; one with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked. The note above the Score table names whichever services that is — the membership is read from the data, not fixed here. A service AIWatch tracked for only part of the month is **excluded from the ranking** rather than labelled (aiwatch-reports#45) — its partial-month Score would rest on insufficient coverage. The label describes the Uptime input, not the Score's rigour.
 * **Incident Counting:** Counts are the incidents each provider published, attributed to the service they affected. Providers differ in granularity, and in *where* that granularity lives: Anthropic maps to a single status-page component but posts one incident **per model**; Together AI tracks each model as its own **resource**, so one event can surface as several incidents. Others post one incident per event at the service level. Compare counts only across providers with comparable granularity.
 * **Uptime Metrics:** Uptime percentages are the official figure each status page exposes — read from the page directly, or aggregated by AIWatch from the per-component availabilities it publishes — for some services a single component, for others a worst-of across a component set, for others still an upstream platform average, depending on what the page exposes. Services marked with "—" publish no accessible uptime metric.
@@ -221,7 +221,7 @@ Actionable takeaways per service. Descriptive context for each event lives in ea
 
 - **Live status** — [ai-watch.dev](https://ai-watch.dev)
 - **Slack/Discord alerts** — [ai-watch.dev/#settings](https://ai-watch.dev/#settings)
-- **Score methodology** — [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+- **Score methodology** — [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
 - **All reports** — [ai-watch.dev/reports](https://ai-watch.dev/reports/)
 
 ---

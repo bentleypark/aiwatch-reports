@@ -38,7 +38,7 @@ Each monthly report includes:
 - **API probe**: Direct RTT measurement every 5 minutes to 31 probe targets with public endpoints (supplementary monitoring data)
 - **3-Month Trend (Notable Movers)**: ranked by the largest single change across **Score / MTTR / total downtime** over the window — incident-feed *measured* metrics. Uptime is deliberately excluded: the archive's `uptime` field mixes per-service sources (status-page group aggregates, estimate/poll-derived figures) so a cross-service uptime delta is misleading (a 3-month official-uptime trend awaits aiwatch#586 + ≥3 months of the clean `officialUptime` field). Direction (🔺/🔻) follows the bold *headline* metric, not Score. Services the Score ranking excludes (no-incident-feed / stale source) are excluded from movers too. The first point is flagged when its month is partial (mid-month onboarding); MTTR/downtime are measured over the months that have incident data.
 
-Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
 
 ---
 
