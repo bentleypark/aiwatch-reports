@@ -30,6 +30,7 @@ const {
   buildDetectionSection,
   buildComponentReliabilitySection,
   buildTrendSection,
+  crossesScoreMethodCutover,
   fmtLeadMin,
   monthName,
   lastDayOfMonth,
@@ -1646,6 +1647,21 @@ test('excludes a SCORE_WITHHELD service (bedrock) from the rendered movers — t
   })
 })
 
+test('crossesScoreMethodCutover flags a window reaching before the #713 (June 2026) cutover', () => {
+  assert.equal(crossesScoreMethodCutover('2026-04'), true)  // June report window (Apr→Jun)
+  assert.equal(crossesScoreMethodCutover('2026-05'), true)  // July report window (May→Jul) still crosses
+  assert.equal(crossesScoreMethodCutover('2026-06'), false) // Aug report window (Jun→Aug) — all post-fix
+  assert.equal(crossesScoreMethodCutover('2026-07'), false)
+  assert.equal(crossesScoreMethodCutover(undefined), false) // defensive
+})
+test('the trend section carries the scoring-method transition caveat when the window predates June 2026', () => {
+  withTrendFixture(dir => {
+    const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
+    assert.ok(out.includes('Scoring-method transition'), `caveat present for an Apr→Jun window: ${out}`)
+    assert.ok(out.includes('assumed ~99.5% uptime'), 'caveat explains the invented-uptime change')
+    assert.ok(!out.includes('aiwatch#') && !out.includes('#713'), 'reader-facing prose carries no internal issue reference')
+  })
+})
 test('returns empty when fewer than 2 months of data exist', () => {
   const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-empty-'))
   try {

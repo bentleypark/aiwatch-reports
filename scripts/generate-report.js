@@ -68,6 +68,17 @@ const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 // its non-null archive.avgLatencyMs and the dashboard's latency ranking.
 const NO_PROBE = new Set(['bedrock', 'azureopenai'])
 
+// aiwatch#713 (merged 2026-06-19) stopped inventing a ~99.5% uptime for services with no official
+// uptime; the 2026-06 archive is the first scored the new (measured-only) way. A 3-month trend window
+// whose earliest month is before this splices two scoring methods, so a no-official-uptime service's
+// Score delta across it partly reflects the fix, not reliability. buildTrendSection appends a one-time
+// caveat when this is true; it auto-disappears once the whole window is post-cutover (from the
+// 2026-08 report onward). The month is a fixed historical fact, so it is hardcoded.
+const SCORE_METHOD_CUTOVER_MONTH = '2026-06'
+function crossesScoreMethodCutover(firstMonth) {
+  return typeof firstMonth === 'string' && firstMonth < SCORE_METHOD_CUTOVER_MONTH
+}
+
 // ── CLI parsing ──────────────────────────────────────────────────────
 function parseCliMonth(argv) {
   const m = argv[2]
@@ -899,6 +910,12 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
     parts.push('')
   }
 
+  if (crossesScoreMethodCutover(entries[0].month)) {
+    parts.push(
+      `> **Scoring-method transition**: Score points before June 2026 predate a methodology change that stopped inventing an uptime figure for services with no official uptime — those months scored such services on an assumed ~99.5% uptime, later dropped. So a Score delta that includes any of those months for a no-official-uptime service (e.g. Deepgram) partly reflects that correction, not a reliability change; the MTTR and total-downtime deltas, measured directly, are unaffected.`,
+      '',
+    )
+  }
   if (trend.partialMonths.size) {
     parts.push(
       `> **Partial month**: ${[...trend.partialMonths].join(', ')} had fewer than a full month of monitoring — its point is indicative, not a full-month comparison. MTTR / downtime show "—" for any month a service recorded zero incidents.`,
@@ -1817,6 +1834,7 @@ module.exports = {
   buildDetectionSection,
   buildComponentReliabilitySection,
   buildTrendSection,
+  crossesScoreMethodCutover,
   fmtLeadMin,
   fmtIso,
   monthName,
