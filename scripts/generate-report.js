@@ -816,11 +816,19 @@ function buildDetectionSection(archive, meta) {
 // AIWatch differentiator: no competitor publishes a monthly per-component uptime ranking. EN-only,
 // like the other data tables. Returns '' (section omitted) when nothing qualifies. Pure + tested.
 const COMPONENT_WEAK_THRESHOLD = 99.9
-function buildComponentReliabilitySection(archive, meta) {
+function buildComponentReliabilitySection(archive, meta, month) {
   const services = archive && archive.services
   if (!services || typeof services !== 'object') return ''
+  // Exclude the services the Score ranking itself excludes — withheld (no uptime + no probe),
+  // stale-source (frozen/dead status page), and mid-month adds — mirroring buildTrendSection. A
+  // service the report says it cannot rank should not appear in a reliability breakdown either;
+  // in particular a service whose status page went dark contributes only a frozen partial window
+  // (e.g. Character.AI, deactivated mid-June — a 6-day window, not comparable to the full-window
+  // rows), which is exactly the mis-read the caption used to warn against (aiwatch-reports#91).
+  const exclude = charts.buildMoverExclude(services, month)
   const rows = []
   for (const [id, s] of Object.entries(services)) {
+    if (exclude.has(id)) continue
     const comps = s && Array.isArray(s.components) ? s.components : null
     if (!comps || comps.length < 2) continue // curation already ≥2; defensive
     const weakest = comps[0] // least-reliable-first
@@ -838,7 +846,7 @@ function buildComponentReliabilitySection(archive, meta) {
     // The window is NOT the month: per-component counting is younger than the report, and a service
     // whose status page goes dark simply stops contributing days (aiwatch-reports#73). Say "the days
     // AIWatch could read its status page", which is what the ratio actually measures.
-    "> AIWatch is the only monitor publishing a **per-component uptime ranking**. This surfaces each multi-surface service's weakest component over the days AIWatch could read its status page — the surface most likely to be your bottleneck, which a single service-level uptime number hides. It is a different measurement from the Official Uptime table; see [About This Report → Component Reliability](#about-this-report).",
+    "> AIWatch surfaces a **per-component uptime breakdown** — each multi-surface service's weakest component over the days AIWatch could read its status page, the surface most likely to be your bottleneck that a single service-level uptime number hides. It is a different measurement from the Official Uptime table and **is not a Score input**; see [About This Report → Component Reliability](#about-this-report).",
     '',
     '| Service | Weakest Component | Uptime | Components |',
     '|---|---|---|---|',
@@ -1152,7 +1160,7 @@ function fillTemplate(template, month, archive, meta) {
   // Component Reliability section (aiwatch#605 Phase 3b) — same marker pattern. The section
   // emits its own trailing `---`; when omitted, strip the marker so the preceding Official
   // Uptime `---` stays the single rule before API Response Time.
-  const componentSection = buildComponentReliabilitySection(archive, meta)
+  const componentSection = buildComponentReliabilitySection(archive, meta, month)
   if (componentSection) {
     out = out.replace(/<!-- COMPONENT_RELIABILITY_SECTION -->/, componentSection)
   } else {
