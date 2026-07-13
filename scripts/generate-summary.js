@@ -94,7 +94,7 @@ function analyze(scores, incidents) {
 // ── Text generators ───────────────────────────────────────
 function generateOpening(monthYear, a) {
   if (a.isStable) {
-    return `${monthYear} was a relatively stable month across all monitored services. ${a.top[0]?.Service} led the rankings with a score of ${a.top[0]?.Score}/100, while ${a.zeroIncidents.length} services recorded zero incidents.`
+    return `${monthYear} was a relatively stable month across all monitored services. ${a.top[0]?.Service} led the rankings with a score of ${a.top[0]?.Score}, while ${a.zeroIncidents.length} services recorded zero incidents.`
   }
   const topNames = a.top.map(r => r.Service)
   const topStable = topNames.length > 2
@@ -104,7 +104,7 @@ function generateOpening(monthYear, a) {
   if (worstSvc && a.top.some(t => t.Service === worstSvc.Service)) {
     return `${monthYear}: ${a.withIncidents.length} out of ${a.totalServices} services recorded at least one incident, with a combined downtime of ${fmtDuration(a.totalDowntimeMins)}. ${topStable} led the reliability rankings.`
   }
-  return `${monthYear} showed a clear divide: ${topStable} remained highly stable, while ${worstSvc?.Service} (${worstSvc?.Score}/100) experienced the most challenges. ${a.withIncidents.length} out of ${a.totalServices} services recorded at least one incident, with a combined downtime of ${fmtDuration(a.totalDowntimeMins)}.`
+  return `${monthYear} showed a clear divide: ${topStable} remained highly stable, while ${worstSvc?.Service} (${worstSvc?.Score}) experienced the most challenges. ${a.withIncidents.length} out of ${a.totalServices} services recorded at least one incident, with a combined downtime of ${fmtDuration(a.totalDowntimeMins)}.`
 }
 
 // `momByService` (aiwatch-reports#54 bonus) maps a service display name → { curr, prev }
@@ -116,22 +116,22 @@ function generateTldr(a, incidents, momByService = {}) {
 
   // Most reliable
   if (a.perfectServices.length > 0) {
-    lines.push(`- **Most reliable**: ${a.perfectServices.map(r => r.Service).join(', ')} (${a.perfectServices[0].Score}/100 — zero incidents, perfect uptime)`)
+    lines.push(`- **Most reliable**: ${a.perfectServices.map(r => r.Service).join(', ')} (${a.perfectServices[0].Score} — zero incidents, perfect uptime)`)
   } else {
-    lines.push(`- **Most reliable**: ${a.top[0]?.Service} (${a.top[0]?.Score}/100)`)
+    lines.push(`- **Most reliable**: ${a.top[0]?.Service} (${a.top[0]?.Score})`)
   }
 
   // Best balance
   if (a.balanceSvc) {
     const incRow = incidents.find(r => r.Service === a.balanceSvc.Service)
     const downtime = incRow ? incRow['Total Downtime'] : '—'
-    lines.push(`- **Best balance (stability + ecosystem)**: ${a.balanceSvc.Service} (${a.balanceSvc.Score}/100, only ${downtime} downtime)`)
+    lines.push(`- **Best balance (stability + ecosystem)**: ${a.balanceSvc.Service} (${a.balanceSvc.Score}, only ${downtime} downtime)`)
   }
 
   // Riskiest
   if (a.bottom[0]) {
     const riskRow = incidents.find(r => r.Service === a.bottom[0].Service)
-    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score}/100${riskRow ? `, ${riskRow['Total Downtime']} total downtime` : ''})`)
+    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score}${riskRow ? `, ${riskRow['Total Downtime']} total downtime` : ''})`)
   }
 
   // Most incidents (MoM-framed when a prior-month count is available — #54 bonus)
