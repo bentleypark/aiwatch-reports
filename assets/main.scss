@@ -147,13 +147,16 @@ tr:nth-child(odd) { background: transparent !important; }
   width: 100%;
   table-layout: fixed;
 }
-/* Give the HEADER cells the same 60/40 as the body. Without th widths the thead split 50/50
-   while the body split 60/40, so the "Service | Uptime" divider misaligned the value column
-   by ~29px on mobile (single-column). */
-.uptime-cols tr th:first-child, .uptime-cols tr td:first-child { width: 60%; }
-.uptime-cols tr th:last-child, .uptime-cols tr td:last-child { width: 40%; }
+.uptime-cols tr td:first-child { width: 60%; }
+.uptime-cols tr td:last-child { width: 40%; }
 @media (max-width: 768px) {
   .uptime-cols tbody { columns: 1; }
+  /* Single-column on mobile: match the HEADER cells to the body's 60/40 so the "Service | Uptime"
+     divider lines up (without th widths the thead splits 50/50 vs the body's 60/40 — a ~29px
+     misalign). Scoped to mobile: on desktop the body flows into 2 columns while the header is one
+     full-width row, so a 60/40 header divider aligns with neither — keep it the balanced 50/50. */
+  .uptime-cols tr th:first-child { width: 60%; }
+  .uptime-cols tr th:last-child { width: 40%; }
 }
 
 /* ── Header ── */
