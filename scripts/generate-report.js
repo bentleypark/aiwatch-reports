@@ -62,9 +62,11 @@ const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 // (SCORE_WITHHELD / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
 // as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
 
-// Services without direct probe coverage (excluded from API Response Time ranking).
-// Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
-const NO_PROBE = new Set(['bedrock', 'azureopenai', 'pinecone'])
+// Services with no direct probe (excluded from the API Response Time ranking); archive.avgLatencyMs
+// is null for these. Pinecone is NOT here: the Worker DOES probe it (control-plane RTT) and the live
+// dashboard ranks it, so dropping it from the report's p75 table alone was a stale inconsistency with
+// its non-null archive.avgLatencyMs and the dashboard's latency ranking.
+const NO_PROBE = new Set(['bedrock', 'azureopenai'])
 
 // ── CLI parsing ──────────────────────────────────────────────────────
 function parseCliMonth(argv) {
