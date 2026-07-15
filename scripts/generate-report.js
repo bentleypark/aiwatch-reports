@@ -43,9 +43,12 @@ const OUT_DIR_ROOT = path.join(__dirname, '..')
 // it leaked a stray "100.00%" row.)
 //
 // It is NOT the uptime-source taxonomy any more (aiwatch#951). A hand-maintained list drifted in
-// both directions: Mistral and Perplexity publish real official uptime yet were labelled "Estimate"
-// and dropped from the Official Uptime table, while OpenRouter and Stability AI publish none yet
-// were labelled "Official · 100.00%" beside a Score that had been rescaled without any uptime.
+// both directions: Mistral and Perplexity publish records AIWatch can read, yet were labelled
+// "Estimate" and dropped from the table, while services that genuinely had no readable records were
+// labelled "Official · 100.00%" beside a Score rescaled without any uptime. (aiwatch#1006 later made
+// AIWatch compute uptime from the raw records of six status-page platforms — Atlassian, incident.io,
+// Instatus, Better Stack, Flashduty, OnlineOrNot — so Stability AI and OpenRouter, once "no uptime",
+// now carry a real computed figure.)
 // Modern archives answer the question directly — `officialUptime` is non-null exactly when the Score
 // consumed one — so the label and the table now read the data. "Estimate" is gone as a concept:
 // aiwatch#713 removed the invented uptime it named.
@@ -264,9 +267,21 @@ function confidence(svc) {
 // mid-month addition, but reports#45 EXCLUDES such a service from the ranking outright, so the
 // label named a row that can no longer exist — and its one real use read "Partial (9-day)",
 // not the "(Nd)" the legend taught. Removed from the template with the rest of the drifted prose.
+// aiwatch#1006 — three states, read from the DATA:
+//   'Official' — AIWatch computed the 30-day figure from the incident/outage records the provider
+//                publishes on its own status page.
+//   'Platform' — the same computation, but the records come from the status-page platform's own
+//                monitors (Better Stack). A measurement, not the provider declaring an incident —
+//                which is why it keeps a separate label even though the window and weights are identical.
+//   'No uptime' — the status page publishes no records to compute from; the Score omits the uptime
+//                component and rescales (aiwatch#713).
+// `uptimeSource` is archived from aiwatch#1006 onward. An older archive has the figure but not the
+// provenance, so it falls back to 'Official' — which is what those archives meant, since 'platform_avg'
+// figures were the BetterStack averages the pre-#1006 code also labelled official.
 function uptimeSourceLabel(svc, id = svc?.id) {
   const official = officialUptimeFor(svc, id)
-  return official === null || official === undefined ? 'No official uptime' : 'Official'
+  if (official === null || official === undefined) return 'No uptime'
+  return svc?.data?.uptimeSource === 'platform_avg' ? 'Platform' : 'Official'
 }
 
 // Ranking-exclusion note (#29). SCORE_WITHHELD services publish no official uptime and have no
@@ -514,9 +529,9 @@ function emitUptimeWarnings(messages, env = process.env) {
   return messages.length
 }
 
-// #586 — resolve the value the "Official Uptime" table should display for a service: the
-// STATUS-PAGE figure (`officialUptime`; the window varies by page), NOT the daily-counter `uptime` that feeds the
-// Score. Returns null when the service has no comparable published metric (→ omitted from the table).
+// #586 — resolve the value the 30-Day Uptime table should display for a service: the computed
+// `officialUptime` figure (#1006 — AIWatch's own trailing-30-day computation), NOT the daily-counter
+// `uptime` that feeds the Score. Returns null when the service has no comparable published metric (→ omitted).
 // Also the single source of truth for `uptimeSourceLabel` and `buildWhy`'s zero-incident wording,
 // so those three can never disagree about whether a service publishes an official uptime.
 //   • Modern archives (≥2026-06, post-aiwatch#951) carry `officialUptime` explicitly and correctly:
@@ -859,7 +874,7 @@ function buildComponentReliabilitySection(archive, meta, month) {
     // The window is NOT the month: per-component counting is younger than the report, and a service
     // whose status page goes dark simply stops contributing days (aiwatch-reports#73). Say "the days
     // AIWatch could read its status page", which is what the ratio actually measures.
-    "> AIWatch surfaces a **per-component uptime breakdown** — each multi-surface service's weakest component over the days AIWatch could read its status page, the surface most likely to be your bottleneck that a single service-level uptime number hides. It is a different measurement from the Official Uptime table and **is not a Score input**; see [About This Report → Component Reliability](#about-this-report).",
+    "> AIWatch surfaces a **per-component uptime breakdown** — each multi-surface service's weakest component over the days AIWatch could read its status page, the surface most likely to be your bottleneck that a single service-level uptime number hides. It is a different measurement from the 30-Day Uptime table and **is not a Score input**; see [About This Report → Component Reliability](#about-this-report).",
     '',
     '| Service | Weakest Component | Uptime | Components |',
     '|---|---|---|---|',
@@ -1123,9 +1138,9 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/\n*<!-- SCORE_RANKING_NOTE -->\n*/, '\n\n')
   }
   out = replaceTableBody(out, 'API Response Time', latencyTable)
-  // Incident Summary + Official Uptime use HTML <tbody>
+  // Incident Summary + 30-Day Uptime use HTML <tbody>
   out = replaceTableBody(out, 'Incident Summary', incidentRows)
-  out = replaceTableBody(out, 'Official Uptime', uptimeRows)
+  out = replaceTableBody(out, '30-Day Uptime', uptimeRows)
   // aiwatch#951 — the caption naming who is missing from that table, rendered from the same gate.
   const uptimeExclusionNote = buildUptimeExclusionNote(services, meta)
   if (uptimeExclusionNote) {
