@@ -1114,6 +1114,11 @@ function fillTemplate(template, month, archive, meta) {
   out = out.replace(/\[LAST_DAY\]/g, String(lastDay))
   out = out.replace(/\[PUBLISH_MONTH\]/g, publishMonth)
   out = out.replace(/\[NEXT_MONTH\]/g, nxt.name)
+  // aiwatch-reports#97 — the monitored-service count is derived from the archive's service set, not
+  // hardcoded in the template, so it never drifts as services are added. For a current-month run this
+  // is the live roster (verified 2026-04/-05 match exactly); a back-generated old month reflects that
+  // month's archived set. The category breakdown beside it is still a manual literal — see #98.
+  out = out.replace(/\[SERVICE_COUNT\]/g, String(services.length))
 
   // aiwatch-reports#74 — resolve `[SCORE_ANCHOR]` from the heading that actually shipped, rather
   // than hand-slugging it in the template. The old template asked a human to substitute a lowercase
