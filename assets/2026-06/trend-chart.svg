@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 550 390" width="550" height="390">
+  <style>
+    .chart-bg { fill: #0d1117; }
+    .chart-title { fill: #e6edf3; }
+  </style>
+  <rect class="chart-bg" width="100%" height="100%" fill="#0d1117"/>
+  <text x="40" y="28" fill="#e6edf3" font-size="14" font-weight="600" font-family="ui-monospace,monospace" class="chart-title">AIWatch Score — 3-Month Trend</text>
+  <line x1="40" y1="350" x2="400" y2="350" stroke="#30363d" stroke-width="1" opacity="0.5"/>
+  <text x="32" y="354" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">0</text>
+  <line x1="40" y1="275" x2="400" y2="275" stroke="#30363d" stroke-width="1" opacity="0.5"/>
+  <text x="32" y="279" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">25</text>
+  <line x1="40" y1="200" x2="400" y2="200" stroke="#30363d" stroke-width="1" opacity="0.5"/>
+  <text x="32" y="204" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">50</text>
+  <line x1="40" y1="125" x2="400" y2="125" stroke="#30363d" stroke-width="1" opacity="0.5"/>
+  <text x="32" y="129" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">75</text>
+  <line x1="40" y1="50" x2="400" y2="50" stroke="#30363d" stroke-width="1" opacity="0.5"/>
+  <text x="32" y="54" fill="#8b949e" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">100</text>
+  <text x="40" y="370" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace" text-anchor="middle">Apr</text>
+  <text x="220" y="370" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace" text-anchor="middle">May</text>
+  <text x="400" y="370" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace" text-anchor="middle">Jun</text>
+  <polyline points="40.0,167.0 220.0,161.0 400.0,152.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,80.0 220.0,80.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,80.0 220.0,80.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,122.0 220.0,116.0 400.0,116.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,95.0 220.0,83.0 400.0,83.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,71.0 220.0,77.0 400.0,77.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,101.0 220.0,98.0 400.0,134.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,122.0 220.0,146.0 400.0,86.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,119.0 220.0,125.0 400.0,128.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,104.0 220.0,104.0 400.0,95.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,104.0 220.0,86.0 400.0,113.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,155.0 220.0,155.0 400.0,176.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,104.0 220.0,125.0 400.0,122.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,89.0 220.0,86.0 400.0,98.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,137.0 220.0,167.0 400.0,176.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,50.0 220.0,89.0 400.0,128.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,119.0 220.0,122.0 400.0,128.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,167.0 220.0,161.0 400.0,143.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,131.0 220.0,125.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,137.0 220.0,95.0 400.0,119.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,152.0 220.0,155.0 400.0,152.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,86.0 220.0,137.0 400.0,113.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,83.0 220.0,74.0 400.0,50.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,86.0 220.0,86.0 400.0,104.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,92.0 220.0,92.0 400.0,95.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,68.0 220.0,59.0 400.0,68.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="220.0,71.0 400.0,71.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="220.0,86.0 400.0,101.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,92.0 220.0,104.0 400.0,122.0" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="126.0" fill="#ef4444" font-size="11" font-family="ui-monospace,monospace">Codex −10</text>
+  <polyline points="40.0,185.0 220.0,158.0 400.0,215.0" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="219.0" fill="#ef4444" font-size="11" font-family="ui-monospace,monospace">Deepgram −10</text>
+  <polyline points="40.0,164.0 220.0,158.0 400.0,158.0" fill="none" stroke="#3fb950" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="162.0" fill="#3fb950" font-size="11" font-family="ui-monospace,monospace">Gemini API +2</text>
+  <polyline points="40.0,143.0 220.0,74.0 400.0,92.0" fill="none" stroke="#3fb950" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="105.0" fill="#3fb950" font-size="11" font-family="ui-monospace,monospace">GitHub Copilot +17</text>
+  <polyline points="40.0,98.0 220.0,110.0 400.0,89.0" fill="none" stroke="#3fb950" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="93.0" fill="#3fb950" font-size="11" font-family="ui-monospace,monospace">OpenAI API +3</text>
+
+</svg>
