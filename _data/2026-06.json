@@ -1,6 +1,6 @@
 {
     "period": "2026-06",
-    "generatedAt": "2026-07-06T05:54:18.694Z",
+    "generatedAt": "2026-07-12T14:10:40.759Z",
     "daysCollected": 30,
     "services": {
         "claude": {
@@ -8,6 +8,10 @@
             "officialUptime": 99.55,
             "score": 67,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 66,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 45,
             "avgResolutionMin": 81,
             "totalDowntimeMin": 3663,
@@ -428,6 +432,10 @@
             "officialUptime": 99.99,
             "score": 90,
             "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 87,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 40,
             "totalDowntimeMin": 40,
@@ -447,11 +455,6 @@
                 }
             ],
             "components": [
-                {
-                    "id": "01KKAD7C71MCCH3FTREMJH4AAS",
-                    "name": "FedRAMP",
-                    "uptime": 42.27
-                },
                 {
                     "id": "01JSM5RTJWHRWDTS6Q604VEW3B",
                     "name": "Login",
@@ -511,11 +514,6 @@
                     "id": "01K9G527YRPY1EFRMHTKB5BKT5",
                     "name": "Sora",
                     "uptime": 99.98
-                },
-                {
-                    "id": "01KTQBYVARFJ5KMCSECM06VKCF",
-                    "name": "Ads Manager",
-                    "uptime": 100
                 }
             ]
         },
@@ -524,6 +522,10 @@
             "officialUptime": null,
             "score": 67,
             "grade": "fair",
+            "scoreConfidence": "medium",
+            "monthlyScore": 64,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "medium",
             "incidents": 3,
             "avgResolutionMin": 706,
             "totalDowntimeMin": 2117,
@@ -563,9 +565,13 @@
         },
         "bedrock": {
             "uptime": 87.37,
-            "officialUptime": 97,
+            "officialUptime": null,
             "score": null,
             "grade": null,
+            "scoreConfidence": "low",
+            "monthlyScore": null,
+            "monthlyGrade": null,
+            "monthlyScoreConfidence": "low",
             "incidents": 1,
             "avgResolutionMin": 3887,
             "totalDowntimeMin": 3887,
@@ -587,9 +593,13 @@
         },
         "azureopenai": {
             "uptime": 100,
-            "officialUptime": 100,
+            "officialUptime": null,
             "score": null,
             "grade": null,
+            "scoreConfidence": "low",
+            "monthlyScore": null,
+            "monthlyGrade": null,
+            "monthlyScoreConfidence": "low",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -601,8 +611,12 @@
         "mistral": {
             "uptime": 87.29,
             "officialUptime": 99.559,
-            "score": 69,
-            "grade": "fair",
+            "score": 80,
+            "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 78,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 39,
             "avgResolutionMin": 84,
             "totalDowntimeMin": 3295,
@@ -960,6 +974,10 @@
             "officialUptime": 100,
             "score": 90,
             "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 89,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 175,
             "totalDowntimeMin": 175,
@@ -1096,6 +1114,10 @@
             "officialUptime": 100,
             "score": 86,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 91,
+            "monthlyGrade": "excellent",
+            "monthlyScoreConfidence": "high",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -1204,8 +1226,12 @@
         "together": {
             "uptime": 99.98,
             "officialUptime": 99.7,
-            "score": 81,
+            "score": 80,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 72,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 85,
             "avgResolutionMin": 27,
             "totalDowntimeMin": 2289,
@@ -1970,150 +1996,17 @@
                     "finalStatus": "investigating",
                     "impact": "minor"
                 }
-            ],
-            "components": [
-                {
-                    "id": "8724444",
-                    "name": "Qwen3.5 397B A17B",
-                    "uptime": 98.62
-                },
-                {
-                    "id": "8802608",
-                    "name": "Google Gemma 4 31B IT",
-                    "uptime": 98.84
-                },
-                {
-                    "id": "8604811",
-                    "name": "OpenAI GPT OSS 120B",
-                    "uptime": 99.58
-                },
-                {
-                    "id": "8670586",
-                    "name": "Orpheus TTS",
-                    "uptime": 99.71
-                },
-                {
-                    "id": "8898048",
-                    "name": "Nemotron 3 Ultra 550B A55B",
-                    "uptime": 99.74
-                },
-                {
-                    "id": "8827857",
-                    "name": "DeepSeek V4 Pro",
-                    "uptime": 99.79
-                },
-                {
-                    "id": "8918569",
-                    "name": "GLM 5.2",
-                    "uptime": 99.83
-                },
-                {
-                    "id": "8475073",
-                    "name": "FLUX.1 [schnell]",
-                    "uptime": 99.85
-                },
-                {
-                    "id": "8912359",
-                    "name": "Kimi K2.7 Code",
-                    "uptime": 99.9
-                },
-                {
-                    "id": "8752981",
-                    "name": "Qwen3.5 9B",
-                    "uptime": 99.96
-                },
-                {
-                    "id": "8863221",
-                    "name": "Pearl-ai Gemma 4 31B IT",
-                    "uptime": 99.99
-                },
-                {
-                    "id": "8691677",
-                    "name": "Google Gemma 3N E4B IT",
-                    "uptime": 100
-                },
-                {
-                    "id": "8824638",
-                    "name": "Kimi K2.6",
-                    "uptime": 100
-                },
-                {
-                    "id": "8824641",
-                    "name": "Kimi K2.6",
-                    "uptime": 100
-                },
-                {
-                    "id": "8670585",
-                    "name": "Kokoro-82M",
-                    "uptime": 100
-                },
-                {
-                    "id": "8475077",
-                    "name": "Llama 3 8B Instruct Lite",
-                    "uptime": 100
-                },
-                {
-                    "id": "8568824",
-                    "name": "Meta Llama 3.3 70B Instruct Turbo",
-                    "uptime": 100
-                },
-                {
-                    "id": "8691664",
-                    "name": "Meta Llama Guard 4 12B",
-                    "uptime": 100
-                },
-                {
-                    "id": "8806939",
-                    "name": "MiniMax M2.7",
-                    "uptime": 100
-                },
-                {
-                    "id": "8911095",
-                    "name": "MiniMax M3",
-                    "uptime": 100
-                },
-                {
-                    "id": "8691673",
-                    "name": "Multilingual E5 Large Instruct",
-                    "uptime": 100
-                },
-                {
-                    "id": "8604812",
-                    "name": "OpenAI GPT OSS 20B",
-                    "uptime": 100
-                },
-                {
-                    "id": "8691661",
-                    "name": "Qwen2.5 7B Instruct Turbo",
-                    "uptime": 100
-                },
-                {
-                    "id": "8597552",
-                    "name": "Qwen3 235B A22B Instruct 2507 Throughput",
-                    "uptime": 100
-                },
-                {
-                    "id": "8692046",
-                    "name": "Whisper Large V3",
-                    "uptime": 100
-                },
-                {
-                    "id": "8720400",
-                    "name": "ZAI GLM 5 FP4",
-                    "uptime": 100
-                },
-                {
-                    "id": "8802370",
-                    "name": "ZAI GLM 5.1",
-                    "uptime": 100
-                }
             ]
         },
         "fireworks": {
             "uptime": 99.99,
             "officialUptime": 99.96,
-            "score": 85,
+            "score": 84,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 82,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 20,
             "avgResolutionMin": 6,
             "totalDowntimeMin": 118,
@@ -2302,28 +2195,6 @@
                     "finalStatus": "resolved",
                     "impact": "minor"
                 }
-            ],
-            "components": [
-                {
-                    "id": "8639845",
-                    "name": "OpenAI GPT OSS 20B chat completion API",
-                    "uptime": 99.31
-                },
-                {
-                    "id": "8639874",
-                    "name": "Qwen3 Embedding 8B embeddings API",
-                    "uptime": 99.94
-                },
-                {
-                    "id": "8470645",
-                    "name": "Nomic Embed Text v1.5 embeddings API",
-                    "uptime": 99.99
-                },
-                {
-                    "id": "8603199",
-                    "name": "OpenAI GPT OSS 120B chat completion API",
-                    "uptime": 100
-                }
             ]
         },
         "cerebras": {
@@ -2331,6 +2202,10 @@
             "officialUptime": 100,
             "score": 89,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 83,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 90,
             "totalDowntimeMin": 90,
@@ -2370,8 +2245,12 @@
         "perplexity": {
             "uptime": 99.98,
             "officialUptime": 100,
-            "score": 88,
+            "score": 89,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 88,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 271,
             "totalDowntimeMin": 271,
@@ -2405,8 +2284,12 @@
         "xai": {
             "uptime": 99.26,
             "officialUptime": null,
-            "score": 73,
+            "score": 71,
             "grade": "fair",
+            "scoreConfidence": "medium",
+            "monthlyScore": 74,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "medium",
             "incidents": 4,
             "avgResolutionMin": 27,
             "totalDowntimeMin": 108,
@@ -2458,6 +2341,10 @@
             "officialUptime": 99.88,
             "score": 82,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 85,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 2,
             "avgResolutionMin": 29,
             "totalDowntimeMin": 58,
@@ -2489,8 +2376,12 @@
         "openrouter": {
             "uptime": 100,
             "officialUptime": null,
-            "score": 80,
+            "score": 79,
             "grade": "good",
+            "scoreConfidence": "medium",
+            "monthlyScore": 79,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "medium",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -2501,9 +2392,13 @@
         },
         "elevenlabs": {
             "uptime": 97.67,
-            "officialUptime": 99.18,
-            "score": 63,
+            "officialUptime": null,
+            "score": 58,
             "grade": "fair",
+            "scoreConfidence": "medium",
+            "monthlyScore": 58,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "medium",
             "incidents": 6,
             "avgResolutionMin": 183,
             "totalDowntimeMin": 1097,
@@ -2610,6 +2505,10 @@
             "officialUptime": 99.97,
             "score": 76,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 76,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 2,
             "avgResolutionMin": 79,
             "totalDowntimeMin": 158,
@@ -2673,8 +2572,12 @@
         "deepgram": {
             "uptime": 89.49,
             "officialUptime": null,
-            "score": 44,
+            "score": 43,
             "grade": "degrading",
+            "scoreConfidence": "medium",
+            "monthlyScore": 45,
+            "monthlyGrade": "degrading",
+            "monthlyScoreConfidence": "medium",
             "incidents": 6,
             "avgResolutionMin": 456,
             "totalDowntimeMin": 2733,
@@ -2791,6 +2694,10 @@
             "officialUptime": 99.99,
             "score": 84,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 84,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 3,
             "avgResolutionMin": 84,
             "totalDowntimeMin": 253,
@@ -2826,50 +2733,17 @@
                     "finalStatus": "resolved",
                     "impact": "minor"
                 }
-            ],
-            "components": [
-                {
-                    "id": "8379104",
-                    "name": "Inference Endpoints UI",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "8810148",
-                    "name": "AWS CDN",
-                    "uptime": 100
-                },
-                {
-                    "id": "84642",
-                    "name": "Git Hosting and Serving",
-                    "uptime": 100
-                },
-                {
-                    "id": "8810143",
-                    "name": "Google cloud CDN",
-                    "uptime": 100
-                },
-                {
-                    "id": "84641",
-                    "name": "Huggingface Hub",
-                    "uptime": 100
-                },
-                {
-                    "id": "8379105",
-                    "name": "Inference Endpoints API",
-                    "uptime": 100
-                },
-                {
-                    "id": "306621",
-                    "name": "Spaces Proxy",
-                    "uptime": 100
-                }
             ]
         },
         "replicate": {
             "uptime": 99.87,
-            "officialUptime": 99.34,
-            "score": 58,
+            "officialUptime": null,
+            "score": 55,
             "grade": "fair",
+            "scoreConfidence": "medium",
+            "monthlyScore": 58,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "medium",
             "incidents": 2,
             "avgResolutionMin": 201,
             "totalDowntimeMin": 402,
@@ -2928,8 +2802,12 @@
         "pinecone": {
             "uptime": 99.99,
             "officialUptime": 99.96,
-            "score": 73,
+            "score": 70,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 74,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 5,
             "avgResolutionMin": 230,
             "totalDowntimeMin": 1151,
@@ -3019,9 +2897,13 @@
         },
         "stability": {
             "uptime": 100,
-            "officialUptime": 100,
-            "score": 76,
-            "grade": "good",
+            "officialUptime": null,
+            "score": 74,
+            "grade": "fair",
+            "scoreConfidence": "medium",
+            "monthlyScore": 74,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "medium",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -3033,8 +2915,12 @@
         "voyageai": {
             "uptime": 99.98,
             "officialUptime": 100,
-            "score": 79,
+            "score": 77,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 85,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 14,
             "totalDowntimeMin": 14,
@@ -3071,6 +2957,10 @@
             "officialUptime": 99.92,
             "score": 95,
             "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 94,
+            "monthlyGrade": "excellent",
+            "monthlyScoreConfidence": "high",
             "incidents": 11,
             "avgResolutionMin": 24,
             "totalDowntimeMin": 269,
@@ -3175,70 +3065,17 @@
                     "finalStatus": "resolved",
                     "impact": "minor"
                 }
-            ],
-            "components": [
-                {
-                    "id": "8470790",
-                    "name": "Image builds",
-                    "uptime": 99.78
-                },
-                {
-                    "id": "8328021",
-                    "name": "Volumes",
-                    "uptime": 99.89
-                },
-                {
-                    "id": "6584624",
-                    "name": "Web endpoints",
-                    "uptime": 99.89
-                },
-                {
-                    "id": "8678775",
-                    "name": "Flash Proxy (us-west)",
-                    "uptime": 99.96
-                },
-                {
-                    "id": "1207137",
-                    "name": "CPU functions",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "6584622",
-                    "name": "Frontend",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "6584420",
-                    "name": "GPU functions",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "8470789",
-                    "name": "Sandboxes",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "6584623",
-                    "name": "Web API",
-                    "uptime": 99.98
-                },
-                {
-                    "id": "8494090",
-                    "name": "OIDC Endpoint",
-                    "uptime": 100
-                },
-                {
-                    "id": "8470788",
-                    "name": "Snapshot restores (beta)",
-                    "uptime": 100
-                }
             ]
         },
         "claudeai": {
             "uptime": 92.24,
             "officialUptime": 99.31,
-            "score": 71,
+            "score": 69,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 69,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 42,
             "avgResolutionMin": 80,
             "totalDowntimeMin": 3356,
@@ -3628,9 +3465,13 @@
         },
         "characterai": {
             "uptime": 98.03,
-            "officialUptime": 99.58,
+            "officialUptime": null,
             "score": null,
             "grade": null,
+            "scoreConfidence": "low",
+            "monthlyScore": null,
+            "monthlyGrade": null,
+            "monthlyScoreConfidence": "low",
             "incidents": 25,
             "avgResolutionMin": 45,
             "totalDowntimeMin": 1128,
@@ -3897,8 +3738,12 @@
         "chatgpt": {
             "uptime": 96.93,
             "officialUptime": 99.8,
-            "score": 82,
+            "score": 81,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 77,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 14,
             "avgResolutionMin": 115,
             "totalDowntimeMin": 1609,
@@ -4089,19 +3934,18 @@
                     "id": "01K6TVGGGDCP0PPGCHXAG3AQX8",
                     "name": "Connectors/Apps",
                     "uptime": 98.29
-                },
-                {
-                    "id": "01JNKS9D9S72PMP1938PVFFQN4",
-                    "name": "Compliance API",
-                    "uptime": 99.89
                 }
             ]
         },
         "claudecode": {
             "uptime": 93.84,
             "officialUptime": 99.41,
-            "score": 68,
+            "score": 66,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 66,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 42,
             "avgResolutionMin": 87,
             "totalDowntimeMin": 3668,
@@ -4492,8 +4336,12 @@
         "codex": {
             "uptime": 99.04,
             "officialUptime": 99.96,
-            "score": 79,
+            "score": 77,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 76,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 8,
             "avgResolutionMin": 685,
             "totalDowntimeMin": 5481,
@@ -4606,8 +4454,12 @@
         "cursor": {
             "uptime": 98.55,
             "officialUptime": 99.84,
-            "score": 80,
-            "grade": "good",
+            "score": 69,
+            "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 79,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 10,
             "avgResolutionMin": 72,
             "totalDowntimeMin": 722,
@@ -4733,8 +4585,12 @@
         "copilot": {
             "uptime": 99.71,
             "officialUptime": 99.89,
-            "score": 88,
+            "score": 87,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 86,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 5,
             "avgResolutionMin": 70,
             "totalDowntimeMin": 350,
@@ -4807,6 +4663,10 @@
             "officialUptime": 99.95,
             "score": 100,
             "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 100,
+            "monthlyGrade": "excellent",
+            "monthlyScoreConfidence": "high",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -4830,8 +4690,12 @@
         "junie": {
             "uptime": 98.84,
             "officialUptime": 100,
-            "score": 86,
-            "grade": "good",
+            "score": 96,
+            "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 93,
+            "monthlyGrade": "excellent",
+            "monthlyScoreConfidence": "high",
             "incidents": 5,
             "avgResolutionMin": 131,
             "totalDowntimeMin": 656,
@@ -4902,8 +4766,12 @@
         "langsmith": {
             "uptime": 100,
             "officialUptime": 98.48,
-            "score": 68,
+            "score": 70,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 66,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 3,
             "avgResolutionMin": 179,
             "totalDowntimeMin": 538,
@@ -4962,8 +4830,12 @@
         "runway": {
             "uptime": 100,
             "officialUptime": 99.96,
-            "score": 84,
+            "score": 78,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 75,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 6,
             "avgResolutionMin": 123,
             "totalDowntimeMin": 740,
@@ -5051,6 +4923,10 @@
             "officialUptime": 99.99,
             "score": 71,
             "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 73,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 2,
             "avgResolutionMin": 237,
             "totalDowntimeMin": 474,
@@ -5078,23 +4954,6 @@
                     "impact": "minor"
                 }
             ],
-            "components": [
-                {
-                    "id": "8475672",
-                    "name": "API",
-                    "uptime": 99.7
-                },
-                {
-                    "id": "8531280",
-                    "name": "Dream Machine",
-                    "uptime": 99.7
-                },
-                {
-                    "id": "8750972",
-                    "name": "Luma Agents",
-                    "uptime": 100
-                }
-            ],
             "addedAt": "2026-06-12"
         },
         "deepseekapp": {
@@ -5102,6 +4961,10 @@
             "officialUptime": 99.94,
             "score": 91,
             "grade": "excellent",
+            "scoreConfidence": "high",
+            "monthlyScore": 94,
+            "monthlyGrade": "excellent",
+            "monthlyScoreConfidence": "high",
             "incidents": 2,
             "avgResolutionMin": 48,
             "totalDowntimeMin": 95,
@@ -5134,8 +4997,12 @@
         "helicone": {
             "uptime": 100,
             "officialUptime": 97.95,
-            "score": 49,
-            "grade": "degrading",
+            "score": 58,
+            "grade": "fair",
+            "scoreConfidence": "high",
+            "monthlyScore": 58,
+            "monthlyGrade": "fair",
+            "monthlyScoreConfidence": "high",
             "incidents": 4,
             "avgResolutionMin": 346,
             "totalDowntimeMin": 1384,
@@ -5181,30 +5048,17 @@
                     "impact": "minor"
                 }
             ],
-            "components": [
-                {
-                    "id": "7615061",
-                    "name": "api.hconeai.com",
-                    "uptime": 100
-                },
-                {
-                    "id": "8603734",
-                    "name": "eu.api.helicone.ai",
-                    "uptime": 100
-                },
-                {
-                    "id": "484146",
-                    "name": "helicone.ai",
-                    "uptime": 100
-                }
-            ],
             "addedAt": "2026-06-23"
         },
         "langfuse": {
             "uptime": 100,
             "officialUptime": 99.96,
-            "score": 77,
+            "score": 81,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 75,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 7,
             "avgResolutionMin": 51,
             "totalDowntimeMin": 356,
@@ -5301,6 +5155,10 @@
             "officialUptime": 100,
             "score": 85,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 84,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 1,
             "avgResolutionMin": 1,
             "totalDowntimeMin": 1,
@@ -5393,6 +5251,10 @@
             "officialUptime": 100,
             "score": 85,
             "grade": "good",
+            "scoreConfidence": "high",
+            "monthlyScore": 85,
+            "monthlyGrade": "good",
+            "monthlyScoreConfidence": "high",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
@@ -5609,51 +5471,51 @@
                 "title": "Integrations API Degraded",
                 "affected": "Mistral API",
                 "durationLabel": "ongoing",
-                "narrative": "The Integrations API experienced degradation and remained under investigation throughout the reporting period."
+                "narrative": "The Integrations API experienced performance degradation and remained under investigation throughout the reporting period."
+            },
+            {
+                "service": "Mistral API",
+                "title": "Completion API Degraded - labs-leanstral-2603 \u00b7 Chat Completions API",
+                "affected": "Mistral API",
+                "durationLabel": "ongoing",
+                "narrative": "Degradation was reported specifically affecting the labs-leanstral-2603 Chat Completions endpoint."
             },
             {
                 "service": "Claude API",
                 "title": "We\u2019ve suspended access to Claude Mythos 5 and Claude Fable 5",
                 "affected": "Claude API",
                 "durationLabel": "ongoing",
-                "narrative": "Access to specific Claude model variants was suspended and remains under monitoring."
+                "narrative": "Access to the Claude Mythos 5 and Claude Fable 5 models was suspended and remains under monitoring."
             },
             {
                 "service": "Together AI",
                 "title": "Voxtral Mini 3B 2507 \u2014 down",
                 "affected": "Together AI",
                 "durationLabel": "ongoing",
-                "narrative": "The Voxtral Mini 3B 2507 model was reported down and the service was investigating the cause."
+                "narrative": "The Voxtral Mini 3B 2507 model experienced a full service outage."
             },
             {
                 "service": "Modal",
                 "title": "Web endpoints is down \u2014 down",
                 "affected": "Modal",
                 "durationLabel": "ongoing",
-                "narrative": "Web endpoints experienced a complete outage and were subject to ongoing investigation."
-            },
-            {
-                "service": "claude.ai",
-                "title": "Elevated errors across models",
-                "affected": "claude.ai",
-                "durationLabel": "ongoing",
-                "narrative": "Users encountered elevated error rates across multiple models, with the situation under monitoring."
+                "narrative": "A service outage impacted the availability of web endpoints."
             },
             {
                 "service": "ChatGPT",
                 "title": "Small Number of Users Have Incorrectly Cancelled Subscription",
                 "affected": "ChatGPT",
                 "durationLabel": "ongoing",
-                "narrative": "An issue was identified where a subset of users faced incorrect subscription cancellations."
+                "narrative": "A logic error resulted in incorrect subscription cancellations for a subset of the user base."
             }
         ],
         "observations": [
-            "Treat Deepgram and Helicone as high-risk services due to degrading reliability scores and high average recovery times.",
-            "Limit reliance on Claude API for mission-critical workflows given its fair reliability score and high incident frequency.",
-            "Utilize Fireworks AI for latency-sensitive production tasks due to its superior recovery speed and high reliability score.",
-            "Implement robust error handling for Mistral API integrations to account for frequent service degradation."
+            "Avoid relying on Claude API or Claude Code for mission-critical workflows due to low reliability scores and high recovery times.",
+            "Implement aggressive retry logic and failover strategies when using Deepgram and Helicone to mitigate long recovery durations.",
+            "Treat Modal as a highly reliable infrastructure provider for compute workloads, despite recent endpoint instability.",
+            "Utilize Fireworks AI for latency-sensitive applications given its superior recovery speed and high reliability score."
         ],
         "model": "gemma",
-        "generatedAt": "2026-07-06T05:54:28.328Z"
+        "generatedAt": "2026-07-12T14:10:44.737Z"
     }
 }
