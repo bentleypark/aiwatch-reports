@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "[MON] [YEAR] AI Reliability Report"
-description: "Monthly reliability report for 43 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
+description: "Monthly reliability report for [SERVICE_COUNT] AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
 date: [YYYY-MM-DD]
 published: true
 ---
@@ -9,7 +9,7 @@ published: true
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: 43 — 33 API services, 6 coding agents, 4 AI apps
+> **Services monitored**: [SERVICE_COUNT] — 33 API services, 6 coding agents, 4 AI apps
 
 <!-- AUTHORING SELF-CHECK — read before writing prose; these are the recurring misses:
      1. CLAIMS BACKED BY DATA, AT THE RIGHT SCOPE. Every superlative/absolute ("the slowest", "the most",
@@ -215,7 +215,8 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
        every month (per-model monitoring, Voice-Agent isolation, Gemini key rotation + dual monitoring,
        retry timeout = the Longest column, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
        it monthly; that cross-month repetition is exactly what this split fixes. New evergreen pattern? Add it
-       to that page, not here.
+       to that page, not here — following the MAINTENANCE curation rules at the top of ../resilience/
+       (evergreen + high-value only, one pattern per failure-mode, prune stale bullets on edit).
      • Observations (here) = THIS MONTH'S DELTA only — the specific failure mode the month surfaced, tied to
        the relevant Resilience pattern with a link. The only home for the month's actionable advice, so Notable
        Incidents stays descriptive (don't end an incident with "keep a fallback" — put the delta here + link).
@@ -225,7 +226,7 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      CAVEAT (e.g. Character.AI) is a legitimate month-specific bullet too. -->
 
 
-- **[Service]**: <!-- THIS month's date-tied failure fact (e.g. "its worst incident was a 27h streaming-STT degradation; p75 the highest probed"), DEEP-linked to the relevant Resilience pattern ([Resilience → Voice/transcription](../resilience/#voice--transcription-deepgram)). Do NOT re-explain the evergreen pattern — link it. -->
+- **[Service]**: <!-- THIS month's date-tied failure fact (e.g. "its worst incident was a 27h streaming-STT degradation; p75 the highest probed"), DEEP-linked to the relevant Resilience pattern ([Resilience → Deepgram](../resilience/#deepgram)). Do NOT re-explain the evergreen pattern — link it. -->
 - **[Service]**: <!-- 2-4 bullets total; only services whose THIS-MONTH data yields a new lesson. If a service's story is unchanged from a prior report, omit it (the pattern already lives in ../resilience/). -->
 <!-- A partial-month / withheld-Score CAVEAT bullet (e.g. Character.AI: why its Score is absent + how to read
      its half-month counts) belongs here too — it's month-specific and not an evergreen pattern. -->
@@ -239,7 +240,7 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
 ## About This Report
 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
-* **Monitoring Frequency:** All 43 services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
+* **Monitoring Frequency:** All [SERVICE_COUNT] services are polled every **5 minutes** via Cloudflare Workers. Health check probes measure direct API response times (RTT) at the same interval.
 * **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). A service with no probe endpoint is scored on the remaining components rescaled to 100, with **no penalty**. A service that has a probe but fewer than 7 days of samples gets that same rescale **plus a 5% penalty** until its probe data matures. Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
 * **Uptime Source:** *Official* = AIWatch computes a 30-day uptime figure from the incident and outage records the provider publishes on its status page — one window and one weighting for every service, so the figures compare. *Platform* = the same computation, but the records come from the status-page platform's own monitors (Better Stack) rather than incidents the provider declared. *No uptime* = the status page publishes no records to compute from. AIWatch **invents none**: the Score simply drops its 40-point Uptime component and is rescaled over the remaining signals (incidents, recovery, responsiveness). A service that still has a probe is scored and ranked on what can be measured; one with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked. The note above the Score table names whichever services that is — the membership is read from the data, not fixed here. A service AIWatch tracked for only part of the month is **excluded from the ranking** rather than labelled — its partial-month Score would rest on insufficient coverage. The label describes the Uptime input, not the Score's rigour.
 * **Incident Counting:** Counts are the incidents each provider published, attributed to the service they affected. Providers differ in granularity, and in *where* that granularity lives: Anthropic maps to a single status-page component but posts one incident **per model**; Together AI tracks each model as its own **resource**, so one event can surface as several incidents. Others post one incident per event at the service level. Compare counts only across providers with comparable granularity.

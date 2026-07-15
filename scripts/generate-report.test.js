@@ -694,6 +694,25 @@ test('NEXT_MONTH resolves year rollover correctly', () => {
   const out = fillTemplate(tmpl, '2026-12', archive, {})
   assert.ok(out.includes('January'), `expected "January" after December: ${out}`)
 })
+test('SERVICE_COUNT resolves to the archive service count, not a hardcoded literal or meta size (aiwatch-reports#97)', () => {
+  // The monitored-service count is derived from archive.services so it never drifts as services
+  // are added; every [SERVICE_COUNT] occurrence (frontmatter description, "Services monitored",
+  // "All N services are polled") is filled from the same source. meta deliberately carries a
+  // DIFFERENT cardinality (4) than archive.services (3), so the count can only be right if it
+  // derives from archive.services — this pins the source, not just the absence of a literal.
+  const tmpl = `Services monitored: [SERVICE_COUNT]\nAll [SERVICE_COUNT] services are polled`
+  const svc = { score: 44, grade: 'Degrading', monthlyScore: 61, monthlyGrade: 'Fair', uptime: 90, incidents: 6, avgResolutionMin: 456, officialUptime: 99 }
+  const archive = { services: { a: { ...svc }, b: { ...svc }, c: { ...svc } }, daysCollected: 0 }
+  const meta = { a: { name: 'A' }, b: { name: 'B' }, c: { name: 'C' }, d: { name: 'D' } }
+  const out = fillTemplate(tmpl, '2026-04', archive, meta)
+  assert.ok(out.includes('Services monitored: 3'), `expected archive count 3 (not meta size 4): ${out}`)
+  assert.ok(!out.includes('[SERVICE_COUNT]'), `every SERVICE_COUNT placeholder must be substituted: ${out}`)
+})
+test('SERVICE_COUNT substitutes even an empty archive (0), leaving no placeholder (aiwatch-reports#97)', () => {
+  const out = fillTemplate('monitored: [SERVICE_COUNT]', '2026-04', { services: {}, daysCollected: 0 }, {})
+  assert.ok(out.includes('monitored: 0'), `expected 0 for an empty archive: ${out}`)
+  assert.ok(!out.includes('[SERVICE_COUNT]'), `placeholder must be substituted even at 0: ${out}`)
+})
 
 // ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
 console.log('\nbuildBySourceTable')
