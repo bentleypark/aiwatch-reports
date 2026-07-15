@@ -11,6 +11,24 @@ published: true
 > **Published**: [PUBLISH_MONTH] [YEAR]
 > **Services monitored**: 43 — 33 API services, 6 coding agents, 4 AI apps
 
+<!-- AUTHORING SELF-CHECK — read before writing prose; these are the recurring misses:
+     1. CLAIMS BACKED BY DATA, AT THE RIGHT SCOPE. Every superlative/absolute ("the slowest", "the most",
+        "worst month", "the only", "never") must be TRUE over the scope you state. Qualify to what the
+        measurement supports: p75 is an edge-RTT probe to ONE endpoint, not "the slowest SERVICE"; a
+        "worst month" must hold on the metric you mean (Score? downtime?) and beat EVERY peer — check the
+        data, a lower-scoring sibling breaks "worst coding agent". Prefer "highest edge-probe RTT among
+        probed services" / "most downtime of any coding agent" to a bare superlative. Soften unprovable
+        absolutes ("never" -> "rarely").
+     2. ONE HOME PER FACT — don't over-emphasise. A specific figure/superlative (e.g. one service's p75)
+        belongs in ONE analytical home (its Notable Incident, or the data table), not restated across
+        Summary + Notable Incidents + Observations. Weight a factor by its real contribution, not by how
+        many times you can repeat it.
+     3. ADVISORY != OUTAGE. Before calling something an outage, read the incident TITLE + impact, not just
+        its duration. A usage-limits / billing / model-access / policy notice (often impact:minor) is an
+        ADVISORY, not downtime — label it so (as the Anthropic entries do). If the archive counted such a
+        notice as downtime it inflates the Score drop (a worker-side classification bug, cf. aiwatch#707);
+        flag it. A long duration alone does not make an availability incident. -->
+
 ## Summary
 
 > Every score in this report is the **AIWatch Score** (0–100): one number combining uptime, incident load, recovery speed and responsiveness. Higher is better. [How it's built →](#[SCORE_ANCHOR])
@@ -171,7 +189,11 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      Observations) that follows the metrics cluster (Score → 30-Day Uptime →
      API Response Time → Detection & RTT Degradation). Each entry: title with key duration,
      affected component(s), and a short prose paragraph that explains scope +
-     remediation/mitigation. -->
+     remediation/mitigation.
+     Each entry must describe the ACTUAL EVENT — pull the real title / root cause from the archive's
+     incidentList (what broke, which component, the provider's own wording), NOT just "downtime was N
+     hours". And verify it is a genuine availability incident (see AUTHORING SELF-CHECK #3): if the
+     longest "incident" is a usage-limits / policy advisory, say so and do not frame it as an outage. -->
 
 ### 1. [Title]
 **Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
