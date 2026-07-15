@@ -371,7 +371,7 @@ Anthropic's status feed carried a "suspended access to Claude Mythos 5 and Claud
 Actionable takeaways per service. Descriptive context for each event lives in earlier sections — [Summary](#summary), [Incident Summary](#incident-summary), and [Notable Incidents](#notable-incidents). This section is what to *do* with that data — keep each bullet prescriptive, not a recap, and not a picks list (per-use-case picks live in [Recommendations](#recommendations)).
 
 - **Deepgram exercised the voice hot-path risk this month**: its June degradation plus the worst probe latency of any service (see [Notable Incidents](#notable-incidents)) put real-time transcription on the exposed path — a live instance of the Voice-Agent exposure. Build per [Resilience → Deepgram](../resilience/#deepgram): a degradation-aware fallback to a second provider such as AssemblyAI (76).
-- **Character.AI's June is half a month, not a month**: its incident feed stopped on 15 June and its status page stopped publishing component data on 18 June. The 25 incidents above cover 7–15 June only. Its Score is absent because it has no official uptime and no latency probe — AIWatch can measure two of the Score's four components and withholds it rather than rank on insufficient signal.
+- **Treat Character.AI's June as a floor, not a full-month read**: its incident feed stopped on 15 June and its status page stopped publishing component data on 18 June, so the 25 incidents above cover 7–15 June only — don't compare its count against full-month services or read it as complete. Its Score is absent by design: with no official uptime and no latency probe, AIWatch can measure only two of the Score's four components and withholds it rather than rank on insufficient signal.
 
 ---
 
