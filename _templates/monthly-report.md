@@ -183,20 +183,30 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
 
 ## Observations
 
-Actionable takeaways per service. Descriptive context for each event lives in earlier sections — [Summary](#summary), [Incident Summary](#incident-summary), and [Notable Incidents](#notable-incidents). This section is what to *do* with that data — keep each bullet prescriptive, not a recap.
+**This month's** per-service resilience deltas — what each service's data *newly* argues for. The evergreen, month-to-month-stable patterns (per-model monitoring, Voice-Agent isolation, key rotation, retry-timeout tuning, failover mechanics) live once in **[Resilience Patterns](../resilience/)** — link there, don't re-explain them. Each bullet ties THIS month's failure mode to the relevant pattern and adds only what's new.
 
-- **If you build on [Service]**: <!-- one-sentence operational guidance -->
-- **Quietly reliable picks within their own role**: <!-- 2-3 services with low-but-nonzero incident counts + fast recovery, each labelled with its actual category (e.g. "OSS model hosting", "serverless GPU compute", "LLM tier fallback"). Make the role explicit so readers don't misread the list as a single-tier fallback set. -->
-<!-- Two cautions when picking these:
-     (1) Avoid restating zero-incident services — those already live in
-         Incident Summary's "Zero incidents recorded" note and the Official
-         Uptime caveat (both above). Pick services with low-but-nonzero
-         counts whose Score + recovery profile demonstrates resilience under
-         real traffic, not just absence of incidents.
-     (2) Don't lump cross-category services as a single "fallback set" —
-         services in EXCLUDE_FALLBACK (Hugging Face, Modal, Replicate,
-         Pinecone, etc.) are not drop-in LLM-API replacements. Always
-         attach the use-case label so readers don't infer interchangeability. -->
+<!-- ROLE BOUNDARY — this section vs its neighbours (they blur; keep each to its ONE job):
+     • Recommendations   = the PICKS TABLE — WHO to use per use case. Only place for picks.
+     • Notable Incidents = the EVENT — what happened + why it mattered. DESCRIBE; do not prescribe.
+     • Incident Summary note = how to READ the counts (granularity; count ≠ reliability). Only home for that.
+     • ../resilience/ (Resilience Patterns) = the EVERGREEN, structural how-to-build guidance that holds
+       every month (per-model monitoring, Voice-Agent isolation, Gemini key rotation + dual monitoring,
+       retry timeout = the Longest column, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
+       it monthly; that cross-month repetition is exactly what this split fixes. New evergreen pattern? Add it
+       to that page, not here.
+     • Observations (here) = THIS MONTH'S DELTA only — the specific failure mode the month surfaced, tied to
+       the relevant Resilience pattern with a link. The only home for the month's actionable advice, so Notable
+       Incidents stays descriptive (don't end an incident with "keep a fallback" — put the delta here + link).
+     THE TEST for a bullet: would it read identically next month? If yes, it's evergreen — move it to
+     ../resilience/ and link. Every bullet must carry a DATE-TIED fact (this month X's worst was a 27h Y; a
+     single 72h Z) and point at the pattern, not restate the architecture. A partial-month / withheld-Score
+     CAVEAT (e.g. Character.AI) is a legitimate month-specific bullet too. -->
+
+
+- **[Service]**: <!-- THIS month's date-tied failure fact (e.g. "its worst incident was a 27h streaming-STT degradation; p75 the highest probed"), DEEP-linked to the relevant Resilience pattern ([Resilience → Voice/transcription](../resilience/#voice--transcription-deepgram)). Do NOT re-explain the evergreen pattern — link it. -->
+- **[Service]**: <!-- 2-4 bullets total; only services whose THIS-MONTH data yields a new lesson. If a service's story is unchanged from a prior report, omit it (the pattern already lives in ../resilience/). -->
+<!-- A partial-month / withheld-Score CAVEAT bullet (e.g. Character.AI: why its Score is absent + how to read
+     its half-month counts) belongs here too — it's month-specific and not an evergreen pattern. -->
 
 ---
 

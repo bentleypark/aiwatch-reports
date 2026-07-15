@@ -24,7 +24,7 @@ Each monthly report includes:
 - **Incident Summary** — Total downtime and incident counts per service
 - **Official Uptime** — Provider-reported uptime figures
 - **Notable Incidents** — Top 5 incidents with root cause and impact
-- **Observations** — Developer recommendations based on the data
+- **Observations** — This month's per-service resilience *deltas* (the specific failure mode the month surfaced), each tied to an evergreen pattern in [Resilience Patterns](resilience.md) with a link — the single home for the month's actionable advice. **Not** picks (Recommendations), event description (Notable Incidents), the count caveat (Incident Summary), or the evergreen how-to (Resilience Patterns)
 
 ---
 
