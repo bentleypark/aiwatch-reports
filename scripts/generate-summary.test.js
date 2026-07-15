@@ -207,7 +207,7 @@ test('generates volatile opening', () => {
   assert(text.includes('March 2026'), 'should include month')
   assert(text.includes('ServiceA'), 'should include top service')
   assert(text.includes('ServiceD'), 'should include worst service')
-  assert(text.includes('52/100'), 'should include worst score')
+  assert(text.includes('ServiceD (52)'), 'should include worst score')
   assert(text.includes('29h 20m') || text.includes('combined downtime'), 'should include combined downtime')
 })
 
@@ -241,7 +241,7 @@ test('includes all required sections', () => {
 test('most reliable shows perfect services', () => {
   const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
   const text = generateTldr(a, MOCK_INCIDENTS)
-  assert(text.includes('ServiceA (100/100'), 'should show perfect score service')
+  assert(text.includes('ServiceA (100'), 'should show perfect score service')
 })
 
 test('MoM-frames the Most-incidents bullet when a prior count is provided (aiwatch-reports#54)', () => {

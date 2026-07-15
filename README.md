@@ -22,9 +22,9 @@ Each monthly report includes:
 - **AIWatch Score Rankings** — Composite reliability score (uptime + incidents + recovery time)
 - **3-Month Trend** — Score direction over the trailing 3 months (slope chart), plus **Notable Movers**: the services whose Score, recovery time (MTTR), or total downtime changed most, so a flat Score can't hide a recovery-time regression. Auto-rendered once ≥2 months of archive exist; omitted otherwise. (Uptime is intentionally not trended — see *Methodology*.)
 - **Incident Summary** — Total downtime and incident counts per service
-- **Official Uptime** — Provider-reported uptime figures
+- **30-Day Uptime** — computed by AIWatch from each provider's published incident/outage records, over one window and one formula for every service
 - **Notable Incidents** — Top 5 incidents with root cause and impact
-- **Observations** — Developer recommendations based on the data
+- **Observations** — This month's per-service resilience *deltas* (the specific failure mode the month surfaced), each tied to an evergreen pattern in [Resilience Patterns](resilience.md) with a link — the single home for the month's actionable advice. **Not** picks (Recommendations), event description (Notable Incidents), the count caveat (Incident Summary), or the evergreen how-to (Resilience Patterns)
 
 ---
 
@@ -38,7 +38,7 @@ Each monthly report includes:
 - **API probe**: Direct RTT measurement every 5 minutes to 31 probe targets with public endpoints (supplementary monitoring data)
 - **3-Month Trend (Notable Movers)**: ranked by the largest single change across **Score / MTTR / total downtime** over the window — incident-feed *measured* metrics. Uptime is deliberately excluded: the archive's `uptime` field mixes per-service sources (status-page group aggregates, estimate/poll-derived figures) so a cross-service uptime delta is misleading (a 3-month official-uptime trend awaits aiwatch#586 + ≥3 months of the clean `officialUptime` field). Direction (🔺/🔻) follows the bold *headline* metric, not Score. Services the Score ranking excludes (no-incident-feed / stale source) are excluded from movers too. The first point is flagged when its month is partial (mid-month onboarding); MTTR/downtime are measured over the months that have incident data.
 
-Full methodology: [ai-watch.dev/#about-score](https://ai-watch.dev/#about-score)
+Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
 
 ---
 

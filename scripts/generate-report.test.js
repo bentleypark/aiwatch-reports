@@ -30,6 +30,7 @@ const {
   buildDetectionSection,
   buildComponentReliabilitySection,
   buildTrendSection,
+  crossesScoreMethodCutover,
   fmtLeadMin,
   monthName,
   lastDayOfMonth,
@@ -151,13 +152,24 @@ test('Medium when uptime null', () => {
   eq(confidence({ data: { uptime: null, incidents: 3 } }), 'Medium')
 })
 
-console.log('\nuptimeSourceLabel (#29, rewritten for aiwatch#951)')
+console.log('\nuptimeSourceLabel (#29 → aiwatch#951 → aiwatch#1006: three states, read from the data)')
 test('Official when the archive carries a status-page figure', () => {
   eq(uptimeSourceLabel({ id: 'cohere', data: { officialUptime: 100 } }), 'Official')
 })
-test('No official uptime when the archive says the provider publishes none', () => {
-  eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
-  eq(uptimeSourceLabel({ id: 'stability', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
+test('No uptime when the archive carries no figure to show', () => {
+  eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
+  eq(uptimeSourceLabel({ id: 'gemini', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
+})
+// aiwatch#1006 — Better Stack pages are computed on the SAME 30-day window with the SAME weights, but
+// their records are the platform's own monitoring, not incidents the provider declared. Same number
+// shape, different evidence — so the label stays distinct and now comes from the archived provenance
+// rather than a hand-maintained id list (which is exactly what drifted in aiwatch#951).
+test('aiwatch#1006: Platform when the records come from the status-page platform monitors', () => {
+  eq(uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.81, uptimeSource: 'platform_avg' } }), 'Platform')
+  eq(uptimeSourceLabel({ id: 'luma', data: { officialUptime: 99.3, uptimeSource: 'platform_avg' } }), 'Platform')
+})
+test('aiwatch#1006: an archive written before the provenance field falls back to Official', () => {
+  eq(uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.73 } }), 'Official')
 })
 // The label used to come from a hand-maintained set, which had drifted in BOTH directions.
 test('aiwatch#951: Mistral and Perplexity publish real uptime — no longer mislabelled', () => {
@@ -165,11 +177,11 @@ test('aiwatch#951: Mistral and Perplexity publish real uptime — no longer misl
   eq(uptimeSourceLabel({ id: 'perplexity', data: { officialUptime: 100 } }), 'Official')
 })
 test('aiwatch#951: bedrock/azureopenai stay excluded even if a stale archive carries a value', () => {
-  eq(uptimeSourceLabel({ id: 'bedrock', data: { officialUptime: 100 } }), 'No official uptime')
-  eq(uptimeSourceLabel({ id: 'azureopenai', data: { officialUptime: 100 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'bedrock', data: { officialUptime: 100 } }), 'No uptime')
+  eq(uptimeSourceLabel({ id: 'azureopenai', data: { officialUptime: 100 } }), 'No uptime')
 })
 test('legacy archive (no officialUptime field) falls back to the maintained set', () => {
-  eq(uptimeSourceLabel({ id: 'perplexity', data: { uptime: 99.5 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'perplexity', data: { uptime: 99.5 } }), 'No uptime')
   eq(uptimeSourceLabel({ id: 'cohere', data: { uptime: 100 } }), 'Official')
 })
 
@@ -359,7 +371,7 @@ test('header is "Uptime Source" (not "Confidence"); the column reads the archive
   assert.ok(!table.includes('Confidence'), 'Confidence column must be gone')
   assert.ok(!table.includes('Estimate'), 'the "Estimate" label went with the estimate itself (aiwatch#713)')
   const openrouterRow = table.split('\n').find(r => r.includes('OpenRouter'))
-  assert.ok(/\| No official uptime \|/.test(openrouterRow), `must not claim Official: ${openrouterRow}`)
+  assert.ok(/\| No uptime \|/.test(openrouterRow), `must not claim Official: ${openrouterRow}`)
   assert.ok(!/100\.00% uptime/.test(openrouterRow), `must not quote the measured uptime: ${openrouterRow}`)
   const perplexityRow = table.split('\n').find(r => r.includes('Perplexity'))
   assert.ok(/\| Official \|/.test(perplexityRow), `publishes real uptime → Official: ${perplexityRow}`)
@@ -588,6 +600,18 @@ test('excludes NO_PROBE services', () => {
   const table = buildLatencyTable(services, { bedrock: { name: 'Amazon Bedrock' } })
   assert.ok(!table.includes('Amazon Bedrock'), 'bedrock should be excluded')
 })
+test('a probed service with a real p75 (e.g. Pinecone) is included; only bedrock/azure are dropped', () => {
+  // Pinecone was previously (wrongly) in NO_PROBE despite the Worker probing it (control-plane RTT)
+  // and archiving a non-null avgLatencyMs — dropping it from the p75 table disagreed with both the
+  // archive and the live dashboard latency ranking. It must now render.
+  const services = [
+    { id: 'pinecone', data: { avgLatencyMs: 844 } },
+    { id: 'bedrock', data: { avgLatencyMs: 999 } },
+  ]
+  const table = buildLatencyTable(services, { pinecone: { name: 'Pinecone' }, bedrock: { name: 'Amazon Bedrock' } })
+  assert.ok(table.includes('Pinecone'), `pinecone has a probe p75 → must appear: ${table}`)
+  assert.ok(!table.includes('Amazon Bedrock'), 'bedrock (genuinely no probe) still excluded')
+})
 test('uses competition ranking for ties (not sequential)', () => {
   // Two services tied at 230ms must both render with "N=" suffix; third slot skips to 3.
   const services = [
@@ -669,6 +693,25 @@ test('NEXT_MONTH resolves year rollover correctly', () => {
   const archive = { services: {}, daysCollected: 0 }
   const out = fillTemplate(tmpl, '2026-12', archive, {})
   assert.ok(out.includes('January'), `expected "January" after December: ${out}`)
+})
+test('SERVICE_COUNT resolves to the archive service count, not a hardcoded literal or meta size (aiwatch-reports#97)', () => {
+  // The monitored-service count is derived from archive.services so it never drifts as services
+  // are added; every [SERVICE_COUNT] occurrence (frontmatter description, "Services monitored",
+  // "All N services are polled") is filled from the same source. meta deliberately carries a
+  // DIFFERENT cardinality (4) than archive.services (3), so the count can only be right if it
+  // derives from archive.services — this pins the source, not just the absence of a literal.
+  const tmpl = `Services monitored: [SERVICE_COUNT]\nAll [SERVICE_COUNT] services are polled`
+  const svc = { score: 44, grade: 'Degrading', monthlyScore: 61, monthlyGrade: 'Fair', uptime: 90, incidents: 6, avgResolutionMin: 456, officialUptime: 99 }
+  const archive = { services: { a: { ...svc }, b: { ...svc }, c: { ...svc } }, daysCollected: 0 }
+  const meta = { a: { name: 'A' }, b: { name: 'B' }, c: { name: 'C' }, d: { name: 'D' } }
+  const out = fillTemplate(tmpl, '2026-04', archive, meta)
+  assert.ok(out.includes('Services monitored: 3'), `expected archive count 3 (not meta size 4): ${out}`)
+  assert.ok(!out.includes('[SERVICE_COUNT]'), `every SERVICE_COUNT placeholder must be substituted: ${out}`)
+})
+test('SERVICE_COUNT substitutes even an empty archive (0), leaving no placeholder (aiwatch-reports#97)', () => {
+  const out = fillTemplate('monitored: [SERVICE_COUNT]', '2026-04', { services: {}, daysCollected: 0 }, {})
+  assert.ok(out.includes('monitored: 0'), `expected 0 for an empty archive: ${out}`)
+  assert.ok(!out.includes('[SERVICE_COUNT]'), `placeholder must be substituted even at 0: ${out}`)
 })
 
 // ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
@@ -754,13 +797,41 @@ test('returns empty string when timeline is undefined', () => {
   eq(buildTimelineDetails(undefined), '')
 })
 test('renders em dash when severity or fix version is missing', () => {
-  const out = buildTimelineDetails([{ stage: 'detected', at: '2026-04-15' }])
-  assert.ok(out.includes('detected | 2026-04-15 | — | —'), `missing fields: ${out}`)
+  // Needs a non-`detected` stage so the timeline renders at all (#87 progression gate); the
+  // fix_released row omits severity + fixedVersion to exercise the em-dash fallback.
+  const out = buildTimelineDetails([
+    { stage: 'detected', at: '2026-04-15', severity: 'high' },
+    { stage: 'fix_released', at: '2026-04-20' },
+  ])
+  assert.ok(out.includes('fix_released | 2026-04-20 | — | —'), `missing fields: ${out}`)
 })
 test('renders em dash for missing stage so undefined never appears in a table cell', () => {
-  const out = buildTimelineDetails([{ at: '2026-04-15' }])
+  // A real progression stage makes the block render; the malformed stageless entry must still
+  // print em-dash, not "undefined".
+  const out = buildTimelineDetails([
+    { stage: 'fix_released', at: '2026-04-20', severity: 'high', fixedVersion: '1.0.0' },
+    { at: '2026-04-15' },
+  ])
   assert.ok(!out.includes('undefined'), `stage fallback: ${out}`)
   assert.ok(out.includes('— | 2026-04-15 | — | —'), `stage = em dash: ${out}`)
+})
+// aiwatch-reports#87 — suppress single-`detected` timelines (no progression → noise, and a
+// first-sighting `detected` date can contradict the this-month `Detected:` bullet).
+test('suppresses a timeline whose only stage is the initial detected (#87)', () => {
+  eq(buildTimelineDetails([{ stage: 'detected', at: '2026-05-13', severity: 'high' }]), '')
+})
+test('suppresses when no non-detected stage exists, even across multiple entries (#87)', () => {
+  // a malformed stageless entry does not count as progression
+  eq(buildTimelineDetails([{ stage: 'detected', at: '2026-05-13' }, { at: '2026-05-14' }]), '')
+})
+test('still renders once a non-detected stage appears — real progression (#87)', () => {
+  const out = buildTimelineDetails([
+    { stage: 'detected', at: '2026-05-13', severity: 'high' },
+    { stage: 'fix_released', at: '2026-05-20', severity: 'high', fixedVersion: '0.8.0' },
+  ])
+  assert.ok(out.includes('<details'), `renders: ${out}`)
+  assert.ok(out.includes('detected | 2026-05-13'), `keeps detected row: ${out}`)
+  assert.ok(out.includes('fix_released | 2026-05-20 | high | 0.8.0'), `progression row: ${out}`)
 })
 
 console.log('\nbuildTopFindings')
@@ -769,7 +840,11 @@ test('renders OSV finding with timeline expansion', () => {
     title: 'GHSA-1234 langchain SSRF', url: 'https://example.com/x',
     source: 'osv', severity: 'high', service: 'langchain',
     detectedAt: '2026-04-10T12:00:00Z',
-    timeline: [{ stage: 'detected', at: '2026-04-10T12:00:00Z', severity: 'high' }],
+    // needs a non-`detected` stage to render at all (#87 progression gate)
+    timeline: [
+      { stage: 'detected', at: '2026-04-10T12:00:00Z', severity: 'high' },
+      { stage: 'fix_released', at: '2026-04-14T12:00:00Z', severity: 'high', fixedVersion: '0.3.1' },
+    ],
   }])
   assert.ok(out.includes('### Top Findings'), `top heading: ${out}`)
   assert.ok(out.includes('1. [GHSA-1234 langchain SSRF](https://example.com/x)'), `link title: ${out}`)
@@ -781,7 +856,12 @@ test('omits timeline section for HN findings even if timeline field set (defensi
   const out = buildTopFindings([{
     title: 'HN post', url: 'https://news.ycombinator.com/item?id=1',
     source: 'hackernews', severity: 'medium', detectedAt: '2026-04-12',
-    timeline: [{ stage: 'detected', at: '2026-04-12' }], // shouldn't happen but be safe
+    // multi-stage so ONLY the HN source-gate can suppress it (not the #87 progression gate) —
+    // proves the source check, not an incidental single-detected suppression
+    timeline: [
+      { stage: 'detected', at: '2026-04-12' },
+      { stage: 'fix_released', at: '2026-04-15', fixedVersion: '2.0.0' },
+    ], // shouldn't happen but be safe
   }])
   assert.ok(!out.includes('<details'), `HN must never render timeline: ${out}`)
 })
@@ -1597,6 +1677,21 @@ test('excludes a SCORE_WITHHELD service (bedrock) from the rendered movers — t
   })
 })
 
+test('crossesScoreMethodCutover flags a window reaching before the #713 (June 2026) cutover', () => {
+  assert.equal(crossesScoreMethodCutover('2026-04'), true)  // June report window (Apr→Jun)
+  assert.equal(crossesScoreMethodCutover('2026-05'), true)  // July report window (May→Jul) still crosses
+  assert.equal(crossesScoreMethodCutover('2026-06'), false) // Aug report window (Jun→Aug) — all post-fix
+  assert.equal(crossesScoreMethodCutover('2026-07'), false)
+  assert.equal(crossesScoreMethodCutover(undefined), false) // defensive
+})
+test('the trend section carries the scoring-method transition caveat when the window predates June 2026', () => {
+  withTrendFixture(dir => {
+    const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
+    assert.ok(out.includes('Scoring-method transition'), `caveat present for an Apr→Jun window: ${out}`)
+    assert.ok(out.includes('assumed ~99.5% uptime'), 'caveat explains the invented-uptime change')
+    assert.ok(!out.includes('aiwatch#') && !out.includes('#713'), 'reader-facing prose carries no internal issue reference')
+  })
+})
 test('returns empty when fewer than 2 months of data exist', () => {
   const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-empty-'))
   try {
@@ -1904,6 +1999,33 @@ test('renders one weakest-component row per qualifying service, weakest-first', 
   assert.ok(out.includes('| ChatGPT | Conversations | 99.20% | 2 |'), 'weakest component + uptime + count')
   assert.ok(!out.includes('Groq'), 'all-healthy service skipped')
 })
+// aiwatch-reports#91 — a service the Score ranking excludes (withheld / stale-source / mid-month
+// add) must not appear in Component Reliability either: its per-component window is partial/frozen
+// and not comparable to the full-window rows (Character.AI, status page deactivated mid-June).
+test('excludes a stale-source service even if its weakest component would qualify (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    openai: { components: [{ id: 'l', name: 'Login', uptime: 99.66 }, { id: 'c', name: 'Chat', uptime: 99.98 }] },
+    characterai: { incidentSourceStale: true, components: [{ id: 'x', name: 'Character.AI', uptime: 98.46 }, { id: 'y', name: 'Y', uptime: 100 }] },
+  } }, { openai: { name: 'OpenAI API' }, characterai: { name: 'Character.AI' } }, '2026-06')
+  assert.ok(out.includes('OpenAI API'), `keeps ranked service: ${out}`)
+  assert.ok(!out.includes('Character.AI'), `drops stale-source service: ${out}`)
+})
+test('excludes a Score-withheld service (bedrock/azure id-set) from the table (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    openai: { components: [{ id: 'l', name: 'Login', uptime: 99.66 }, { id: 'c', name: 'Chat', uptime: 99.98 }] },
+    bedrock: { components: [{ id: 'x', name: 'US-East', uptime: 97.0 }, { id: 'y', name: 'EU', uptime: 100 }] },
+  } }, { openai: { name: 'OpenAI API' }, bedrock: { name: 'Amazon Bedrock' } }, '2026-06')
+  assert.ok(out.includes('OpenAI API'), `keeps ranked service: ${out}`)
+  assert.ok(!out.includes('Bedrock'), `drops withheld service: ${out}`)
+})
+test('the intro calls the table a breakdown, not a ranking, and disclaims Score membership (#91)', () => {
+  const out = buildComponentReliabilitySection({ services: {
+    deepgram: { components: [{ id: 'a', name: 'A', uptime: 65.81 }, { id: 'b', name: 'B', uptime: 100 }] },
+  } }, { deepgram: { name: 'Deepgram' } }, '2026-06')
+  assert.ok(!/only monitor/.test(out), `no unverifiable "only monitor" claim: ${out}`)
+  assert.ok(!/uptime ranking/.test(out), `not called a ranking: ${out}`)
+  assert.ok(/is not a Score input/.test(out), `discloses it is not scored: ${out}`)
+})
 test('skips a single-component service (needs >=2)', () => {
   eq(buildComponentReliabilitySection({ services: {
     solo: { components: [{ id: 'a', name: 'API', uptime: 98 }] },
@@ -1983,7 +2105,7 @@ test('officialUptimeFor withholds the value', () => {
   eq(officialUptimeFor(CONTRADICTORY), null)
 })
 test('uptimeSourceLabel does not claim "Official"', () => {
-  eq(uptimeSourceLabel(CONTRADICTORY), 'No official uptime')
+  eq(uptimeSourceLabel(CONTRADICTORY), 'No uptime')
 })
 test('buildWhy does not quote the withheld figure, and claims nothing about the provider', () => {
   // The archive DID carry a figure; we withheld it because it contradicted the Score. Saying
@@ -2168,7 +2290,7 @@ const RETIRED_CLAIMS = [
   [/still has a probe \(Gemini, xAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
   [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
-  [/Partial \(Nd\)/,                     'uptimeSourceLabel emits only Official / No official uptime; #45 excludes short-window services instead'],
+  [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],
 ]
 
 /**
@@ -2190,6 +2312,25 @@ function archiveExercisingEverySection(base) {
 test('no retired false claim survives a full report render', () => {
   const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
   for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
+})
+
+// #1006 — guards the replaceTableBody('30-Day Uptime') anchor against heading drift. The section was
+// renamed from "Official Uptime" to "30-Day Uptime"; when the anchor lagged, replaceTableBody found no
+// heading and silently left the template's empty placeholder — a permanently blank uptime table, green.
+// REAL_ARCHIVE carries no officialUptime, so give every service one and assert a real % row lands
+// INSIDE the section (and the placeholder is gone).
+test('the 30-Day Uptime table renders real rows into its section (anchor guard)', () => {
+  const archive = JSON.parse(JSON.stringify(REAL_ARCHIVE))
+  for (const id of Object.keys(archive.services)) {
+    archive.services[id] = { ...archive.services[id], officialUptime: 99.42, score: 90, scoreConfidence: 'high' }
+  }
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archive, {})
+  const start = out.indexOf('## 30-Day Uptime')
+  assert.ok(start !== -1, 'the 30-Day Uptime heading must exist')
+  const rest = out.indexOf('\n## ', start + 1)
+  const section = out.slice(start, rest === -1 ? undefined : rest)
+  assert.match(section, /<tr><td>[^<]+<\/td><td>99\.42%<\/td><\/tr>/, 'a real uptime row must be injected, not the empty placeholder')
+  assert.ok(!section.includes('<tr><td></td><td></td></tr>'), 'the empty placeholder row must be replaced')
 })
 
 test('the ratchet actually exercises every conditional section', () => {
@@ -2293,16 +2434,18 @@ test('every service lands in exactly one group — ranked, withheld, stale, or r
 })
 
 
-test('uptimeSourceLabel emits exactly two labels — there is no Partial', () => {
-  // The template taught a third label the generator cannot produce. Its one historical use was
-  // hand-typed as "Partial (9-day)" (not the "(Nd)" the legend showed), and reports#45 now excludes
-  // a short-window service from the ranking entirely rather than labelling its row.
+test('uptimeSourceLabel emits only Official / Platform / No uptime — never Partial', () => {
+  // #1006 added a third label (Platform, for a BetterStack-sourced figure). The label the generator
+  // still cannot produce is "Partial": its one historical use was hand-typed as "Partial (9-day)"
+  // (not the "(Nd)" the legend showed), and reports#45 now excludes a short-window service from the
+  // ranking entirely rather than labelling its row.
   const labels = new Set([
     uptimeSourceLabel({ id: 'groq', data: { officialUptime: 100, scoreConfidence: 'high' } }, 'groq'),
+    uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.7, uptimeSource: 'platform_avg' } }, 'together'),
     uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null } }, 'openrouter'),
     uptimeSourceLabel({ id: 'bedrock', data: {} }, 'bedrock'),
   ])
-  assert.deepStrictEqual([...labels].sort(), ['No official uptime', 'Official'])
+  assert.deepStrictEqual([...labels].sort(), ['No uptime', 'Official', 'Platform'])
   for (const l of labels) assert.ok(!/Partial/.test(l), `unexpected label: ${l}`)
 })
 

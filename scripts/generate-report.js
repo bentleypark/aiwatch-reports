@@ -43,9 +43,12 @@ const OUT_DIR_ROOT = path.join(__dirname, '..')
 // it leaked a stray "100.00%" row.)
 //
 // It is NOT the uptime-source taxonomy any more (aiwatch#951). A hand-maintained list drifted in
-// both directions: Mistral and Perplexity publish real official uptime yet were labelled "Estimate"
-// and dropped from the Official Uptime table, while OpenRouter and Stability AI publish none yet
-// were labelled "Official · 100.00%" beside a Score that had been rescaled without any uptime.
+// both directions: Mistral and Perplexity publish records AIWatch can read, yet were labelled
+// "Estimate" and dropped from the table, while services that genuinely had no readable records were
+// labelled "Official · 100.00%" beside a Score rescaled without any uptime. (aiwatch#1006 later made
+// AIWatch compute uptime from the raw records of six status-page platforms — Atlassian, incident.io,
+// Instatus, Better Stack, Flashduty, OnlineOrNot — so Stability AI and OpenRouter, once "no uptime",
+// now carry a real computed figure.)
 // Modern archives answer the question directly — `officialUptime` is non-null exactly when the Score
 // consumed one — so the label and the table now read the data. "Estimate" is gone as a concept:
 // aiwatch#713 removed the invented uptime it named.
@@ -62,9 +65,22 @@ const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 // (SCORE_WITHHELD / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
 // as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
 
-// Services without direct probe coverage (excluded from API Response Time ranking).
-// Archive.avgLatencyMs will be null for these — tracked for explicit messaging.
-const NO_PROBE = new Set(['bedrock', 'azureopenai', 'pinecone'])
+// Services with no direct probe (excluded from the API Response Time ranking); archive.avgLatencyMs
+// is null for these. Pinecone is NOT here: the Worker DOES probe it (control-plane RTT) and the live
+// dashboard ranks it, so dropping it from the report's p75 table alone was a stale inconsistency with
+// its non-null archive.avgLatencyMs and the dashboard's latency ranking.
+const NO_PROBE = new Set(['bedrock', 'azureopenai'])
+
+// aiwatch#713 (merged 2026-06-19) stopped inventing a ~99.5% uptime for services with no official
+// uptime; the 2026-06 archive is the first scored the new (measured-only) way. A 3-month trend window
+// whose earliest month is before this splices two scoring methods, so a no-official-uptime service's
+// Score delta across it partly reflects the fix, not reliability. buildTrendSection appends a one-time
+// caveat when this is true; it auto-disappears once the whole window is post-cutover (from the
+// 2026-08 report onward). The month is a fixed historical fact, so it is hardcoded.
+const SCORE_METHOD_CUTOVER_MONTH = '2026-06'
+function crossesScoreMethodCutover(firstMonth) {
+  return typeof firstMonth === 'string' && firstMonth < SCORE_METHOD_CUTOVER_MONTH
+}
 
 // ── CLI parsing ──────────────────────────────────────────────────────
 function parseCliMonth(argv) {
@@ -251,9 +267,21 @@ function confidence(svc) {
 // mid-month addition, but reports#45 EXCLUDES such a service from the ranking outright, so the
 // label named a row that can no longer exist — and its one real use read "Partial (9-day)",
 // not the "(Nd)" the legend taught. Removed from the template with the rest of the drifted prose.
+// aiwatch#1006 — three states, read from the DATA:
+//   'Official' — AIWatch computed the 30-day figure from the incident/outage records the provider
+//                publishes on its own status page.
+//   'Platform' — the same computation, but the records come from the status-page platform's own
+//                monitors (Better Stack). A measurement, not the provider declaring an incident —
+//                which is why it keeps a separate label even though the window and weights are identical.
+//   'No uptime' — the status page publishes no records to compute from; the Score omits the uptime
+//                component and rescales (aiwatch#713).
+// `uptimeSource` is archived from aiwatch#1006 onward. An older archive has the figure but not the
+// provenance, so it falls back to 'Official' — which is what those archives meant, since 'platform_avg'
+// figures were the BetterStack averages the pre-#1006 code also labelled official.
 function uptimeSourceLabel(svc, id = svc?.id) {
   const official = officialUptimeFor(svc, id)
-  return official === null || official === undefined ? 'No official uptime' : 'Official'
+  if (official === null || official === undefined) return 'No uptime'
+  return svc?.data?.uptimeSource === 'platform_avg' ? 'Platform' : 'Official'
 }
 
 // Ranking-exclusion note (#29). SCORE_WITHHELD services publish no official uptime and have no
@@ -501,9 +529,9 @@ function emitUptimeWarnings(messages, env = process.env) {
   return messages.length
 }
 
-// #586 — resolve the value the "Official Uptime" table should display for a service: the
-// STATUS-PAGE figure (`officialUptime`; the window varies by page), NOT the daily-counter `uptime` that feeds the
-// Score. Returns null when the service has no comparable published metric (→ omitted from the table).
+// #586 — resolve the value the 30-Day Uptime table should display for a service: the computed
+// `officialUptime` figure (#1006 — AIWatch's own trailing-30-day computation), NOT the daily-counter
+// `uptime` that feeds the Score. Returns null when the service has no comparable published metric (→ omitted).
 // Also the single source of truth for `uptimeSourceLabel` and `buildWhy`'s zero-incident wording,
 // so those three can never disagree about whether a service publishes an official uptime.
 //   • Modern archives (≥2026-06, post-aiwatch#951) carry `officialUptime` explicitly and correctly:
@@ -629,6 +657,12 @@ function buildByServiceTable(byService, limit = 5) {
 
 function buildTimelineDetails(timeline) {
   if (!Array.isArray(timeline) || timeline.length === 0) return ''
+  // #291 timelines exist to show PROGRESSION (detected → fix_released → severity_changed → …).
+  // A timeline whose only stage is the initial `detected` carries no progression: it merely
+  // duplicates the `Detected:` bullet above it, or — when the alert's first-ever sighting predates
+  // this month's collection window — contradicts it with an earlier date (aiwatch-reports#87).
+  // Render only when a non-`detected` stage exists.
+  if (!timeline.some(e => e && e.stage && e.stage !== 'detected')) return ''
   const rows = timeline.map(e =>
     `| ${e.stage ?? '—'} | ${fmtIso(e.at)} | ${e.severity ?? '—'} | ${e.fixedVersion ?? '—'} |`,
   )
@@ -810,11 +844,19 @@ function buildDetectionSection(archive, meta) {
 // AIWatch differentiator: no competitor publishes a monthly per-component uptime ranking. EN-only,
 // like the other data tables. Returns '' (section omitted) when nothing qualifies. Pure + tested.
 const COMPONENT_WEAK_THRESHOLD = 99.9
-function buildComponentReliabilitySection(archive, meta) {
+function buildComponentReliabilitySection(archive, meta, month) {
   const services = archive && archive.services
   if (!services || typeof services !== 'object') return ''
+  // Exclude the services the Score ranking itself excludes — withheld (no uptime + no probe),
+  // stale-source (frozen/dead status page), and mid-month adds — mirroring buildTrendSection. A
+  // service the report says it cannot rank should not appear in a reliability breakdown either;
+  // in particular a service whose status page went dark contributes only a frozen partial window
+  // (e.g. Character.AI, deactivated mid-June — a 6-day window, not comparable to the full-window
+  // rows), which is exactly the mis-read the caption used to warn against (aiwatch-reports#91).
+  const exclude = charts.buildMoverExclude(services, month)
   const rows = []
   for (const [id, s] of Object.entries(services)) {
+    if (exclude.has(id)) continue
     const comps = s && Array.isArray(s.components) ? s.components : null
     if (!comps || comps.length < 2) continue // curation already ≥2; defensive
     const weakest = comps[0] // least-reliable-first
@@ -832,7 +874,7 @@ function buildComponentReliabilitySection(archive, meta) {
     // The window is NOT the month: per-component counting is younger than the report, and a service
     // whose status page goes dark simply stops contributing days (aiwatch-reports#73). Say "the days
     // AIWatch could read its status page", which is what the ratio actually measures.
-    "> AIWatch is the only monitor publishing a **per-component uptime ranking**. This surfaces each multi-surface service's weakest component over the days AIWatch could read its status page — the surface most likely to be your bottleneck, which a single service-level uptime number hides. It is a different measurement from the Official Uptime table; see [About This Report → Component Reliability](#about-this-report).",
+    "> AIWatch surfaces a **per-component uptime breakdown** — each multi-surface service's weakest component over the days AIWatch could read its status page, the surface most likely to be your bottleneck that a single service-level uptime number hides. It is a different measurement from the 30-Day Uptime table and **is not a Score input**; see [About This Report → Component Reliability](#about-this-report).",
     '',
     '| Service | Weakest Component | Uptime | Components |',
     '|---|---|---|---|',
@@ -883,6 +925,12 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
     parts.push('')
   }
 
+  if (crossesScoreMethodCutover(entries[0].month)) {
+    parts.push(
+      `> **Scoring-method transition**: Score points before June 2026 predate a methodology change that stopped inventing an uptime figure for services with no official uptime — those months scored such services on an assumed ~99.5% uptime, later dropped. So a Score delta that includes any of those months for a no-official-uptime service (e.g. Deepgram) partly reflects that correction, not a reliability change; the MTTR and total-downtime deltas, measured directly, are unaffected.`,
+      '',
+    )
+  }
   if (trend.partialMonths.size) {
     parts.push(
       `> **Partial month**: ${[...trend.partialMonths].join(', ')} had fewer than a full month of monitoring — its point is indicative, not a full-month comparison. MTTR / downtime show "—" for any month a service recorded zero incidents.`,
@@ -1066,6 +1114,11 @@ function fillTemplate(template, month, archive, meta) {
   out = out.replace(/\[LAST_DAY\]/g, String(lastDay))
   out = out.replace(/\[PUBLISH_MONTH\]/g, publishMonth)
   out = out.replace(/\[NEXT_MONTH\]/g, nxt.name)
+  // aiwatch-reports#97 — the monitored-service count is derived from the archive's service set, not
+  // hardcoded in the template, so it never drifts as services are added. For a current-month run this
+  // is the live roster (verified 2026-04/-05 match exactly); a back-generated old month reflects that
+  // month's archived set. The category breakdown beside it is still a manual literal — see #98.
+  out = out.replace(/\[SERVICE_COUNT\]/g, String(services.length))
 
   // aiwatch-reports#74 — resolve `[SCORE_ANCHOR]` from the heading that actually shipped, rather
   // than hand-slugging it in the template. The old template asked a human to substitute a lowercase
@@ -1090,9 +1143,9 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/\n*<!-- SCORE_RANKING_NOTE -->\n*/, '\n\n')
   }
   out = replaceTableBody(out, 'API Response Time', latencyTable)
-  // Incident Summary + Official Uptime use HTML <tbody>
+  // Incident Summary + 30-Day Uptime use HTML <tbody>
   out = replaceTableBody(out, 'Incident Summary', incidentRows)
-  out = replaceTableBody(out, 'Official Uptime', uptimeRows)
+  out = replaceTableBody(out, '30-Day Uptime', uptimeRows)
   // aiwatch#951 — the caption naming who is missing from that table, rendered from the same gate.
   const uptimeExclusionNote = buildUptimeExclusionNote(services, meta)
   if (uptimeExclusionNote) {
@@ -1146,7 +1199,7 @@ function fillTemplate(template, month, archive, meta) {
   // Component Reliability section (aiwatch#605 Phase 3b) — same marker pattern. The section
   // emits its own trailing `---`; when omitted, strip the marker so the preceding Official
   // Uptime `---` stays the single rule before API Response Time.
-  const componentSection = buildComponentReliabilitySection(archive, meta)
+  const componentSection = buildComponentReliabilitySection(archive, meta, month)
   if (componentSection) {
     out = out.replace(/<!-- COMPONENT_RELIABILITY_SECTION -->/, componentSection)
   } else {
@@ -1801,6 +1854,7 @@ module.exports = {
   buildDetectionSection,
   buildComponentReliabilitySection,
   buildTrendSection,
+  crossesScoreMethodCutover,
   fmtLeadMin,
   fmtIso,
   monthName,
