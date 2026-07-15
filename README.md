@@ -22,7 +22,7 @@ Each monthly report includes:
 - **AIWatch Score Rankings** — Composite reliability score (uptime + incidents + recovery time)
 - **3-Month Trend** — Score direction over the trailing 3 months (slope chart), plus **Notable Movers**: the services whose Score, recovery time (MTTR), or total downtime changed most, so a flat Score can't hide a recovery-time regression. Auto-rendered once ≥2 months of archive exist; omitted otherwise. (Uptime is intentionally not trended — see *Methodology*.)
 - **Incident Summary** — Total downtime and incident counts per service
-- **Official Uptime** — Provider-reported uptime figures
+- **30-Day Uptime** — computed by AIWatch from each provider's published incident/outage records, over one window and one formula for every service
 - **Notable Incidents** — Top 5 incidents with root cause and impact
 - **Observations** — Developer recommendations based on the data
 

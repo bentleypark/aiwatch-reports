@@ -152,13 +152,24 @@ test('Medium when uptime null', () => {
   eq(confidence({ data: { uptime: null, incidents: 3 } }), 'Medium')
 })
 
-console.log('\nuptimeSourceLabel (#29, rewritten for aiwatch#951)')
+console.log('\nuptimeSourceLabel (#29 → aiwatch#951 → aiwatch#1006: three states, read from the data)')
 test('Official when the archive carries a status-page figure', () => {
   eq(uptimeSourceLabel({ id: 'cohere', data: { officialUptime: 100 } }), 'Official')
 })
-test('No official uptime when the archive says the provider publishes none', () => {
-  eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
-  eq(uptimeSourceLabel({ id: 'stability', data: { officialUptime: null, uptime: 100 } }), 'No official uptime')
+test('No uptime when the archive carries no figure to show', () => {
+  eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
+  eq(uptimeSourceLabel({ id: 'gemini', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
+})
+// aiwatch#1006 — Better Stack pages are computed on the SAME 30-day window with the SAME weights, but
+// their records are the platform's own monitoring, not incidents the provider declared. Same number
+// shape, different evidence — so the label stays distinct and now comes from the archived provenance
+// rather than a hand-maintained id list (which is exactly what drifted in aiwatch#951).
+test('aiwatch#1006: Platform when the records come from the status-page platform monitors', () => {
+  eq(uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.81, uptimeSource: 'platform_avg' } }), 'Platform')
+  eq(uptimeSourceLabel({ id: 'luma', data: { officialUptime: 99.3, uptimeSource: 'platform_avg' } }), 'Platform')
+})
+test('aiwatch#1006: an archive written before the provenance field falls back to Official', () => {
+  eq(uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.73 } }), 'Official')
 })
 // The label used to come from a hand-maintained set, which had drifted in BOTH directions.
 test('aiwatch#951: Mistral and Perplexity publish real uptime — no longer mislabelled', () => {
@@ -166,11 +177,11 @@ test('aiwatch#951: Mistral and Perplexity publish real uptime — no longer misl
   eq(uptimeSourceLabel({ id: 'perplexity', data: { officialUptime: 100 } }), 'Official')
 })
 test('aiwatch#951: bedrock/azureopenai stay excluded even if a stale archive carries a value', () => {
-  eq(uptimeSourceLabel({ id: 'bedrock', data: { officialUptime: 100 } }), 'No official uptime')
-  eq(uptimeSourceLabel({ id: 'azureopenai', data: { officialUptime: 100 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'bedrock', data: { officialUptime: 100 } }), 'No uptime')
+  eq(uptimeSourceLabel({ id: 'azureopenai', data: { officialUptime: 100 } }), 'No uptime')
 })
 test('legacy archive (no officialUptime field) falls back to the maintained set', () => {
-  eq(uptimeSourceLabel({ id: 'perplexity', data: { uptime: 99.5 } }), 'No official uptime')
+  eq(uptimeSourceLabel({ id: 'perplexity', data: { uptime: 99.5 } }), 'No uptime')
   eq(uptimeSourceLabel({ id: 'cohere', data: { uptime: 100 } }), 'Official')
 })
 
@@ -360,7 +371,7 @@ test('header is "Uptime Source" (not "Confidence"); the column reads the archive
   assert.ok(!table.includes('Confidence'), 'Confidence column must be gone')
   assert.ok(!table.includes('Estimate'), 'the "Estimate" label went with the estimate itself (aiwatch#713)')
   const openrouterRow = table.split('\n').find(r => r.includes('OpenRouter'))
-  assert.ok(/\| No official uptime \|/.test(openrouterRow), `must not claim Official: ${openrouterRow}`)
+  assert.ok(/\| No uptime \|/.test(openrouterRow), `must not claim Official: ${openrouterRow}`)
   assert.ok(!/100\.00% uptime/.test(openrouterRow), `must not quote the measured uptime: ${openrouterRow}`)
   const perplexityRow = table.split('\n').find(r => r.includes('Perplexity'))
   assert.ok(/\| Official \|/.test(perplexityRow), `publishes real uptime → Official: ${perplexityRow}`)
@@ -2075,7 +2086,7 @@ test('officialUptimeFor withholds the value', () => {
   eq(officialUptimeFor(CONTRADICTORY), null)
 })
 test('uptimeSourceLabel does not claim "Official"', () => {
-  eq(uptimeSourceLabel(CONTRADICTORY), 'No official uptime')
+  eq(uptimeSourceLabel(CONTRADICTORY), 'No uptime')
 })
 test('buildWhy does not quote the withheld figure, and claims nothing about the provider', () => {
   // The archive DID carry a figure; we withheld it because it contradicted the Score. Saying
@@ -2260,7 +2271,7 @@ const RETIRED_CLAIMS = [
   [/still has a probe \(Gemini, xAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
   [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
-  [/Partial \(Nd\)/,                     'uptimeSourceLabel emits only Official / No official uptime; #45 excludes short-window services instead'],
+  [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],
 ]
 
 /**
@@ -2282,6 +2293,25 @@ function archiveExercisingEverySection(base) {
 test('no retired false claim survives a full report render', () => {
   const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
   for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
+})
+
+// #1006 — guards the replaceTableBody('30-Day Uptime') anchor against heading drift. The section was
+// renamed from "Official Uptime" to "30-Day Uptime"; when the anchor lagged, replaceTableBody found no
+// heading and silently left the template's empty placeholder — a permanently blank uptime table, green.
+// REAL_ARCHIVE carries no officialUptime, so give every service one and assert a real % row lands
+// INSIDE the section (and the placeholder is gone).
+test('the 30-Day Uptime table renders real rows into its section (anchor guard)', () => {
+  const archive = JSON.parse(JSON.stringify(REAL_ARCHIVE))
+  for (const id of Object.keys(archive.services)) {
+    archive.services[id] = { ...archive.services[id], officialUptime: 99.42, score: 90, scoreConfidence: 'high' }
+  }
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archive, {})
+  const start = out.indexOf('## 30-Day Uptime')
+  assert.ok(start !== -1, 'the 30-Day Uptime heading must exist')
+  const rest = out.indexOf('\n## ', start + 1)
+  const section = out.slice(start, rest === -1 ? undefined : rest)
+  assert.match(section, /<tr><td>[^<]+<\/td><td>99\.42%<\/td><\/tr>/, 'a real uptime row must be injected, not the empty placeholder')
+  assert.ok(!section.includes('<tr><td></td><td></td></tr>'), 'the empty placeholder row must be replaced')
 })
 
 test('the ratchet actually exercises every conditional section', () => {
@@ -2385,16 +2415,18 @@ test('every service lands in exactly one group — ranked, withheld, stale, or r
 })
 
 
-test('uptimeSourceLabel emits exactly two labels — there is no Partial', () => {
-  // The template taught a third label the generator cannot produce. Its one historical use was
-  // hand-typed as "Partial (9-day)" (not the "(Nd)" the legend showed), and reports#45 now excludes
-  // a short-window service from the ranking entirely rather than labelling its row.
+test('uptimeSourceLabel emits only Official / Platform / No uptime — never Partial', () => {
+  // #1006 added a third label (Platform, for a BetterStack-sourced figure). The label the generator
+  // still cannot produce is "Partial": its one historical use was hand-typed as "Partial (9-day)"
+  // (not the "(Nd)" the legend showed), and reports#45 now excludes a short-window service from the
+  // ranking entirely rather than labelling its row.
   const labels = new Set([
     uptimeSourceLabel({ id: 'groq', data: { officialUptime: 100, scoreConfidence: 'high' } }, 'groq'),
+    uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.7, uptimeSource: 'platform_avg' } }, 'together'),
     uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null } }, 'openrouter'),
     uptimeSourceLabel({ id: 'bedrock', data: {} }, 'bedrock'),
   ])
-  assert.deepStrictEqual([...labels].sort(), ['No official uptime', 'Official'])
+  assert.deepStrictEqual([...labels].sort(), ['No uptime', 'Official', 'Platform'])
   for (const l of labels) assert.ok(!/Partial/.test(l), `unexpected label: ${l}`)
 })
 
