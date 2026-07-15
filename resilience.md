@@ -20,7 +20,7 @@ published: true
         AI apps; only categories that actually have a pattern appear as headings). A pattern attributed to a
         NAMED service gets an h3 under its category heading (Anthropic, Gemini, Deepgram) — keep that h3 even
         when it's the only service in the category, so its anchor stays stable for report deep-links; a
-        category-level pattern not tied to one named service sits directly under the h2 (Coding agents); a
+        category-level pattern not tied to one named service sits directly under the h2 (no h3); a
         service-AGNOSTIC pattern lives under "Cross-cutting patterns" at the bottom, stated ONCE — never
         duplicated into each service. Keep the category headings + the TOC below in sync; ~<=4 bullets per
         service subsection — if one outgrows that, the pattern is too granular, consolidate.
@@ -32,7 +32,7 @@ Structural guidance for building reliably on the services AIWatch monitors. Thes
 
 <small>_Last reviewed: 2026-07_</small>
 
-**Jump to:** [LLM APIs](#llm-apis) · [Voice / transcription](#voice--transcription) · [Coding agents](#coding-agents) · [Cross-cutting patterns](#cross-cutting-patterns)
+**Jump to:** [LLM APIs](#llm-apis) · [Voice / transcription](#voice--transcription) · [Cross-cutting patterns](#cross-cutting-patterns)
 
 ---
 
@@ -56,10 +56,6 @@ Structural guidance for building reliably on the services AIWatch monitors. Thes
 - **The Voice Agent carries an upstream-LLM dependency.** The longest Deepgram incidents trace back to that surface, so a single-LLM Voice Agent setup takes the full upstream blast radius — **configure multiple LLM providers for failover**.
 - **Isolate the Voice Agent from your core STT/TTS** so an upstream-LLM incident can't take down basic transcription.
 - **Real-time transcription is a hot path** — route it behind a **degradation-aware fallback** to a second provider. A latency degradation alone (not only a hard outage) stalls real-time audio.
-
-## Coding agents
-
-- **Failure modes vary by agent** — some flap (frequent short incidents), others take a rare long one. Plan for the **long** case on any agent on a critical path: a manually-swapped backup is too slow across a multi-day outage. **Drive failover from a health check** so an extended outage degrades to a fallback automatically, rather than relying on someone noticing and switching.
 
 ---
 
