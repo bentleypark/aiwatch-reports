@@ -71,12 +71,17 @@ const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 // its non-null archive.avgLatencyMs and the dashboard's latency ranking.
 const NO_PROBE = new Set(['bedrock', 'azureopenai'])
 
-// aiwatch#713 (merged 2026-06-19) stopped inventing a ~99.5% uptime for services with no official
-// uptime; the 2026-06 archive is the first scored the new (measured-only) way. A 3-month trend window
-// whose earliest month is before this splices two scoring methods, so a no-official-uptime service's
-// Score delta across it partly reflects the fix, not reliability. buildTrendSection appends a one-time
-// caveat when this is true; it auto-disappears once the whole window is post-cutover (from the
-// 2026-08 report onward). The month is a fixed historical fact, so it is hardcoded.
+// TWO scoring changes land on the 2026-06 boundary, so a trend window whose earliest month is before
+// it splices both (#69):
+//   1. aiwatch#713 stopped inventing a ~99.5% uptime for services with no official uptime. Affects
+//      only those services (e.g. Deepgram).
+//   2. aiwatch#993 switched the archived Score from a build-day rolling-30d SNAPSHOT (`score`) to a
+//      month-WINDOW computation (`monthlyScore`) — see resolveMonthlyScore in generate-charts.js.
+//      Changes the BASIS for every service; how far the two figures diverge varies per service.
+// The cross-boundary gap itself is unmeasurable — pre-2026-06 archives carry no `monthlyScore` and
+// cannot be back-filled — so the caveat sizes it from the 2026-06 archive, the one month carrying
+// BOTH values. That is a proxy, not a measurement of the spliced delta. MTTR / total-downtime come
+// from the incident feed; that basis never changed, so their deltas stay clean.
 const SCORE_METHOD_CUTOVER_MONTH = '2026-06'
 function crossesScoreMethodCutover(firstMonth) {
   return typeof firstMonth === 'string' && firstMonth < SCORE_METHOD_CUTOVER_MONTH
@@ -927,7 +932,7 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
 
   if (crossesScoreMethodCutover(entries[0].month)) {
     parts.push(
-      `> **Scoring-method transition**: Score points before June 2026 predate a methodology change that stopped inventing an uptime figure for services with no official uptime — those months scored such services on an assumed ~99.5% uptime, later dropped. So a Score delta that includes any of those months for a no-official-uptime service (e.g. Deepgram) partly reflects that correction, not a reliability change; the MTTR and total-downtime deltas, measured directly, are unaffected.`,
+      `> **Scoring-method transition**: Score points before June 2026 were produced two different ways, and both changed at that boundary — so **for every service**, a Score delta spanning it compares two different measurements rather than two months of the same one. First, the earlier points are a snapshot of a rolling 30-day window taken on the day the report was built, whereas June onward scores the report month itself. Where both figures exist for the same month, they agree exactly for about a quarter of services and sit within two points for over half — but reach ten points apart at the extreme. Second, the earlier points predate a change that stopped inventing an uptime figure for services with no official uptime, which had scored those services (e.g. Deepgram) on an assumed ~99.5% uptime, later dropped. Read a Score delta across this boundary as directional, not exact. The MTTR and total-downtime deltas are measured from the incident record throughout and are unaffected.`,
       '',
     )
   }

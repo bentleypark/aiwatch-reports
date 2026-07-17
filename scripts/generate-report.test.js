@@ -1677,7 +1677,7 @@ test('excludes a SCORE_WITHHELD service (bedrock) from the rendered movers — t
   })
 })
 
-test('crossesScoreMethodCutover flags a window reaching before the #713 (June 2026) cutover', () => {
+test('crossesScoreMethodCutover flags a window reaching before the June 2026 cutover (#713 + #993)', () => {
   assert.equal(crossesScoreMethodCutover('2026-04'), true)  // June report window (Apr→Jun)
   assert.equal(crossesScoreMethodCutover('2026-05'), true)  // July report window (May→Jul) still crosses
   assert.equal(crossesScoreMethodCutover('2026-06'), false) // Aug report window (Jun→Aug) — all post-fix
@@ -1688,9 +1688,74 @@ test('the trend section carries the scoring-method transition caveat when the wi
   withTrendFixture(dir => {
     const out = buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir)
     assert.ok(out.includes('Scoring-method transition'), `caveat present for an Apr→Jun window: ${out}`)
-    assert.ok(out.includes('assumed ~99.5% uptime'), 'caveat explains the invented-uptime change')
-    assert.ok(!out.includes('aiwatch#') && !out.includes('#713'), 'reader-facing prose carries no internal issue reference')
+    assert.ok(out.includes('assumed ~99.5% uptime'), 'caveat explains the invented-uptime change (aiwatch#713)')
+    // #69 — the caveat used to describe ONLY the invented-uptime change and scope it to "a
+    // no-official-uptime service (e.g. Deepgram)", telling the reader every OTHER service's delta was
+    // like-for-like. It isn't: aiwatch#993 also switched the archived Score from a build-day snapshot
+    // to a month-window computation at the same boundary, changing the basis for EVERY service. Both
+    // assertions below fail against that old text. Matched loosely (the bug is the SCOPE, not the
+    // wording) — the old narrow scoping is pinned by shape in the #75 RETIRED_CLAIMS ratchet.
+    assert.match(out, /snapshot[\s\S]{0,80}rolling 30-day|rolling 30-day[\s\S]{0,80}snapshot/, 'caveat explains the snapshot→month-window switch (aiwatch#993)')
+    assert.ok(out.includes('for every service'), 'caveat scopes the warning fleet-wide, not to no-official-uptime services alone')
+    assert.ok(!/#\d+/.test(out) && !out.includes('aiwatch#'), 'reader-facing prose carries no internal issue reference')
   })
+})
+// #69 — the caveat quotes a distribution. 2026-06 is the ONLY archive carrying both `score` (build-day
+// snapshot) and `monthlyScore` (month window), so it is the sole witness for those figures. The archive
+// is frozen, so it cannot drift on its own; the realistic way these numbers go wrong is a PROSE edit.
+// So each claim is asserted twice — the archive still supports the figure, AND the emitted caveat still
+// states it. Asserting only the first would be the archive agreeing with itself: figures falsified in
+// the template would pass. Both halves must name the same phrase for the loop to close.
+test('the scoring-method caveat distribution matches the 2026-06 archive it is derived from', () => {
+  const arch = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-06.json'), 'utf-8'))
+  const gaps = Object.values(arch.services)
+    .filter(s => Number.isInteger(s.score) && Number.isInteger(s.monthlyScore))
+    .map(s => Math.abs(s.monthlyScore - s.score))
+  assert.ok(gaps.length >= 30, `enough services carry both figures to characterize: ${gaps.length}`)
+  const share = p => gaps.filter(p).length / gaps.length
+  const zero = share(g => g === 0)
+
+  const out = withTrendFixture(dir => buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir))
+  assert.ok(out.includes('Scoring-method transition'), 'caveat present (guards a vacuous pass)')
+
+  // Each phrase carries its VERB, so the assertion binds the claim's polarity and not just its
+  // number — "differ for about a quarter" would otherwise satisfy a bare 'about a quarter'.
+  const claims = [
+    ['agree exactly for about a quarter', zero >= 0.20 && zero <= 0.30, `zero-gap share is ${(zero * 100).toFixed(1)}%`],
+    ['sit within two points for over half', share(g => g <= 2) > 0.5, `≤2pt share is ${(share(g => g <= 2) * 100).toFixed(1)}%`],
+    ['reach ten points apart', Math.max(...gaps) === 10, `max gap is ${Math.max(...gaps)}`],
+  ]
+  for (const [phrase, archiveSupports, detail] of claims) {
+    assert.ok(archiveSupports, `2026-06 archive supports "${phrase}" — ${detail}`)
+    assert.ok(out.includes(phrase), `caveat prose still states "${phrase}" (${detail})`)
+  }
+})
+
+// #69 — the guard, not just crossesScoreMethodCutover's return value. The pure fn is pinned above,
+// but nothing asserted buildTrendSection ACTS on it: mutating the caveat's `if` to `true` left all
+// 249 tests green. A caveat that fails to retire would tell August readers their Jun→Aug window
+// crosses a boundary it does not — a false reader-facing claim, and one nobody notices, since the
+// failure is a paragraph that should have vanished.
+test('the trend section drops the caveat once the whole window is post-cutover', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-postcutover-'))
+  try {
+    for (const [m, days] of [['2026-06', 30], ['2026-07', 31]]) {
+      fsT.writeFileSync(pathT.join(dir, `${m}.json`), JSON.stringify({
+        period: m, daysCollected: days, services: {
+          codex: { score: 80, grade: 'Good', avgResolutionMin: 100, totalDowntimeMin: 600 },
+        },
+      }))
+    }
+    const archive = { period: '2026-08', daysCollected: 31, services: {
+      codex: { score: 70, grade: 'Fair', avgResolutionMin: 600, totalDowntimeMin: 5000 },
+    } }
+    const out = buildTrendSection('2026-08', archive, TREND_META, dir)
+    // Load-bearing: without it the assertion below passes vacuously on an empty section.
+    assert.ok(out.includes('## 3-Month Trend'), `section renders for a Jun→Aug window: ${out}`)
+    assert.ok(!out.includes('Scoring-method transition'), 'caveat self-retires for an all-post-cutover Jun→Aug window')
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
 })
 test('returns empty when fewer than 2 months of data exist', () => {
   const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-empty-'))
@@ -2291,6 +2356,7 @@ const RETIRED_CLAIMS = [
   [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
   [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],
+  [/Score delta[\s\S]{0,80}for a no-official-uptime service/, '#69 — scoped the Score-delta warning to no-official-uptime services; aiwatch#993 makes the basis shift fleet-wide'],
 ]
 
 /**
