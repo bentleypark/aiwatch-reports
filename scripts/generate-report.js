@@ -1532,7 +1532,7 @@ async function main() {
 //
 // The hand-authored narrative slots (Summary "High incident count" bullet, Key
 // Insight patterns, Notable Incidents) have no memory of prior months, so the same
-// framing recurs (Together AI led the "High incident count" bullet Apr/May/Jun) and
+// framing recurs (Together AI filled the "High incident count" bullet in both Apr and May) and
 // is only caught by a human at edit time. This injects a generate-time RECURRENCE
 // CHECK block — the same class of mechanical gate #415 was on the aiwatch side:
 // a passive "compare against last month" rule gets only probabilistic compliance.
@@ -1544,9 +1544,36 @@ async function main() {
 // delete-before-merge fence as AUTO-DRAFT, and degrade gracefully (a missing/corrupt
 // prior month is skipped, never thrown — same contract as the charts prior-month read).
 
-// Slots we track. Keyed the same on the current-subject side (computeCurrentSubjects)
-// and the prior-month side (extractNarrativeSubjects) so detectRecurrence can pair them.
-const RECURRENCE_SLOTS = ['summary', 'keyInsight', 'notable']
+// Slots we track. Most are keyed the same on the current-subject side (computeCurrentSubjects) and
+// the prior-month side (extractNarrativeSubjects) so detectRecurrence can pair them.
+//
+// #61 — `summaryWatchOut` is the exception: it is evaluated by the **#55 pre-publish lint only**, and
+// deliberately has NO current side at generate time. The two gates read different things. The lint
+// compares two AUTHORED reports, so it can see a Watch out bullet. The #54 block runs while the report
+// is still being drafted — the bullet does not exist yet — so computeCurrentSubjects predicts the
+// current subjects from archive DATA (incident counts → the "High incident count" bullet, slowest
+// recovery + movers → Key Insight). "Watch out" is editorial judgement with no data proxy: guessing it
+// would warn about a bullet the author has not written. So the slot stays empty on that side, and
+// detectRecurrence's `|| []` yields no generate-time flag by design, not by omission.
+// That still closes #61: the lint runs BEFORE publish, which is the gate the Anthropic 3-peat needed.
+// Wire a current side here only if a defensible data proxy appears — and update this note if so.
+//
+// It is a SEPARATE slot rather than folded into `summary` so a flag can name which bullet repeated
+// (the two carry different narrative weight: a recurring high-incident count is often a true
+// structural fact about a chatty status page, while a recurring "Watch out" is the editorial lede
+// going stale).
+//
+// Which Summary bullets are tracked, and why the rest are not. Census over all four published
+// reports (2026-03/04/05/06 — 03 is `published: true` and is a prior for the June window):
+//   • Watch out (4/4)                    → TRACKED. Editorial concern bullet; its repeat is staleness.
+//   • High incident count/noise (3/4)    → TRACKED already (#54, the proven Together AI repeat).
+//   • Most reliable (4/4)                → excluded: the ranking's top, so repeats are structural.
+//   • Riskiest this month (4/4)          → excluded: the ranking's bottom, same reason.
+//   • Biggest improvement (1/4, June)    → excluded FOR NOW. Not structural like the two above, so a
+//   • Best balance (1/4, March)            defensible future slot — but each has appeared once in four
+//     months, so tracking it would be designing for a case we have never seen, against #54's founding
+//     rule of targeting proven repeats and avoiding noise. Revisit if either becomes a fixture.
+const RECURRENCE_SLOTS = ['summary', 'summaryWatchOut', 'keyInsight', 'notable']
 const RECURRENCE_WINDOW = 3 // look back this many published months
 const RECURRENCE_MIN = 2    // flag a subject repeated in ≥ this many of the window
 
@@ -1556,6 +1583,7 @@ const RECURRENCE_CLOSE_MARKER = '<!-- END RECURRENCE CHECK -->'
 // Human label per slot for the injected block.
 const RECURRENCE_SLOT_LABEL = {
   summary: "the Summary 'High incident count' bullet",
+  summaryWatchOut: "the Summary 'Watch out' bullet",
   keyInsight: 'a Key Insight pattern',
   notable: 'Notable Incidents',
 }
@@ -1636,6 +1664,74 @@ function highIncidentBulletSubjects(summaryTxt, lexicon) {
   return out
 }
 
+// Subjects of the Summary "Watch out" bullet (#61). Sibling to highIncidentBulletSubjects: the other
+// EDITORIAL concern bullet, and the one whose repeats went unflagged — the Anthropic trio was named
+// in it three months running (2026-04, -05, -06; leading it in -06) and neither gate saw it. A human
+// reviewer caught it.
+//
+// Deliberately NOT the `Name (` stat-group scan highIncidentBulletSubjects uses. That bullet is
+// formulaic ("Mistral API (155 incidents…)"); "Watch out" is free prose, so the same scan pulls
+// any capitalized word before a paren — "…all landed Fair (63–65)" would yield a service called
+// "Fair", since canonicalizeToLexicon returns unknown names unchanged. Filtering to the report's
+// own lexicon (as keyInsightSubjects does) is precise regardless of sentence shape.
+//
+// Scoped to the ONE bullet, not the whole Summary (see RECURRENCE_SLOTS for which bullets and why).
+//
+// The Score-table lexicon ALONE is not enough here, and the miss is the exact case this exists for.
+// The bullet names its subject editorially, and a group noun need not spell its members out:
+//   2026-05: "…and the Anthropic stack — Claude API / claude.ai / Claude Code all landed Fair"
+//   2026-06: "the Anthropic stack stayed Fair (66–69)."          ← no member is named at all
+// A lexicon-only scan yields the trio for May and NOTHING for June, so the very recurrence that
+// motivated this issue still would not flag. Hence the group aliases below.
+//
+// A group EXPANDS to its members rather than standing as a subject of its own, because the spellings
+// are one narrative subject — the same reason #54 folds "Mistral" into "Mistral API". 2026-04 names
+// the trio outright while 2026-06 names only the group; as distinct subjects those two months never
+// match each other, so a repeat phrased differently month to month stays invisible however it is read.
+//
+// Expansion only has to fire when the group arrives WITHOUT its members, since a bullet that names
+// them is already covered by the lexicon filter. What THIS bullet actually shows across four months:
+//   2026-06  "the Anthropic stack stayed Fair (66–69)."                group only    → must expand
+//   2026-05  "the Anthropic stack — Claude API / claude.ai / …"        group+members → lexicon has them
+//   2026-04  "Anthropic per-model counts (Claude API 40 + claude.ai…"  members named → lexicon has them
+//            (its group noun is not alias-matched, and does not need to be — the members are right there)
+//   2026-03  Watch out names GitHub Copilot alone                      no group noun → nothing to expand
+//
+// So `stack` is the only member-less wording this slot has ever seen. `services` is a deliberate
+// HEDGE, and — stated plainly, because the distinction matters to anyone pruning this pattern — it is
+// NOT attested in this bullet: it appears in 2026-03's sibling High-incident bullet ("Anthropic
+// services — counts inflated…"). It is kept because the vocabulary for this one group demonstrably
+// drifts between bullets and months, and a wording the slot has not seen yet is exactly how the #61
+// false negative returns. That is a bet on observed drift, not evidence from the slot itself.
+//
+// It stays NARROW for the same reason it exists: bare "Anthropic" is ordinary prose in these reports
+// ("Anthropic posts a separate incident per model", 2026-06), so matching it would expand the trio
+// into bullets that merely mention the vendor — a permanent false positive.
+const SUBJECT_GROUP_ALIASES = [
+  { re: /\bAnthropic\s+(?:stack|services)\b/i, members: ['Claude API', 'claude.ai', 'Claude Code'] },
+]
+
+function watchOutBulletSubjects(summaryTxt, lexicon) {
+  const bulletRe = /^[-*]\s*\*\*watch out[^*]*\*\*:?\s*(.+)$/im
+  const m = summaryTxt.match(bulletRe)
+  if (!m) return []
+  const text = m[1]
+  const out = subjectsInText(text, lexicon)
+  const seen = new Set(out.map(normSubject))
+  for (const { re, members } of SUBJECT_GROUP_ALIASES) {
+    if (!re.test(text)) continue // no group noun → expand nothing (2026-03's bullet names Copilot alone)
+    for (const member of members) {
+      // Exact match against the document's OWN Score table — a member off that month's roster is
+      // dropped, never invented from the alias.
+      const canon = lexicon.find(l => normSubject(l) === normSubject(member))
+      if (!canon || seen.has(normSubject(canon))) continue
+      seen.add(normSubject(canon))
+      out.push(canon)
+    }
+  }
+  return out
+}
+
 // Key Insight subjects = services named in the section's BOLD-LEAD bullets (`- **…**: …`)
 // ONLY, not its prose — the bold-lead bullets ARE the recurring framings. Scanning the full
 // ~200-line section pulls every incidentally-mentioned service (noisy flags); requiring the
@@ -1674,6 +1770,7 @@ function extractNarrativeSubjects(indexMd) {
   const lexicon = serviceNameLexicon(md)
   return {
     summary: highIncidentBulletSubjects(sectionText(md, 'Summary'), lexicon),
+    summaryWatchOut: watchOutBulletSubjects(sectionText(md, 'Summary'), lexicon),
     keyInsight: keyInsightSubjects(sectionText(md, 'Key Insight'), lexicon),
     notable: affectedSubjects(sectionText(md, 'Notable Incidents'), lexicon),
   }
@@ -1890,4 +1987,6 @@ module.exports = {
   RECURRENCE_OPEN_MARKER,
   RECURRENCE_CLOSE_MARKER,
   RECURRENCE_SLOTS,
+  RECURRENCE_SLOT_LABEL,
+  watchOutBulletSubjects,
 }

@@ -21,6 +21,7 @@ const path = require('path')
 const {
   extractNarrativeSubjects,
   detectRecurrence,
+  RECURRENCE_SLOT_LABEL: SLOT_LABEL,
   SUMMARY_OPEN_MARKER,
   NOTABLE_OPEN_MARKER,
   OBSERVATIONS_OPEN_MARKER,
@@ -28,12 +29,10 @@ const {
 } = require('./generate-report')
 const { monthsBefore } = require('./generate-charts')
 
-// Human labels per slot for the warn annotation (mirrors #54's block wording).
-const SLOT_LABEL = {
-  summary: "the Summary 'High incident count' bullet",
-  keyInsight: 'a Key Insight pattern',
-  notable: 'Notable Incidents',
-}
+// Human labels per slot for the warn annotation — IMPORTED from generate-report (#61), not copied.
+// This was a hand-maintained mirror of #54's block wording; adding the 'Watch out' slot is exactly
+// the edit that would have let the two drift (the lint would print a bare slot key for any slot the
+// copy missed), so it now shares the one definition that the RECURRENCE block already renders from.
 
 // The exact fence markers we ship (kept for reference/coupling); the detector below is a
 // keyword check so a hand-edited/close marker or a future fence variant is still caught.
