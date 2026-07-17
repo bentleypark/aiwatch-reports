@@ -994,10 +994,11 @@ function buildLatencyTable(services, meta) {
   // descending comparator yields "faster = higher rank" and ties get "N=" suffix.
   const ranked = competitionRank(withLatency, s => -s.data.avgLatencyMs)
 
-  // Only p75 (avgLatencyMs) exists in the archive today. The p95 / Spikes / vs-Last-Month
-  // columns were dropped (#17) — they rendered as a literal "—" in every cell, every month.
-  // To re-enable a column: add its field to MonthlyServiceData in the aiwatch worker
-  // (worker/src/monthly-archive.ts), surface it via /api/report, then append it here:
+  // The p95 / Spikes / vs-Last-Month columns were dropped (#17) — they rendered a literal "—" in
+  // every cell, every month. `p95LatencyMs` / `latencySpikes` ARE in the archive now, so re-enabling
+  // either is just appending a column here (the old note claiming "only p75 exists in the archive"
+  // was stale). `p50LatencyMs` is deliberately NOT one of them — see buildResponsivenessSection:
+  // this table is the network-latency reference, not the Score's input:
   //   p95 (ms)      ← s.data.p95LatencyMs
   //   Spikes        ← s.data.latencySpikes
   //   vs Last Month ← delta from s.data.prevMonthLatencyMs (or read the prior archive)
@@ -1009,6 +1010,60 @@ function buildLatencyTable(services, meta) {
     `| ${r.rankLabel} | ${serviceName(r.item.id, meta)} | ${Math.round(r.item.data.avgLatencyMs)} |`,
   )
   return [...header, ...rows].join('\n')
+}
+
+// #76 / aiwatch#1002 — the Responsiveness component's two inputs, in their OWN section rather than as
+// columns on the p75 table above. Deliberate, and the report's own structure already argues for it:
+// the Uptime component (40%) has its own section, and the p75 table's caption explicitly promises it is
+// a network-latency reference and NOT the Score's input. Adding p50 there would falsify that caption
+// and the /methodology cards that mirror it, and would rebuild the score-vs-latency mixing the p75
+// framing exists to prevent.
+//
+// Shows the raw persisted p50 + cvCombined only, never the derived sub-scores. Those come from tuned
+// constants in the worker's score.ts (REFERENCE_MS / REFERENCE_CV / P50_FLOOR_MS, retuned per aiwatch#132)
+// which this repo cannot import — restating the formula here, in prose in another repo with nothing
+// pinning it, is a parallel copy that goes silently false the next time those constants move (the drift
+// aiwatch#1002 item 7 warns about). The caption links /methodology for the formula rather than repeating
+// its numbers, and the caption test asserts no `exp(` leaks back in.
+function buildResponsivenessSection(archive, meta, month) {
+  const services = archive && archive.services
+  if (!services || typeof services !== 'object') return ''
+  // Same exclusions as the ranking and the component breakdown: a service the report says it cannot
+  // rank has no business in a Score-component table (buildComponentReliabilitySection's reasoning).
+  const exclude = charts.buildMoverExclude(services, month)
+  const rows = []
+  for (const [id, s] of Object.entries(services)) {
+    if (exclude.has(id)) continue
+    // `== null`, NOT `!== null`: the key is ABSENT on archives written before aiwatch#1054, and
+    // `undefined !== null` is true — the p75 table's idiom would pass absence straight into Math.round
+    // as NaN. Also NOT filtered on avgLatencyMs: an inheriting service (claudecode→claude,
+    // codex→openai — aiwatch#883) is scored on its parent's probe, so it HAS a p50 while its own
+    // avgLatencyMs is null. Filtering on that would drop exactly the rows inheritance exists to serve.
+    if (!s || s.p50LatencyMs == null) continue
+    rows.push({ name: serviceName(id, meta), p50: s.p50LatencyMs, cv: s.cvCombined })
+  }
+  if (rows.length === 0) return '' // pre-aiwatch#1054 month → the whole section collapses, no empty table
+  rows.sort((a, b) => a.p50 - b.p50 || a.name.localeCompare(b.name))
+  return [
+    '## Responsiveness Inputs (Score Component)',
+    '',
+    "> **This table feeds the Score.** These are the two figures the **Responsiveness** component (20% of",
+    "> the AIWatch Score) was computed from this month: each service's median (p50) probe RTT, and the",
+    '> combined coefficient of variation (CV) of that RTT — day-to-day movement plus the p95/p50 spread.',
+    '> **Lower is better for both**: a fast service still scores poorly here if it is erratic.',
+    '>',
+    '> Do not confuse it with [API Response Time — Monthly p75](#api-response-time--monthly-p75) further',
+    '> down. That table probes the **same endpoints** but its p75 figure is **not part of the Score** —',
+    '> it is a network-speed reference only. This one is scored; that one is not.',
+    '> [How each figure becomes a sub-score →](https://ai-watch.dev/methodology#score)',
+    '',
+    '| Service | p50 RTT | RTT variation (CV) |',
+    '|---|---|---|',
+    ...rows.map(r => `| ${r.name} | ${Math.round(r.p50)} ms | ${r.cv == null ? '—' : r.cv.toFixed(2)} |`),
+    '',
+    '---',
+    '',
+  ].join('\n')
 }
 
 // ── Template filling ─────────────────────────────────────────────────
@@ -1204,6 +1259,12 @@ function fillTemplate(template, month, archive, meta) {
   // Component Reliability section (aiwatch#605 Phase 3b) — same marker pattern. The section
   // emits its own trailing `---`; when omitted, strip the marker so the preceding Official
   // Uptime `---` stays the single rule before API Response Time.
+  const responsivenessSection = buildResponsivenessSection(archive, meta, month)
+  if (responsivenessSection) {
+    out = out.replace(/<!-- RESPONSIVENESS_SECTION -->/, responsivenessSection)
+  } else {
+    out = out.replace(/\n*<!-- RESPONSIVENESS_SECTION -->\n*/, '\n\n')
+  }
   const componentSection = buildComponentReliabilitySection(archive, meta, month)
   if (componentSection) {
     out = out.replace(/<!-- COMPONENT_RELIABILITY_SECTION -->/, componentSection)
@@ -1955,6 +2016,7 @@ module.exports = {
   buildSecuritySection,
   buildDetectionSection,
   buildComponentReliabilitySection,
+  buildResponsivenessSection,
   buildTrendSection,
   crossesScoreMethodCutover,
   fmtLeadMin,
