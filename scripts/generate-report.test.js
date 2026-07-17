@@ -1784,14 +1784,16 @@ const { computeCurrentSubjects } = require('./generate-report')
 
 // A minimal published-report fixture: a Score table (the self-contained lexicon) plus
 // the three narrative slots, mirroring the real report structure.
-function sampleReport({ highIncident, keyInsight, affected }) {
+function sampleReport({ highIncident, keyInsight, affected, watchOut, riskiest }) {
   return [
     '# Report',
     '',
     '## Summary',
     '',
     '- **Most reliable**: Modal (97/100)',
+    `- **Riskiest this month**: ${riskiest || 'Replicate (61/100)'}`,
     `- **High incident count, fast recovery**: ${highIncident}`,
+    ...(watchOut ? [`- **Watch out**: ${watchOut}`] : []),
     '',
     '## Key Insight',
     '',
@@ -1805,7 +1807,11 @@ function sampleReport({ highIncident, keyInsight, affected }) {
     '| 2 | Together AI | 84 | Good |',
     '| 3 | Mistral API | 78 | Good |',
     '| 4 | ChatGPT | 70 | Good |',
-    '| 5 | Gemini API | 64 | Fair |',
+    '| 5 | Claude API | 65 | Fair |',
+    '| 6 | Gemini API | 64 | Fair |',
+    '| 7 | claude.ai | 64 | Fair |',
+    '| 8 | Claude Code | 63 | Fair |',
+    '| 9 | Replicate | 61 | Fair |',
     '',
     '## Notable Incidents',
     '',
@@ -1876,6 +1882,146 @@ test('missing sections and garbage input degrade to [] without throwing', () => 
   eq(`${empty.summary.length}${empty.keyInsight.length}${empty.notable.length}`, '000')
   const junk = extractNarrativeSubjects(null)
   eq(`${junk.summary.length}${junk.keyInsight.length}${junk.notable.length}`, '000')
+})
+
+// ── Summary "Watch out" slot (aiwatch-reports#61) ────────────────────
+// The bullet's wording in these fixtures is lifted from the real 2026-04/05/06 reports, because the
+// gap was a wording gap: prose shape, not structure, is what the extractor has to survive.
+console.log('\nwatchOutBulletSubjects (aiwatch-reports#61)')
+
+test('pulls Watch out subjects and does not leak non-lexicon capitalized words', () => {
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    // Real 2026-05 shape. "Fair (63–65)" is the trap: the High-incident bullet's `Name (` stat-group
+    // scan would read "Fair" as a service — canonicalizeToLexicon returns unknown names unchanged —
+    // which is why this slot filters to the lexicon instead.
+    watchOut: 'Gemini API (only 2 incidents but a 22h 32m average recovery) and the Anthropic stack — Claude API / claude.ai / Claude Code all landed Fair (63–65).',
+  })
+  const s = extractNarrativeSubjects(md)
+  assert.ok(s.summaryWatchOut.includes('Gemini API'), 'named service found')
+  assert.ok(s.summaryWatchOut.includes('Claude API'), 'member named outright found')
+  assert.ok(!s.summaryWatchOut.includes('Fair'), '"Fair (63–65)" must not read as a service')
+  // This bullet names the group noun AND its members — the one shape where expansion can double them.
+  // detectRecurrence dedups downstream, so a duplicate is invisible in the flags; pin it at this
+  // exported surface instead, where the contract (order-preserving, de-duplicated) actually lives.
+  eq(s.summaryWatchOut.length, new Set(s.summaryWatchOut).size, `no duplicate subjects: ${s.summaryWatchOut}`)
+})
+
+test('expands the "Anthropic stack" group noun when no member is named (the 2026-06 shape)', () => {
+  // The miss this issue exists for: June names ONLY the group, so a lexicon-only scan returns
+  // nothing for it and the Apr/May→Jun repeat stays invisible.
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    watchOut: 'the Anthropic stack stayed Fair (66–69). Codex reads 86 → 76, but that dip is an advisory.',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq([...s.summaryWatchOut].sort().join('|'), 'Claude API|Claude Code|claude.ai')
+})
+
+test('a group member absent from the report\'s own Score table is dropped, not invented', () => {
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    watchOut: 'the Anthropic stack stayed Fair.',
+  }).replace('| 7 | claude.ai | 64 | Fair |\n', '') // roster without claude.ai
+  const s = extractNarrativeSubjects(md)
+  assert.ok(s.summaryWatchOut.includes('Claude API'), 'rostered member kept')
+  assert.ok(!s.summaryWatchOut.includes('claude.ai'), 'unrostered member not invented from the alias')
+  // Without the `!canon` guard the unrostered member is pushed as `undefined` rather than skipped —
+  // which `!includes('claude.ai')` above still satisfies. detectRecurrence's `!key` check swallows it
+  // downstream, so pin the contract here, at the exported surface that promises it.
+  assert.ok(s.summaryWatchOut.every(Boolean), `no holes in the subject list: ${JSON.stringify(s.summaryWatchOut)}`)
+})
+
+test('the group alias does NOT expand when the bullet names no group noun', () => {
+  // The negative half. Without it, `if (!re.test(text)) continue` can be deleted outright and the
+  // suite stays green — the trio would then be injected into EVERY Watch out bullet, sit in ≥2 of any
+  // 3 priors forever, and flag Anthropic every month: a permanent false positive, worse than the
+  // blindness #61 fixes. Not hypothetical — 2026-03's real bullet is "GitHub Copilot infrastructure
+  // instability (18 affected days)", no Anthropic surface anywhere in it.
+  // 2026-03's real shape, and it is the month that pins the guard's SCOPE too: its group noun sits in
+  // the SIBLING High-incident bullet while its Watch out names only Copilot. Testing the group noun
+  // against the whole Summary section instead of the one bullet passes every other test, yet drags
+  // the trio into this month's Watch out subjects — the same false positive through another door.
+  const md = sampleReport({
+    highIncident: 'Anthropic services — counts inflated due to per-model component reporting',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    watchOut: 'GitHub Copilot infrastructure instability (18 affected days)',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq(s.summaryWatchOut.join('|'), '')
+})
+
+test('a bare "Anthropic" mention does NOT expand the trio — the alias must stay narrow', () => {
+  // The other half of the guard. Widening the pattern to /Anthropic/i passes every other test, yet
+  // any bullet merely MENTIONING the vendor would inject all three services — parking them in the
+  // slot every month. Bare "Anthropic" is ordinary prose here ("Anthropic posts a separate incident
+  // per model"), so this is the likelier false positive of the two, not a contrived one.
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    watchOut: 'Anthropic shipped a fix for the per-model split; Gemini API had a slow month.',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq(s.summaryWatchOut.join('|'), 'Gemini API') // the named service, and nothing the alias invented
+})
+
+test('the group alias matches the hedged "Anthropic services" wording (unattested in this bullet)', () => {
+  // NOT evidence from this slot — no Watch out bullet has used this wording (2026-03's, where the
+  // phrase does appear, is its sibling High-incident bullet; its Watch out names GitHub Copilot
+  // alone). The alias is a pattern as a bet on observed drift: the vocabulary for this one group
+  // moves between bullets and months, and a wording the slot has not seen yet is how the #61 false
+  // negative returns. See SUBJECT_GROUP_ALIASES — this test pins the hedge, it does not justify it.
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    watchOut: 'Anthropic services — counts inflated due to per-model component reporting.',
+  })
+  const s = extractNarrativeSubjects(md)
+  eq([...s.summaryWatchOut].sort().join('|'), 'Claude API|Claude Code|claude.ai')
+})
+
+test('Most reliable / Riskiest are NOT tracked — their repeats are structural, not narrative', () => {
+  // Both bullets are the ranking's top and bottom, so the same services fill them by construction;
+  // tracking them would warn every month regardless of how fresh the writing is.
+  const md = sampleReport({
+    highIncident: 'Together AI (85 incidents)',
+    keyInsight: '- x',
+    affected: 'Gemini API',
+    riskiest: 'Replicate (61/100, Fair) — the lowest score',
+    watchOut: 'Gemini API had a slow month.',
+  })
+  const s = extractNarrativeSubjects(md)
+  assert.ok(!s.summaryWatchOut.includes('Modal'), 'Most reliable subject not pulled into the slot')
+  assert.ok(!s.summaryWatchOut.includes('Replicate'), 'Riskiest subject not pulled into the slot')
+  assert.ok(!s.summary.includes('Modal') && !s.summary.includes('Replicate'), 'nor into the high-incident slot')
+})
+
+test('the Apr/May→Jun Anthropic "Watch out" run is flagged (the reports#61 regression)', () => {
+  // The concrete miss: the trio was named in Watch out in 2026-04, -05 AND -06 (leading it only in
+  // -06) and neither gate saw it — each month phrased it differently, which is exactly what defeated
+  // a lexicon-only scan.
+  const mk = watchOut => extractNarrativeSubjects(sampleReport({
+    highIncident: 'Together AI (85 incidents)', keyInsight: '- x', affected: 'Gemini API', watchOut,
+  }))
+  const apr = mk('Anthropic per-model counts (Claude API 40 + claude.ai 37 + Claude Code 31) often track the same root event')
+  const may = mk('Gemini API (2 incidents) and the Anthropic stack — Claude API / claude.ai / Claude Code all landed Fair (63–65).')
+  const jun = mk('the Anthropic stack stayed Fair (66–69).')
+
+  const flags = detectRecurrence(jun, [{ month: '2026-05', subjects: may }, { month: '2026-04', subjects: apr }])
+  const watch = flags.filter(f => f.slot === 'summaryWatchOut')
+  eq(watch.map(f => f.service).sort().join('|'), 'Claude API|Claude Code|claude.ai')
+  for (const f of watch) eq(f.monthsSeen.sort().join(','), '2026-04,2026-05')
+  // Gemini led Watch out in May only — one prior month is not a run, so it must not flag.
+  assert.ok(!watch.some(f => f.service === 'Gemini API'), 'a single prior month does not make a recurrence')
 })
 
 console.log('\ndetectRecurrence (aiwatch-reports#54)')

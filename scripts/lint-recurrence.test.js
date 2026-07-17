@@ -22,7 +22,7 @@ function eq(actual, expected, msg) {
 
 // A minimal report fixture: frontmatter + Score table (the self-contained lexicon that
 // #54's extractor reads) + the three narrative slots.
-function report({ published = true, highIncident = 'Together AI (85 incidents)', keyInsight = '- x', affected = 'Gemini API', extra = '' } = {}) {
+function report({ published = true, highIncident = 'Together AI (85 incidents)', keyInsight = '- x', affected = 'Gemini API', watchOut = '', extra = '' } = {}) {
   return [
     '---',
     'layout: page',
@@ -33,6 +33,7 @@ function report({ published = true, highIncident = 'Together AI (85 incidents)',
     '## Summary',
     '',
     `- **High incident count, fast recovery**: ${highIncident}`,
+    ...(watchOut ? [`- **Watch out**: ${watchOut}`] : []),
     extra,
     '',
     '## Key Insight',
@@ -46,6 +47,9 @@ function report({ published = true, highIncident = 'Together AI (85 incidents)',
     '| 1 | Together AI | 84 | Good |',
     '| 2 | Mistral API | 78 | Good |',
     '| 3 | Gemini API | 64 | Fair |',
+    '| 4 | Claude API | 65 | Fair |',
+    '| 5 | claude.ai | 64 | Fair |',
+    '| 6 | Claude Code | 63 | Fair |',
     '',
     '## Notable Incidents',
     '',
@@ -162,6 +166,21 @@ test('WARNS on a same-slot recurrence vs the prior month (reuses #54 extraction)
   eq(r.warnings.length, 1)
   assert.ok(r.warnings[0].message.includes('Together AI'), 'names the repeated service')
   assert.ok(r.warnings[0].message.includes('2026-05'), 'names the prior month')
+})
+
+test('WARNS on a recurring "Watch out" subject, naming the bullet — and never FAILS (#61)', () => {
+  // The gate was blind here: the Anthropic trio was named in Watch out in 2026-04/05/06 (leading it
+  // only in -06) and only a human caught it. June names ONLY the group noun, May spells the members
+  // out — the two must still match.
+  // Overlap ONLY the Watch out slot — differ the others so the count isolates this slot.
+  const md = report({ highIncident: 'Together AI (85 incidents)', affected: 'Gemini API', watchOut: 'the Anthropic stack stayed Fair (66-69).' })
+  const priorMd = report({ highIncident: 'Mistral API (140 incidents)', affected: 'Mistral API', watchOut: 'the Anthropic stack - Claude API / claude.ai / Claude Code all landed Fair (63-65).' })
+  const r = lintReport({ md, priorMd, month: '2026-06', priorMonth: '2026-05' })
+  eq(r.errors.length, 0) // warn-only: a recurring concern is sometimes legitimately the story
+  eq(r.warnings.length, 3) // one per member of the expanded group
+  assert.ok(r.warnings.every(w => w.message.includes("Summary 'Watch out' bullet")),
+    `warn names the bullet via the imported RECURRENCE_SLOT_LABEL: ${r.warnings.map(w => w.message).join(' | ')}`)
+  assert.ok(r.warnings.some(w => w.message.includes('Claude API')), 'names the repeated service')
 })
 
 test('does NOT warn when every slot names a different service than the prior month', () => {
