@@ -102,7 +102,7 @@ published: true
 
 > *"Which AI service is safest to rely on in production?"*
 
-Combines four components — Uptime (40%), Incident affected days (25%), Recovery speed (15%), Responsiveness (20%, derived from each service's median (p50) probe RTT and its RTT stability). The [API Response Time — Monthly p75](#api-response-time--monthly-p75) table below is a separate network-latency reference, not the Responsiveness input; full breakdown of weights, fallbacks, and penalties is in [About This Report → AIWatch Score](#about-this-report). [How it's calculated →](https://ai-watch.dev/methodology#score)
+Combines four components — Uptime (40%), Incident affected days (25%), Recovery speed (15%), Responsiveness (20%, the p50 RTT + stability figures shown under [Responsiveness Inputs](#responsiveness-inputs-score-component)). The separate [API Response Time — Monthly p75](#api-response-time--monthly-p75) table is a network-latency reference that does *not* feed the Score; full breakdown of weights, fallbacks, and penalties is in [About This Report → AIWatch Score](#about-this-report). [How it's calculated →](https://ai-watch.dev/methodology#score)
 
 <!-- SCORE_RANKING_NOTE -->
 
@@ -137,9 +137,11 @@ Uptime computed by AIWatch over a 30-day window from the incident and outage rec
 
 <!-- COMPONENT_RELIABILITY_SECTION -->
 
+<!-- RESPONSIVENESS_SECTION -->
+
 ## API Response Time — Monthly p75
 
-These p75 figures are a network-latency reference: direct API-endpoint round-trip time, probed from the Cloudflare Workers edge every 5 minutes — not inference latency. Lower is better. They are **not** the Score's Responsiveness input, which reads each service's median (p50) probe RTT and its stability. So this table ranks *which service is fastest on the network*, while [AIWatch Score](#[SCORE_ANCHOR]) ranks *which is safest to rely on*. A service AIWatch does not probe has no row here; that alone does not drop it from the Score ranking.
+These p75 figures are a network-latency reference: direct API-endpoint round-trip time, probed from the Cloudflare Workers edge every 5 minutes — not inference latency. Lower is better. **This table does not feed the Score** — the Score's Responsiveness component reads the *median* (p50) RTT and its stability instead, shown above under [Responsiveness Inputs](#responsiveness-inputs-score-component). So this table ranks *which service is fastest on the network*, while [AIWatch Score](#[SCORE_ANCHOR]) ranks *which is safest to rely on*. A service AIWatch does not probe has no row here; that alone does not drop it from the Score ranking.
 
 <!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
 <!-- 32 probe targets: 30 API services (incl. twelvelabs) + cursor (coding agent) + characterai (app, detail-card only, aiwatch#921). A service AIWatch does not probe simply has no row here (13 of 41 in June 2026, ten of them ranked); that alone does not affect its Score. -->

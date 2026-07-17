@@ -29,6 +29,7 @@ const {
   buildSecuritySection,
   buildDetectionSection,
   buildComponentReliabilitySection,
+  buildResponsivenessSection,
   buildTrendSection,
   crossesScoreMethodCutover,
   fmtLeadMin,
@@ -707,6 +708,25 @@ test('SERVICE_COUNT resolves to the archive service count, not a hardcoded liter
   const out = fillTemplate(tmpl, '2026-04', archive, meta)
   assert.ok(out.includes('Services monitored: 3'), `expected archive count 3 (not meta size 4): ${out}`)
   assert.ok(!out.includes('[SERVICE_COUNT]'), `every SERVICE_COUNT placeholder must be substituted: ${out}`)
+})
+test('fillTemplate injects the Responsiveness section AND never leaves the marker behind (#76 wiring)', () => {
+  // The builder being correct proves nothing about fillTemplate injecting it — the axis that survives
+  // unit tests. Drives the REAL template marker both ways.
+  const fsW = require('fs'); const pathW = require('path')
+  const tmpl = fsW.readFileSync(pathW.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  assert.ok(tmpl.includes('<!-- RESPONSIVENESS_SECTION -->'), 'template carries the marker to fill')
+
+  const withP50 = { services: { groq: { p50LatencyMs: 174, cvCombined: 0.21, score: 91, monthlyScore: 91, uptime: 99, officialUptime: 100 } }, daysCollected: 30 }
+  const filled = fillTemplate(tmpl, '2026-07', withP50, { groq: { name: 'Groq Cloud' } })
+  assert.ok(filled.includes('## Responsiveness Inputs (Score Component)'), 'section injected when data present')
+  assert.ok(filled.includes('| Groq Cloud | 174 ms | 0.21 |'), 'the row reached the rendered report')
+  assert.ok(!filled.includes('RESPONSIVENESS_SECTION'), 'marker consumed, not left in output')
+
+  // Legacy month → section collapses, and crucially the marker does not survive as a literal comment.
+  const legacy = { services: { groq: { score: 91, monthlyScore: 91, avgLatencyMs: 207, uptime: 99, officialUptime: 100 } }, daysCollected: 30 }
+  const collapsed = fillTemplate(tmpl, '2026-06', legacy, { groq: { name: 'Groq Cloud' } })
+  assert.ok(!collapsed.includes('Responsiveness Inputs (Score Component)'), 'no empty section on a pre-#1054 month')
+  assert.ok(!collapsed.includes('RESPONSIVENESS_SECTION'), 'marker stripped even when the section is empty')
 })
 test('SERVICE_COUNT substitutes even an empty archive (0), leaving no placeholder (aiwatch-reports#97)', () => {
   const out = fillTemplate('monitored: [SERVICE_COUNT]', '2026-04', { services: {}, daysCollected: 0 }, {})
@@ -2169,6 +2189,75 @@ test('loadPriorNarrative skips months with no index.md (never throws)', () => {
   }
 })
 
+// ── buildResponsivenessSection (#76 / aiwatch#1002) ─────────────────
+console.log('\nbuildResponsivenessSection (#76 / aiwatch#1002)')
+const rMeta = { groq: { name: 'Groq Cloud' }, openai: { name: 'OpenAI API' }, claudecode: { name: 'Claude Code' } }
+
+test('omits the section entirely on a month with no p50 (every archive before aiwatch#1054)', () => {
+  // The key is ABSENT on those archives, not null — verified live against the real 2026-06 archive.
+  // An empty table with a caption promising "the values the Score used" would be worse than no section.
+  eq(buildResponsivenessSection({ services: { groq: { score: 91, avgLatencyMs: 207 } } }, rMeta, '2026-07'), '')
+  eq(buildResponsivenessSection({ services: {} }, rMeta, '2026-07'), '')
+  eq(buildResponsivenessSection(null, rMeta, '2026-07'), '')
+})
+
+test('renders p50 + CV per service, fastest first', () => {
+  const out = buildResponsivenessSection({ services: {
+    openai: { p50LatencyMs: 223, cvCombined: 0.31 },
+    groq: { p50LatencyMs: 174, cvCombined: 0.21 },
+  } }, rMeta, '2026-07')
+  assert.ok(out.includes('## Responsiveness Inputs (Score Component)'), 'has heading')
+  assert.ok(out.trimEnd().endsWith('---'), 'ends with a rule')
+  assert.ok(out.includes('| Groq Cloud | 174 ms | 0.21 |'), `groq row: ${out}`)
+  assert.ok(out.includes('| OpenAI API | 223 ms | 0.31 |'), `openai row: ${out}`)
+  const order = [...out.matchAll(/\| (Groq Cloud|OpenAI API) \|/g)].map(m => m[1])
+  assert.deepStrictEqual(order, ['Groq Cloud', 'OpenAI API'], 'fastest first')
+})
+
+test('a service is included on p50 alone — never filtered on avgLatencyMs (the aiwatch#883 trap)', () => {
+  // claudecode has no probe of its own, so its avgLatencyMs is null while the parent probe's p50 is
+  // what scored it. The p75 table's `avgLatencyMs !== null` idiom would drop exactly this row.
+  const out = buildResponsivenessSection({ services: {
+    claudecode: { avgLatencyMs: null, p50LatencyMs: 192, cvCombined: 0.44 },
+  } }, rMeta, '2026-07')
+  assert.ok(out.includes('| Claude Code | 192 ms | 0.44 |'), `inherited row present: ${out}`)
+})
+
+test('skips a service the Score scored no Responsiveness for, and tolerates a null CV', () => {
+  const out = buildResponsivenessSection({ services: {
+    groq: { p50LatencyMs: 174, cvCombined: 0.21 },
+    openai: { p50LatencyMs: null, cvCombined: null }, // probed but unscorable this month
+    claudecode: { p50LatencyMs: 192, cvCombined: null }, // defensive: p50 without a CV
+  } }, rMeta, '2026-07')
+  assert.ok(!out.includes('OpenAI API'), `no p50 → no row: ${out}`)
+  assert.ok(out.includes('| Claude Code | 192 ms | — |'), `null CV renders as a dash: ${out}`)
+})
+
+test('excludes a service the ranking itself drops, even when it carries a p50 (stale source)', () => {
+  // buildMoverExclude drops SCORE_WITHHELD / stale-source / mid-month-added, mirroring the ranking and
+  // the component breakdown. Without it, a service whose status page froze mid-month (incidentSourceStale)
+  // would still show a p50 here — a Score-component figure for a service the report says it cannot rank.
+  // bedrock/azureopenai can't test this (no probe → p50 already null), so use a stale-flagged probed one.
+  const out = buildResponsivenessSection({ services: {
+    groq: { p50LatencyMs: 174, cvCombined: 0.21 },
+    deepseek: { p50LatencyMs: 569, cvCombined: 0.33, incidentSourceStale: true },
+  } }, { groq: { name: 'Groq Cloud' }, deepseek: { name: 'DeepSeek API' } }, '2026-07')
+  assert.ok(out.includes('Groq Cloud'), 'the rankable service stays')
+  assert.ok(!out.includes('DeepSeek'), `a stale-source service is excluded despite its p50: ${out}`)
+})
+
+test('the caption keeps the p50 table distinct from the p75 network-latency reference', () => {
+  // The whole reason this is its own section (aiwatch#1002 item 6). If the caption ever stops saying
+  // so, the two tables have silently merged in the reader's mind.
+  const out = buildResponsivenessSection({ services: { groq: { p50LatencyMs: 174, cvCombined: 0.21 } } }, rMeta, '2026-07')
+  assert.ok(/This table feeds the Score/.test(out), 'states plainly that THIS one is scored')
+  assert.ok(/not part of the Score/.test(out), 'states plainly that the p75 table is NOT scored')
+  assert.ok(/same endpoints/.test(out), 'explains why they look alike — same probe, different statistic')
+  assert.ok(/Lower is better for/.test(out), 'says which direction is good — CV has no intuitive scale')
+  assert.ok(/methodology#score/.test(out), 'links the formula rather than restating its constants here')
+  assert.ok(!/exp\(/.test(out), 'the drift-prone score.ts formula is NOT inlined (aiwatch#1002 item 7)')
+})
+
 // ── buildComponentReliabilitySection (aiwatch#605 Phase 3b) ─────────
 console.log('\nbuildComponentReliabilitySection (#605 Phase 3b)')
 const crMeta = { services: {} }
@@ -2716,7 +2805,9 @@ test('the API Response Time section carries ONE prose block, and it is true', ()
   // Everything the footnote used to carry now lives here, once.
   assert.match(intro, /Cloudflare Workers edge every 5 minutes/, 'measurement method')
   assert.match(intro, /not inference latency/, 'the disclaimer readers need')
-  assert.match(intro, /median \(p50\) probe RTT/, 'and the p75-is-not-the-Score-input correction')
+  assert.match(intro, /does not feed the Score/, 'the p75-is-not-a-Score-input correction, stated plainly')
+  assert.match(intro, /\(p50\) RTT/, 'and it points at the statistic that IS scored')
+  assert.match(intro, /Responsiveness Inputs/, 'linking to where that scored figure lives')
   assert.match(intro, /no row here/, 'a probe-less service is absent from THIS table')
   assert.match(intro, /does not drop it from the Score ranking/, 'and that is all this needs to say')
   assert.ok(!/are excluded from rankings/.test(intro), 'the false causal claim must stay dead')
