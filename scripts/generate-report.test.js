@@ -879,8 +879,13 @@ test('emitBreakdownWarnings uses the ::warning:: channel under GitHub Actions (a
 test('fillTemplate WIRES the ungrouped warning, not just the breakdown (aiwatch-reports#98)', () => {
   // The builders being correct proves nothing about fillTemplate calling them — deleting the
   // emitBreakdownWarnings call left the whole suite green.
-  const orig = console.warn; const seen = []
-  console.warn = m => seen.push(m)
+  //
+  // Capture BOTH channels. fillTemplate calls emitBreakdownWarnings with its default env, so the
+  // channel depends on where the suite runs: `console.warn` locally, `::warning::` on console.log
+  // under GITHUB_ACTIONS. Stubbing only warn passed locally and failed in CI — the assertion was
+  // testing the environment, not the wiring.
+  const origWarn = console.warn; const origLog = console.log; const seen = []
+  console.warn = m => seen.push(m); console.log = m => seen.push(m)
   try {
     const breakdownWarnings = () => seen.filter(m => String(m).includes('aiwatch-reports#98'))
     fillTemplate('[SERVICE_COUNT] — [SERVICE_BREAKDOWN]', '2026-07', bdArchive(['claude', 'ghost']), BD_META)
@@ -888,7 +893,7 @@ test('fillTemplate WIRES the ungrouped warning, not just the breakdown (aiwatch-
     seen.length = 0
     fillTemplate('[SERVICE_COUNT] — [SERVICE_BREAKDOWN]', '2026-07', bdArchive(['claude']), BD_META)
     assert.deepEqual(breakdownWarnings(), [], 'and must stay silent when every service is grouped')
-  } finally { console.warn = orig }
+  } finally { console.warn = origWarn; console.log = origLog }
 })
 
 test('the SHIPPED template carries [SERVICE_BREAKDOWN] and fillTemplate consumes it (aiwatch-reports#98)', () => {
