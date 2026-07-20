@@ -133,9 +133,18 @@ async function fetchServiceMeta() {
     console.error(`[generate-report] Service metadata fetch failed: HTTP ${status}`)
     process.exit(5)
   }
+  return projectServiceMeta(body.services)
+}
+
+// Extracted + exported ONLY so `group` is pinned by a test (aiwatch-reports#98). It is one field in an
+// unremarkable projection, its producer (`group`, aiwatch#1068) lives in a DIFFERENT repo this repo's CI
+// cannot see, and every breakdown unit test hands `meta` in directly — so dropping it here was a
+// one-line silent kill of the whole feature that left the suite green and every report reading
+// "44 — 44 other".
+function projectServiceMeta(services) {
   const byId = {}
-  for (const s of body.services) {
-    byId[s.id] = { name: s.name, category: s.category, provider: s.provider }
+  for (const s of services) {
+    byId[s.id] = { name: s.name, category: s.category, group: s.group, provider: s.provider }
   }
   return byId
 }
@@ -162,6 +171,84 @@ function fmtDurationMin(mins) {
 
 function serviceName(id, meta) {
   return meta[id]?.name || id
+}
+
+// aiwatch-reports#98 — the reader-facing category breakdown beside `[SERVICE_COUNT]` on the
+// "Services monitored" line. It must SUM to that count, so both are counted over the ARCHIVE's
+// service set, never the live roster: `meta` comes from the CURRENT /api/v1/status (44 services
+// today) while a 2026-06 report covers the 41 that month archived.
+//
+// The bucket per service is the FINE `group` field (aiwatch#1068). A new service in an EXISTING
+// bucket is safe — aiwatch's own sync test pins `group` membership to the frontend
+// SERVICE_CATEGORIES. A brand-new CATEGORY is NOT covered: aiwatch can add one with its CI green,
+// and the unknown value arrives here as "other". That is what `findUngroupedServices` warns about.
+//
+// Keys are in canonical SERVICE_CATEGORIES order, used to break count ties so the line is
+// deterministic (a Map's insertion order would otherwise leak the archive's id order into it).
+// Values are `[singular, plural]` — a 1-member bucket is real, not hypothetical (`image` is exactly
+// 1 in the 2026-03/-04/-05 archives), and "1 coding agents" would ship in published copy. Mass nouns
+// repeat the same form. Both forms are REQUIRED: a bare string is still indexable, so writing one
+// silently renders a single character. `group-labels have both a singular and a plural` pins it.
+const GROUP_LABELS = {
+  llm: ['LLM API', 'LLM APIs'],
+  agents: ['coding agent', 'coding agents'],
+  voice: ['voice & transcription', 'voice & transcription'],
+  inference: ['inference & infra', 'inference & infra'],
+  observability: ['observability', 'observability'],
+  video: ['video', 'video'],
+  image: ['image', 'image'],
+  apps: ['AI app', 'AI apps'],
+}
+const OTHER_LABEL = ['other', 'other']
+// `Object.hasOwn`, not a truthiness lookup: a plain object inherits Object.prototype, so a group named
+// `constructor`/`toString` would resolve to an inherited function — defeating the "other" fallback AND
+// the ungrouped warning at once, and rendering `undefined` into published copy. The one input class
+// that would otherwise escape both safety nets.
+const isKnownGroup = g => g != null && Object.hasOwn(GROUP_LABELS, g)
+const labelFor = (g, n) => (isKnownGroup(g) ? GROUP_LABELS[g] : OTHER_LABEL)[n === 1 ? 0 : 1]
+const GROUP_ORDER = Object.keys(GROUP_LABELS)
+// `other` is not a canonical bucket — rank it last so it always trails the real ones on a count tie.
+const groupRank = g => (GROUP_ORDER.indexOf(g) === -1 ? Infinity : GROUP_ORDER.indexOf(g))
+
+// Archive services whose live `meta` entry carries no group we recognise — a service RETIRED since
+// the archived month (absent from the live roster entirely), or a new `group` value the worker
+// started emitting before this list learned it. Either way it must be REPORTED rather than dropped:
+// dropping would silently break the sums-to-the-count property, which is the manual-literal drift
+// #98 exists to end.
+function findUngroupedServices(services, meta) {
+  return services.filter(s => !isKnownGroup(meta[s.id]?.group)).map(s => s.id)
+}
+
+// Two different faults, so two different messages — listing 33 ids when the real cause is "meta
+// carried no groups at all" buries the diagnosis in noise.
+function emitBreakdownWarnings(ids, total, env = process.env) {
+  if (ids.length === 0) return 0
+  const m = ids.length === total
+    ? `NO service carried a recognised category \`group\`, so the Services-monitored breakdown reads ` +
+      `"${total} other". /api/v1/status is reachable (the run would have exited otherwise), so either ` +
+      'the worker stopped emitting `group` (aiwatch#1068) or its values no longer match this report\'s ' +
+      'buckets (aiwatch-reports#98)'
+    : `${ids.length} of ${total} services have no recognised category group (${ids.slice(0, 5).join(', ')}` +
+      `${ids.length > 5 ? `, +${ids.length - 5} more` : ''}) — counted as "other" so the breakdown still ` +
+      'sums to the service count. Either they were retired from /api/v1/status since this month was ' +
+      'archived, or the worker emits a `group` this report does not map yet (aiwatch-reports#98)'
+  if (env.GITHUB_ACTIONS) console.log(`::warning::${m}`)
+  else console.warn(`[generate-report] WARNING: ${m}`)
+  return ids.length
+}
+
+// "15 LLM APIs, 6 coding agents, 6 inference & infra, 4 AI apps, …" — count-descending, ties broken by
+// canonical order. An empty archive yields '' — substituted as-is, leaving no placeholder behind.
+function buildServiceBreakdown(services, meta) {
+  const counts = new Map()
+  for (const s of services) {
+    const g = isKnownGroup(meta[s.id]?.group) ? meta[s.id].group : 'other'
+    counts.set(g, (counts.get(g) || 0) + 1)
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || groupRank(a[0]) - groupRank(b[0]))
+    .map(([g, n]) => `${n} ${labelFor(g, n)}`)
+    .join(', ')
 }
 
 // aiwatch-reports#74 — Kramdown's `generate_id`, reimplemented: delete every character outside
@@ -1177,8 +1264,12 @@ function fillTemplate(template, month, archive, meta) {
   // aiwatch-reports#97 — the monitored-service count is derived from the archive's service set, not
   // hardcoded in the template, so it never drifts as services are added. For a current-month run this
   // is the live roster (verified 2026-04/-05 match exactly); a back-generated old month reflects that
-  // month's archived set. The category breakdown beside it is still a manual literal — see #98.
+  // month's archived set.
   out = out.replace(/\[SERVICE_COUNT\]/g, String(services.length))
+  // aiwatch-reports#98 — and the category breakdown beside it, counted over the same archive set so
+  // the two can never disagree. Was a hand-maintained literal that drifted every month.
+  emitBreakdownWarnings(findUngroupedServices(services, meta), services.length)
+  out = out.replace(/\[SERVICE_BREAKDOWN\]/g, buildServiceBreakdown(services, meta))
 
   // aiwatch-reports#74 — resolve `[SCORE_ANCHOR]` from the heading that actually shipped, rather
   // than hand-slugging it in the template. The old template asked a human to substitute a lowercase
@@ -1994,6 +2085,11 @@ module.exports = {
   confidence,
   uptimeSourceLabel,
   buildRankingNote,
+  buildServiceBreakdown,
+  GROUP_LABELS,
+  findUngroupedServices,
+  emitBreakdownWarnings,
+  projectServiceMeta,
   buildScoreTable,
   isStaleSource,
   isRecentlyAdded,

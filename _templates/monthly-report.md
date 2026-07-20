@@ -9,7 +9,7 @@ published: true
 > **Source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
 > **Period**: [MONTH] 1–[LAST_DAY], [YEAR]
 > **Published**: [PUBLISH_MONTH] [YEAR]
-> **Services monitored**: [SERVICE_COUNT] — 33 API services, 6 coding agents, 4 AI apps
+> **Services monitored**: [SERVICE_COUNT] — [SERVICE_BREAKDOWN]
 
 <!-- AUTHORING SELF-CHECK — read before writing prose; these are the recurring misses:
      1. CLAIMS BACKED BY DATA, AT THE RIGHT SCOPE. Every superlative/absolute ("the slowest", "the most",
