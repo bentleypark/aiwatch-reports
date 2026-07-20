@@ -8,6 +8,11 @@ const {
   confidence,
   uptimeSourceLabel,
   buildRankingNote,
+  buildServiceBreakdown,
+  GROUP_LABELS,
+  findUngroupedServices,
+  emitBreakdownWarnings,
+  projectServiceMeta,
   isStaleSource,
   isRecentlyAdded,
   buildScoreTable,
@@ -732,6 +737,178 @@ test('SERVICE_COUNT substitutes even an empty archive (0), leaving no placeholde
   const out = fillTemplate('monitored: [SERVICE_COUNT]', '2026-04', { services: {}, daysCollected: 0 }, {})
   assert.ok(out.includes('monitored: 0'), `expected 0 for an empty archive: ${out}`)
   assert.ok(!out.includes('[SERVICE_COUNT]'), `placeholder must be substituted even at 0: ${out}`)
+})
+
+// ── Services-monitored category breakdown (aiwatch-reports#98) ───────
+console.log('\nbuildServiceBreakdown')
+// A 3-service archive whose live `meta` deliberately carries a 4th service in a 4th group: the
+// breakdown can only be right if it counts the ARCHIVE, so this pins the source the same way the
+// #97 count test does.
+const BD_SVC = { score: 44, grade: 'Fair', monthlyScore: 61, monthlyGrade: 'Fair', uptime: 90, incidents: 6, avgResolutionMin: 45, officialUptime: 99, scoreConfidence: 'high' }
+const bdArchive = ids => ({ services: Object.fromEntries(ids.map(id => [id, { ...BD_SVC }])), daysCollected: 30 })
+// The shape fillTemplate hands the builders: a flat [{ id, data }] list, not the archive object.
+const bdList = ids => ids.map(id => ({ id, data: { ...BD_SVC } }))
+const BD_META = {
+  claude: { name: 'Claude', group: 'llm' }, openai: { name: 'OpenAI', group: 'llm' },
+  cursor: { name: 'Cursor', group: 'agents' }, chatgpt: { name: 'ChatGPT', group: 'apps' },
+  // Present in meta, but in a bucket this report has not learned — the FORWARD-looking failure
+  // (aiwatch adds a 45th service in a new category) as opposed to a service retired from the roster.
+  quantumthing: { name: 'Quantum Thing', group: 'quantum' },
+}
+
+test('breakdown counts the ARCHIVE roster, not the live meta roster (aiwatch-reports#98)', () => {
+  // The live roster grows between the archived month and generation day (44 live vs 41 in the
+  // 2026-06 archive). Grouping over meta would print a breakdown contradicting [SERVICE_COUNT].
+  const out = buildServiceBreakdown(bdList(['claude', 'openai', 'cursor']), BD_META)
+  assert.equal(out, '2 LLM APIs, 1 coding agent')
+  assert.ok(!out.includes('AI app'), `chatgpt is meta-only and must not be counted: ${out}`)
+})
+
+test('breakdown always sums to SERVICE_COUNT — the #98 invariant', () => {
+  for (const ids of [['claude'], ['claude', 'cursor'], ['claude', 'openai', 'cursor', 'chatgpt']]) {
+    const out = buildServiceBreakdown(bdList(ids), BD_META)
+    const sum = [...out.matchAll(/(\d+) /g)].reduce((t, m) => t + Number(m[1]), 0)
+    assert.equal(sum, ids.length, `breakdown "${out}" must sum to ${ids.length}`)
+  }
+})
+
+test('breakdown orders by count desc, ties by canonical category order (aiwatch-reports#98)', () => {
+  // agents(1) before apps(1): equal counts, and `agents` precedes `apps` in SERVICE_CATEGORIES.
+  // Without the tie-break this would leak the archive's id order into the reader-facing line.
+  const out = buildServiceBreakdown(bdList(['chatgpt', 'cursor', 'claude', 'openai']), BD_META)
+  assert.equal(out, '2 LLM APIs, 1 coding agent, 1 AI app')
+})
+
+test('a service with no recognised group is bucketed to "other" (last on a tie) and reported, never dropped (aiwatch-reports#98)', () => {
+  // A service retired from /api/v1/status, or a new worker `group` this list has not learned yet.
+  // Dropping it would silently break the sum — the exact drift #98 exists to end.
+  // Two DIFFERENT causes, both must land in "other": `ghost` is absent from meta entirely (retired
+  // service), `quantumthing` is present but carries a group this report does not map (a new upstream
+  // category). A predicate of `!meta[s.id]` would catch only the first — the backwards-looking one.
+  const list = bdList(['claude', 'openai', 'cursor', 'ghost', 'quantumthing'])
+  assert.deepEqual(findUngroupedServices(list, BD_META), ['ghost', 'quantumthing'])
+  const out = buildServiceBreakdown(list, BD_META)
+  assert.equal(out, '2 LLM APIs, 2 other, 1 coding agent')
+  const sum = [...out.matchAll(/(\d+) /g)].reduce((t, m) => t + Number(m[1]), 0)
+  assert.equal(sum, 5, `"other" keeps the sum whole: ${out}`)
+})
+
+test('every GROUP_LABELS entry carries both a singular and a plural (aiwatch-reports#98)', () => {
+  // The shape is a footgun: a bare string is ALSO indexable, so writing `robotics: 'robotics'` — the
+  // pre-refactor shape, and what "mass nouns repeat the same form" invites — renders "1 r" / "2 o"
+  // into the published Services-monitored line with every sum and ordering invariant still holding.
+  // Nothing else fails on it, so this is the only thing standing between that and a reader.
+  for (const [g, label] of Object.entries(GROUP_LABELS)) {
+    assert.ok(Array.isArray(label) && label.length === 2,
+      `GROUP_LABELS.${g} must be [singular, plural], got ${JSON.stringify(label)}`)
+    for (const form of label) {
+      assert.ok(typeof form === 'string' && form.length > 1,
+        `GROUP_LABELS.${g} form ${JSON.stringify(form)} must be a real word (a 1-char value is the bare-string bug)`)
+    }
+  }
+})
+
+test('an inherited Object.prototype key is treated as ungrouped, not as a label (aiwatch-reports#98)', () => {
+  // A truthiness lookup on a plain object resolves `constructor`/`toString` to an inherited function,
+  // which escapes the "other" fallback AND the warning simultaneously — rendering "1 undefined" into
+  // published copy with nothing raised. The only input class that defeats both safety nets at once.
+  const list = bdList(['claude', 'weird'])
+  const meta = { ...BD_META, weird: { name: 'Weird', group: 'constructor' } }
+  assert.deepEqual(findUngroupedServices(list, meta), ['weird'], 'must be reported as ungrouped')
+  const out = buildServiceBreakdown(list, meta)
+  assert.equal(out, '1 LLM API, 1 other')
+  assert.ok(!out.includes('undefined'), `never render undefined to a reader: ${out}`)
+})
+
+test('projectServiceMeta keeps `group` — the one-line silent kill of the whole feature (aiwatch-reports#98)', () => {
+  // `group` is produced by aiwatch#1068 in a DIFFERENT repo, so this repo's CI cannot see it change.
+  // Dropping the field here (a tidy-up of an unremarkable projection) leaves every breakdown unit test
+  // green — they hand `meta` in directly — while every report silently renders "44 — 44 other".
+  const out = projectServiceMeta([
+    { id: 'claude', name: 'Claude API', category: 'api', group: 'llm', provider: 'Anthropic' },
+  ])
+  assert.equal(out.claude.group, 'llm', 'the group field must survive the projection')
+  assert.equal(out.claude.name, 'Claude API')
+  assert.equal(out.claude.category, 'api')
+
+  // And the projection's output must be directly usable as the breakdown's meta — the two halves of
+  // the contract, pinned end to end rather than each against its own fixture.
+  assert.equal(buildServiceBreakdown(bdList(['claude']), out), '1 LLM API')
+})
+
+test('emitBreakdownWarnings is silent when every service is grouped, loud when not (aiwatch-reports#98)', () => {
+  const orig = console.warn; const seen = []
+  console.warn = m => seen.push(m)
+  try {
+    assert.equal(emitBreakdownWarnings([], 3, {}), 0)
+    assert.equal(seen.length, 0, 'no warning when nothing is ungrouped')
+
+    // Partial → names the offenders (a service retired since the archived month).
+    assert.equal(emitBreakdownWarnings(['ghost'], 4, {}), 1)
+    assert.ok(seen.some(m => m.includes('ghost') && m.includes('1 of 4')),
+      `the partial warning names the id: ${seen.join('|')}`)
+
+    // Total → a DIFFERENT diagnosis (worker stopped emitting `group`), not a 40-id list.
+    seen.length = 0
+    emitBreakdownWarnings(['a', 'b', 'c'], 3, {})
+    assert.ok(seen.some(m => /NO service carried/.test(m)), `total-loss diagnosis: ${seen.join('|')}`)
+    assert.ok(!seen.some(m => m.includes('a, b, c')), 'must not dump every id when all are ungrouped')
+
+    // A partial list is capped — 30 ids on one line is unreadable in a log.
+    seen.length = 0
+    const many = Array.from({ length: 9 }, (_, i) => `svc${i}`)
+    emitBreakdownWarnings(many, 40, {})
+    assert.ok(seen.some(m => m.includes('+4 more')), `long partial lists are capped: ${seen.join('|')}`)
+    assert.ok(!seen.some(m => m.includes('svc8')), 'ids past the cap are not listed')
+  } finally { console.warn = orig }
+})
+
+test('emitBreakdownWarnings uses the ::warning:: channel under GitHub Actions (aiwatch-reports#98)', () => {
+  // A bare console.warn scrolls past unseen in CI; `::warning::` renders as an annotation. That branch
+  // is the whole point of the function in CI, so collapsing it must not pass.
+  const origLog = console.log; const origWarn = console.warn
+  const logged = []; const warned = []
+  console.log = m => logged.push(m); console.warn = m => warned.push(m)
+  try {
+    emitBreakdownWarnings(['ghost'], 4, { GITHUB_ACTIONS: 'true' })
+    assert.ok(logged.some(m => String(m).startsWith('::warning::')), `expected an annotation: ${logged.join('|')}`)
+    assert.equal(warned.length, 0, 'must not double-report on the plain channel')
+  } finally { console.log = origLog; console.warn = origWarn }
+})
+
+test('fillTemplate WIRES the ungrouped warning, not just the breakdown (aiwatch-reports#98)', () => {
+  // The builders being correct proves nothing about fillTemplate calling them — deleting the
+  // emitBreakdownWarnings call left the whole suite green.
+  const orig = console.warn; const seen = []
+  console.warn = m => seen.push(m)
+  try {
+    const breakdownWarnings = () => seen.filter(m => String(m).includes('aiwatch-reports#98'))
+    fillTemplate('[SERVICE_COUNT] — [SERVICE_BREAKDOWN]', '2026-07', bdArchive(['claude', 'ghost']), BD_META)
+    assert.ok(breakdownWarnings().some(m => m.includes('ghost')), `the warning must reach the console: ${seen.join('|')}`)
+    seen.length = 0
+    fillTemplate('[SERVICE_COUNT] — [SERVICE_BREAKDOWN]', '2026-07', bdArchive(['claude']), BD_META)
+    assert.deepEqual(breakdownWarnings(), [], 'and must stay silent when every service is grouped')
+  } finally { console.warn = orig }
+})
+
+test('the SHIPPED template carries [SERVICE_BREAKDOWN] and fillTemplate consumes it (aiwatch-reports#98)', () => {
+  // Drives the real template: the builder being correct proves nothing about the placeholder being
+  // wired, and the old hand-maintained literal must be gone for good.
+  const fsB = require('fs'); const pathB = require('path')
+  const tmpl = fsB.readFileSync(pathB.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  assert.ok(tmpl.includes('[SERVICE_BREAKDOWN]'), 'template carries the placeholder to fill')
+  assert.ok(!/\d+ API services, \d+ coding agents/.test(tmpl), 'the hand-maintained literal is gone')
+
+  const filled = fillTemplate(tmpl, '2026-07', bdArchive(['claude', 'openai', 'cursor']), BD_META)
+  assert.ok(filled.includes('**Services monitored**: 3 — 2 LLM APIs, 1 coding agent'),
+    'count and breakdown agree on the rendered line')
+  assert.ok(!filled.includes('[SERVICE_BREAKDOWN]'), 'placeholder consumed, not left in output')
+})
+
+test('breakdown collapses to empty on an empty archive, leaving no placeholder (aiwatch-reports#98)', () => {
+  assert.equal(buildServiceBreakdown([], {}), '')
+  const out = fillTemplate('monitored: [SERVICE_COUNT] — [SERVICE_BREAKDOWN]', '2026-04', { services: {}, daysCollected: 0 }, {})
+  assert.ok(!out.includes('[SERVICE_BREAKDOWN]'), `placeholder must be substituted even at 0: ${out}`)
 })
 
 // ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
@@ -2577,6 +2754,18 @@ console.log('\nreport-wide false-claim ratchet (#75)')
 const REAL_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
 const REAL_ARCHIVE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-05.json'), 'utf-8'))
 
+// aiwatch-reports#98 — these renders used to pass `{}` for meta, which since the breakdown landed made
+// the full report read "Services monitored: 33 — 33 other" and taught the ratchet that total category
+// loss is a valid report (it also drowned the run in the very warning that failure is supposed to
+// raise). Spread the archive's ids across the real group keys: memberships are synthetic, but the
+// SHAPE is faithful, which is all this ratchet needs. The collapse itself is asserted separately by
+// 'the full render states a real category breakdown'.
+const REAL_GROUPS = ['llm', 'agents', 'voice', 'inference', 'observability', 'video', 'image', 'apps']
+const metaFor = archive => Object.fromEntries(
+  Object.keys(archive.services).map((id, i) => [id, { name: id, group: REAL_GROUPS[i % REAL_GROUPS.length] }]),
+)
+const REAL_META = metaFor(REAL_ARCHIVE)
+
 const RETIRED_CLAIMS = [
   [/no reliable incident feed/i,          'bedrock reads AWS Health events JSON (aiwatch#677); azureopenai an Azure RSS'],
   [/migrated to a platform/i,             'cause-free stale caveat — we do not know why a feed froze'],
@@ -2611,7 +2800,7 @@ function archiveExercisingEverySection(base) {
 }
 
 test('no retired false claim survives a full report render', () => {
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
 })
 
@@ -2625,7 +2814,7 @@ test('the 30-Day Uptime table renders real rows into its section (anchor guard)'
   for (const id of Object.keys(archive.services)) {
     archive.services[id] = { ...archive.services[id], officialUptime: 99.42, score: 90, scoreConfidence: 'high' }
   }
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archive, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archive, metaFor(archive))
   const start = out.indexOf('## 30-Day Uptime')
   assert.ok(start !== -1, 'the 30-Day Uptime heading must exist')
   const rest = out.indexOf('\n## ', start + 1)
@@ -2634,10 +2823,24 @@ test('the 30-Day Uptime table renders real rows into its section (anchor guard)'
   assert.ok(!section.includes('<tr><td></td><td></td></tr>'), 'the empty placeholder row must be replaced')
 })
 
+test('the full render states a real category breakdown that sums to the count (aiwatch-reports#98)', () => {
+  // The ratchet's other checks only assert no placeholder SURVIVES — a total collapse to "33 other"
+  // resolves the placeholder and passes them all. Assert the rendered line end to end instead.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
+  const line = out.split('\n').find(l => l.includes('**Services monitored**'))
+  assert.ok(line, 'the Services-monitored line must render')
+  assert.ok(!/\bother\b/.test(line), `no bucket may collapse to "other" in a full render: ${line}`)
+
+  const [count, ...buckets] = [...line.matchAll(/(\d+) /g)].map(m => Number(m[1]))
+  assert.equal(buckets.reduce((a, b) => a + b, 0), count,
+    `the breakdown must sum to [SERVICE_COUNT]: ${line}`)
+  assert.equal(count, Object.keys(REAL_ARCHIVE.services).length, 'and the count is the archive roster')
+})
+
 test('the ratchet actually exercises every conditional section', () => {
   // Guard the guard: if a future template change drops one of these sections, the regexes that
   // target it start passing for the wrong reason.
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), REAL_META)
   assert.match(out, /excluded from this ranking/, 'withheld/stale ranking clause must render')
   assert.match(out, /no longer read/, 'stale caveat must render')
   assert.match(out, /Component Reliability/, 'component reliability section must render')
@@ -2645,7 +2848,7 @@ test('the ratchet actually exercises every conditional section', () => {
 })
 
 test('a full render leaves no unresolved placeholder or dead anchor', () => {
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   const leftovers = out.match(/\[[A-Z_]{4,}\]/g) || []
   assert.deepStrictEqual(leftovers, [], `unsubstituted placeholders: ${leftovers.join(', ')}`)
   assert.ok(!/#aiwatch-score--\[/.test(out), 'the AIWatch Score anchor must not embed a placeholder')
@@ -2755,7 +2958,7 @@ test('every About This Report link names the bullet it points at', () => {
   // The bullets carry no anchors of their own (kramdown only auto-ids headings), so the link lands
   // at the section top and the "→ Bullet" suffix is the only thing telling a reader where to look.
   // Three of six references omitted it.
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', archiveExercisingEverySection(REAL_ARCHIVE), REAL_META)
   const links = [...out.matchAll(/\[([^\]]*About This Report[^\]]*)\]\(#about-this-report\)/g)].map(m => m[1])
   assert.ok(links.length >= 3, `expected several methodology links, found ${links.length}`)
   for (const text of links) {
@@ -2780,7 +2983,7 @@ test('the stale caveat truncates the incident COUNT, never the uptime', () => {
 test('the Score is named and linked where a reader first meets a number', () => {
   // Summary is three sections above the AIWatch Score heading, yet it opens with bare figures like
   // "44/100". A first-time reader met the numbers before the metric had a name.
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   const summary = out.slice(out.indexOf('## Summary'), out.indexOf('## Recommendations'))
   assert.match(summary, /\*\*AIWatch Score\*\* \(0–100\)/, 'Summary must name the metric')
   assert.match(summary, /\(#aiwatch-score--/, 'and link to its definition')
@@ -2795,7 +2998,7 @@ test('the API Response Time section carries ONE prose block, and it is true', ()
   // half-explaining the method. Merged into the intro; the footnote is gone.
   // June 2026: 13 of 41 services had no probe; 10 of them were ranked, Modal at #2 with a 95.
   // The old footnote named three of the thirteen and claimed all were "excluded from rankings".
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   const start = out.indexOf('## API Response Time')
   const section = out.slice(start, out.indexOf('\n## ', start + 5))
   assert.ok(!/^> \*\*Note\*\*: Probe RTT/m.test(section), 'the footnote must not return')
@@ -2824,7 +3027,7 @@ test('the API Response Time section carries ONE prose block, and it is true', ()
 test('every resolved SCORE_ANCHOR link keeps its leading #', () => {
   // `[SCORE_ANCHOR]` resolves to a bare id, so the template must write `(#[SCORE_ANCHOR])`.
   // Omitting the # yields `](aiwatch-score--june-…)` — a relative-path link that 404s silently.
-  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, {})
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   const links = [...out.matchAll(/\]\(([^)]*aiwatch-score--[^)]*)\)/g)].map(m => m[1])
   assert.ok(links.length >= 2, `expected several Score links, found ${links.length}`)
   for (const href of links) assert.ok(href.startsWith('#'), `anchor link lost its #: ${href}`)
