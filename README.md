@@ -1,6 +1,6 @@
 # AIWatch Monthly Reports
 
-> Monthly AI service reliability reports covering uptime, incidents, and performance across 41 major AI services.
+> Monthly AI service reliability reports covering uptime, incidents, and performance across 45 major AI services.
 
 **Live site**: [ai-watch.dev/reports](https://ai-watch.dev/reports/) (served via Vercel rewrite; legacy `reports.ai-watch.dev` self-redirects to the canonical path — #264)
 **Data source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
@@ -30,12 +30,12 @@ Each monthly report includes:
 
 ## Methodology
 
-- **43 services monitored**: 15 LLM APIs, 18 voice & inference, 4 AI apps, 6 coding agents
+- **45 services monitored**: 16 LLM APIs, 6 coding agents, 3 voice, 8 inference & infra, 3 observability, 2 video, 2 image, 5 AI apps
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, AWS Health Dashboard, Azure Status RSS, OnlineOrNot
 - **AIWatch Score**: Weighted composite of uptime (40pts), incident affected days (25pts), recovery time (15pts), and probe-based responsiveness (20pts). Services without probe data use 80→100 score redistribution.
 - **Uptime figures**: Official status page metrics — single primary component basis where available, platform-wide average otherwise
 - **Incident counts**: Per-component aggregation — some providers (e.g., Anthropic) report per model, so counts may exceed distinct outages
-- **API probe**: Direct RTT measurement every 5 minutes to 31 probe targets with public endpoints (supplementary monitoring data)
+- **API probe**: Direct RTT measurement every 5 minutes to 33 probe targets with public endpoints (supplementary monitoring data)
 - **3-Month Trend (Notable Movers)**: ranked by the largest single change across **Score / MTTR / total downtime** over the window — incident-feed *measured* metrics. Uptime is deliberately excluded: the archive's `uptime` field mixes per-service sources (status-page group aggregates, estimate/poll-derived figures) so a cross-service uptime delta is misleading (a 3-month official-uptime trend awaits aiwatch#586 + ≥3 months of the clean `officialUptime` field). Direction (🔺/🔻) follows the bold *headline* metric, not Score. Services the Score ranking excludes (no-incident-feed / stale source) are excluded from movers too. The first point is flagged when its month is partial (mid-month onboarding); MTTR/downtime are measured over the months that have incident data.
 
 Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
@@ -78,7 +78,7 @@ After generation, fill in the narrative sections (`Summary`, `Recommendations`, 
 
 ## About AIWatch
 
-AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 41 major AI services.
+AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 45 major AI services.
 
 - **Live dashboard**: [ai-watch.dev](https://ai-watch.dev)
 - **Source code**: [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch) (AGPL-3.0)
