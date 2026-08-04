@@ -1,5 +1,5 @@
 const {
-  generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
+  generateScoreBarSvg, scoreTiersFromReport, trendRowsFromTiers, chartWarn, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
@@ -9,6 +9,8 @@ const {
 const assert = require('assert')
 const { spawnSync } = require('child_process')
 const path = require('path')
+const fs = require('fs')
+const os = require('os')
 
 let passed = 0
 let failed = 0
@@ -62,11 +64,13 @@ test('unknown grade → grey', () => {
 
 console.log('\ngenerateScoreBarSvg')
 
+// Keyed as `parseTableGroups` really returns the report's Score table (verified against the generated
+// 2026-06 section): Rank / Service / Score / Grade / Uptime Source / Why. There is no Confidence column.
 const MOCK_SCORES = [
-  { Service: 'Cohere API', Score: '100', Grade: 'Excellent', Confidence: 'High' },
-  { Service: 'OpenAI API', Score: '86', Grade: 'Excellent', Confidence: 'High' },
-  { Service: 'ElevenLabs', Score: '52', Grade: 'Degrading', Confidence: 'High' },
-  { Service: 'Perplexity', Score: 'N/A', Grade: '', Confidence: 'Low' },
+  { Rank: '1', Service: 'Cohere API', Score: '100', Grade: 'Excellent', 'Uptime Source': 'Official', Why: 'Zero incidents' },
+  { Rank: '2', Service: 'OpenAI API', Score: '86', Grade: 'Excellent', 'Uptime Source': 'Official', Why: '3 incidents' },
+  { Rank: '3', Service: 'ElevenLabs', Score: '52', Grade: 'Degrading', 'Uptime Source': 'Official', Why: '9 incidents' },
+  { Rank: '', Service: 'Perplexity', Score: 'N/A', Grade: '', 'Uptime Source': 'No uptime', Why: '' },
 ]
 
 test('returns valid SVG string', () => {
@@ -112,7 +116,7 @@ test('dark background, no light mode', () => {
 })
 
 test('escapes XML entities in service names', () => {
-  const scores = [{ Service: 'xAI & Co', Score: '80', Grade: 'Good', Confidence: 'High' }]
+  const scores = [{ Rank: '1', Service: 'xAI & Co', Score: '80', Grade: 'Good', 'Uptime Source': 'Official', Why: '' }]
   const svg = generateScoreBarSvg(scores)
   assert.ok(svg.includes('xAI &amp; Co'), 'should escape ampersand')
   assert.ok(!svg.includes('xAI & Co'), 'should not have raw ampersand')
@@ -120,8 +124,8 @@ test('escapes XML entities in service names', () => {
 
 test('filters NaN scores', () => {
   const scores = [
-    { Service: 'Valid', Score: '90', Grade: 'Excellent', Confidence: 'High' },
-    { Service: 'Bad', Score: 'TBD', Grade: '', Confidence: 'Low' },
+    { Rank: '1', Service: 'Valid', Score: '90', Grade: 'Excellent', 'Uptime Source': 'Official', Why: '' },
+    { Rank: '', Service: 'Bad', Score: 'TBD', Grade: '', 'Uptime Source': 'No uptime', Why: '' },
   ]
   const svg = generateScoreBarSvg(scores)
   assert.ok(svg.includes('Valid'), 'should include valid service')
@@ -133,6 +137,216 @@ test('filters NaN scores', () => {
 test('handles empty scores array', () => {
   const svg = generateScoreBarSvg([])
   assert.ok(svg.startsWith('<svg'), 'should still produce valid SVG')
+})
+
+// aiwatch-reports#106 — the report's second ranking table (no official uptime). It carries no Uptime
+// Source column: the value would read 'No uptime' on every row, which is what puts the row there.
+const MOCK_MEDIUM = [
+  { Rank: '1', Service: 'Gemini API', Score: '87', Grade: 'Good', Why: 'Zero incidents' },
+  { Rank: '2', Service: 'Deepgram', Score: '48', Grade: 'Degrading', Why: '4 incidents' },
+]
+
+test('draws the no-official-uptime tier below a divider, never merged into the bars above', () => {
+  const svg = generateScoreBarSvg(MOCK_SCORES, MOCK_MEDIUM)
+  const divider = svg.indexOf('No official uptime — ranked separately')
+  assert.ok(divider > -1, 'the divider label is drawn')
+  // Gemini's 87 beats OpenAI's 86, so a merged descending sort would place it ABOVE OpenAI.
+  assert.ok(svg.indexOf('OpenAI API') < divider, 'main-tier bars stay above the divider')
+  assert.ok(svg.indexOf('Gemini API') > divider, 'a higher medium score does not jump the divider')
+  assert.ok(svg.indexOf('Deepgram') > divider)
+})
+
+test('the medium tier is sorted within itself', () => {
+  const svg = generateScoreBarSvg(MOCK_SCORES, MOCK_MEDIUM)
+  assert.ok(svg.indexOf('Gemini API') < svg.indexOf('Deepgram'), 'Gemini (87) before Deepgram (48)')
+})
+
+test('the divider label sits between the tiers, not on top of either', () => {
+  // `dividerHeight` reserves the row the label is drawn in. Zeroing it leaves the label overlapping
+  // the last main-tier bar — invisible to the two bounds tests below, which only check the bottom.
+  const svg = generateScoreBarSvg(MOCK_SCORES, MOCK_MEDIUM)
+  const labelY = Number(svg.match(/y="(\d+)"[^>]*>No official uptime — ranked separately/)[1])
+  const barYs = [...svg.matchAll(/<rect x="\d+" y="(\d+)"/g)].map(m => Number(m[1]))
+  const above = barYs.filter(y => y < labelY)
+  const below = barYs.filter(y => y > labelY)
+  assert.ok(above.length > 0 && below.length > 0, 'the label really is between the two groups of bars')
+  assert.ok(labelY - Math.max(...above) >= 20, `label at ${labelY} crowds the last main bar at ${Math.max(...above)}`)
+  assert.ok(Math.min(...below) - labelY >= 5, `label at ${labelY} crowds the first medium bar at ${Math.min(...below)}`)
+})
+
+test('the N/A footer sits BELOW the second tier, not on top of its bars', () => {
+  // `naY` is derived from the combined body height. Reverting it to the high-tier-only expression
+  // keeps every other test green while the footer text is drawn over the tier divider label.
+  const svg = generateScoreBarSvg(MOCK_SCORES, MOCK_MEDIUM)   // MOCK_SCORES carries the one N/A row
+  const naY = Number(svg.match(/y="(\d+)"[^>]*>Perplexity — N\/A/)[1])
+  const lowestBarY = Math.max(...[...svg.matchAll(/<rect x="\d+" y="(\d+)"/g)].map(m => Number(m[1])))
+  assert.ok(naY > lowestBarY, `N/A footer at y=${naY} must sit below the lowest bar at y=${lowestBarY}`)
+})
+
+test('the chart grows to fit the second tier — no bars drawn outside the viewBox', () => {
+  const svg = generateScoreBarSvg(MOCK_SCORES, MOCK_MEDIUM)
+  const height = Number(svg.match(/viewBox="0 0 \d+ (\d+)"/)[1])
+  const maxBarY = Math.max(...[...svg.matchAll(/<rect x="\d+" y="(\d+)"/g)].map(m => Number(m[1])))
+  assert.ok(maxBarY < height, `lowest bar at y=${maxBarY} must fit inside the ${height}px viewBox`)
+})
+
+test('no divider and an unchanged chart when there is no second tier', () => {
+  const withArg = generateScoreBarSvg(MOCK_SCORES, [])
+  assert.ok(!withArg.includes('No official uptime'), 'no divider for a single-tier month')
+  eq(withArg, generateScoreBarSvg(MOCK_SCORES), 'omitting the argument renders the same chart')
+})
+
+// The CLI's tier wiring — the renderer being correct says nothing about main feeding it both arrays.
+console.log('\nscoreTiersFromReport (#106)')
+
+// Column sets match what buildScoreTable really emits: the main table carries Uptime Source, the
+// medium one does not (aiwatch-reports#106). scoreTiersFromReport reads that difference to tell the
+// two apart, so a fixture that gave them identical headers would test a shape the report never has.
+const TWO_TIER_REPORT = [
+  '# July 2026', '',
+  '## AIWatch Score — July 2026 Reliability Rankings', '',
+  '| Rank | Service | Score | Grade | Uptime Source | Why |', '|---|---|---|---|---|---|',
+  '| 1 | Windsurf | 100 | Excellent | Official | Zero incidents |', '',
+  '**No Official Uptime**', '',
+  '*not directly comparable to the table above.*', '',
+  '| Rank | Service | Score | Grade | Why |', '|---|---|---|---|---|',
+  '| 1 | Gemini API | 87 | Good | Zero incidents |', '',
+  '## 30-Day Uptime', '',
+  '| Service | Uptime |', '|---|---|', '| Windsurf | 100.00% |', '',
+].join('\n')
+
+test('splits the report back into its two ranking tiers', () => {
+  const { scores, mediumScores } = scoreTiersFromReport(TWO_TIER_REPORT)
+  eq(scores.map(r => r.Service).join('|'), 'Windsurf')
+  eq(mediumScores.map(r => r.Service).join('|'), 'Gemini API', 'the second table is NOT folded into the first')
+})
+
+test('a third table in the Score section is reported, not silently dropped', () => {
+  // The destructuring is positional, so a future extra table would vanish from the chart — the same
+  // silent omission this issue exists to remove. Warn instead.
+  const threeTables = TWO_TIER_REPORT.replace(
+    '## 30-Day Uptime',
+    '| Rank | Service |\n|---|---|\n| 1 | Surprise |\n\n## 30-Day Uptime',
+  )
+  const warnings = []
+  const { scores, mediumScores } = scoreTiersFromReport(threeTables, m => warnings.push(m))
+  eq(warnings.length, 1)
+  assert.ok(warnings[0].includes('3 tables'), warnings[0])
+  eq(scores.length + mediumScores.length, 2, 'the two known tiers are still charted')
+})
+
+test('two tables warn about nothing', () => {
+  const warnings = []
+  scoreTiersFromReport(TWO_TIER_REPORT, m => warnings.push(m))
+  eq(warnings.length, 0)
+})
+
+test('the trend fallback covers BOTH tiers', () => {
+  // This feeds monthEntryFromScoreRows when the month has no _data snapshot. Reading `scores` alone
+  // would drop every no-official-uptime service from the trend chart with no signal at all.
+  const rows = trendRowsFromTiers({ scores: [{ Service: 'Windsurf' }], mediumScores: [{ Service: 'Gemini API' }] })
+  eq(rows.map(r => r.Service).join('|'), 'Windsurf|Gemini API')
+  eq(trendRowsFromTiers({ scores: [{ Service: 'Windsurf' }], mediumScores: [] }).length, 1)
+})
+
+// Tier assignment is positional. A hand-edited report that reorders or re-columns the tables would
+// otherwise chart the no-uptime services as the main ranking with no signal at all. The two shapes
+// are separate disjuncts, so each needs its own fixture — a single fully-swapped report makes both
+// true at once and either half could then be deleted green.
+test('a SECOND table still carrying Uptime Source is reported', () => {
+  const mediumKeepsColumn = TWO_TIER_REPORT
+    .replace('| Rank | Service | Score | Grade | Why |\n|---|---|---|---|---|\n| 1 | Gemini API | 87 | Good | Zero incidents |',
+      '| Rank | Service | Score | Grade | Uptime Source | Why |\n|---|---|---|---|---|---|\n| 1 | Gemini API | 87 | Good | No uptime | Zero incidents |')
+  const warnings = []
+  const { mediumScores } = scoreTiersFromReport(mediumKeepsColumn, m => warnings.push(m))
+  eq(mediumScores.length, 1, 'the fixture still parses as two tables')
+  assert.ok('Uptime Source' in mediumScores[0], 'and the second one really did keep the column')
+  assert.ok(warnings.some(w => w.includes('expected tier shape')), warnings.join('\n'))
+})
+
+test('a FIRST table missing Uptime Source is reported', () => {
+  const mainLosesColumn = TWO_TIER_REPORT
+    .replace('| Rank | Service | Score | Grade | Uptime Source | Why |\n|---|---|---|---|---|---|\n| 1 | Windsurf | 100 | Excellent | Official | Zero incidents |',
+      '| Rank | Service | Score | Grade | Why |\n|---|---|---|---|---|\n| 1 | Windsurf | 100 | Excellent | Zero incidents |')
+  const warnings = []
+  const { scores } = scoreTiersFromReport(mainLosesColumn, m => warnings.push(m))
+  assert.ok(!('Uptime Source' in scores[0]), 'the fixture really did drop it from the FIRST table')
+  assert.ok(warnings.some(w => w.includes('expected tier shape')), warnings.join('\n'))
+})
+
+test('chartWarn annotates on stdout in CI, warns on stderr locally', () => {
+  // Mirrors generate-report.test.js's emitUptimeWarnings test. The annotation branch is the entire
+  // reason this function exists — the PR checklist tells the operator to look for `::warning::` in
+  // the "Generate charts" step log — and every other test here injects a stub warn, so without this
+  // the default is never executed at all. Capture both channels so a swap can't pass silently.
+  // Asserted PER CALL. Pooling both calls and checking `out[0]`/`err[0]` cannot detect an inverted
+  // condition: a full swap still leaves one message in each array with the expected prefix.
+  const capture = env => {
+    const out = [], err = []
+    const realLog = console.log, realWarn = console.warn
+    console.log = m => out.push(m); console.warn = m => err.push(m)
+    try { chartWarn('boom', env) } finally { console.log = realLog; console.warn = realWarn }
+    return { out, err }
+  }
+  const ci = capture({ GITHUB_ACTIONS: 'true' })
+  eq(ci.err.length, 0, `CI must not use stderr: ${ci.err.join()}`)
+  eq(ci.out.length, 1)
+  assert.ok(ci.out[0].startsWith('::warning::'), ci.out[0])
+  const local = capture({})
+  eq(local.out.length, 0, `local must not print an annotation: ${local.out.join()}`)
+  eq(local.err.length, 1)
+  assert.ok(local.err[0].startsWith('[generate-charts] WARNING: '), local.err[0])
+})
+
+test('a one-table month is never reported as a tier-shape problem', () => {
+  // A single-tier month has no second table to be out of order with. Includes the shape a PUBLISHED
+  // legacy report really has — `Confidence`, no `Uptime Source` — which a column-based classifier
+  // would file as the no-official-uptime tier and chart under the divider. All of 2026-03.
+  const legacy = [
+    '## AIWatch Score — March 2026', '',
+    '| Rank | Service | Score | Grade | Confidence | Why |', '|---|---|---|---|---|---|',
+    '| 1 | Groq Cloud | 92 | Excellent | High | Zero incidents |', '',
+    '## Next', '',
+  ].join('\n')
+  const warnings = []
+  const { scores, mediumScores } = scoreTiersFromReport(legacy, m => warnings.push(m))
+  eq(warnings.length, 0, warnings.join('\n'))
+  eq(scores.length, 1, 'a legacy month is the MAIN ranking')
+  eq(mediumScores.length, 0)
+})
+
+test('every published report parses as ONE main-tier group with no warning', () => {
+  // The regression check the fixture above abstracts: run the real committed reports through the
+  // real reader. A classifier that files any of them as the medium tier draws the whole month's
+  // ranking under a "No official uptime" divider.
+  for (const month of ['2026-03', '2026-04', '2026-05']) {
+    const md = fs.readFileSync(path.join(__dirname, '..', month, 'index.md'), 'utf-8')
+    const warnings = []
+    const { scores, mediumScores } = scoreTiersFromReport(md, m => warnings.push(m))
+    assert.ok(scores.length > 10, `${month}: ${scores.length} rows in the main tier`)
+    eq(mediumScores.length, 0, `${month} has no second tier`)
+    eq(warnings.length, 0, `${month}: ${warnings.join('\n')}`)
+  }
+})
+
+test('two tables glued together with no blank line are reported, not silently merged', () => {
+  // parseTableGroups splits on the blank line, so gluing them yields ONE group whose rows include the
+  // second header line as DATA — and the medium tier ends up inside the main descending sequence,
+  // the exact merge this issue removes. One group, so the shape check above cannot see it.
+  const glued = TWO_TIER_REPORT.replace(/\n\n\*\*No Official Uptime\*\*\n\n\*[^\n]*\*\n\n/, '\n')
+  const warnings = []
+  const { scores, mediumScores } = scoreTiersFromReport(glued, m => warnings.push(m))
+  eq(mediumScores.length, 0, 'the fixture really did glue them into one group')
+  assert.ok(scores.some(r => r.Service === 'Gemini API'), 'and the medium row really did land in the main tier')
+  assert.ok(warnings.some(w => w.includes('header row')), warnings.join('\n'))
+})
+
+test('a single-table month yields an empty second tier, not a borrowed one', () => {
+  // The 30-Day Uptime table sits in the next section — it must not become the "medium" tier.
+  const oneTable = TWO_TIER_REPORT.replace(/\*\*No Official Uptime\*\*[\s\S]*?\| 1 \| Gemini API \|[^\n]*\n/, '')
+  const { scores, mediumScores } = scoreTiersFromReport(oneTable)
+  eq(scores.map(r => r.Service).join('|'), 'Windsurf')
+  eq(mediumScores.length, 0)
 })
 
 // ── generateUptimeHeatmapSvg ─────────────────────────────
@@ -995,6 +1209,53 @@ test('CLI with no report path exits 1 and prints usage', () => {
   assert.strictEqual(r.status, 1)
   assert.match(r.stderr, /Usage: node scripts\/generate-charts\.js/)
   assert.match(r.stderr, /--allow-partial/, 'usage must document the flag')
+})
+
+test('the CLI hands BOTH tiers to the bar chart (aiwatch-reports#106)', () => {
+  // The wiring, not the renderer. `generateScoreBarSvg(scores, mediumScores)` → `(scores)`, and
+  // `scoreTiersFromReport(md)` → `parseTableGroups(md, 'AIWatch Score')[0]`, both leave every pure
+  // test green while the published chart loses a whole tier — so exercise the real entry point.
+  // Run in a temp cwd: the CLI resolves `assets/<month>/` against process.cwd(), and `_data/` is
+  // absent there so it stops before the network fetch the trend chart needs.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'charts-cli-'))
+  try {
+    fs.mkdirSync(path.join(tmp, '2026-07'))
+    fs.writeFileSync(path.join(tmp, '2026-07', 'index.md'), TWO_TIER_REPORT)
+    spawnSync(process.execPath, [SCRIPT, '2026-07/index.md'], { encoding: 'utf8', cwd: tmp })
+    const svg = fs.readFileSync(path.join(tmp, 'assets', '2026-07', 'score-chart.svg'), 'utf-8')
+    const divider = svg.indexOf('No official uptime — ranked separately')
+    assert.ok(divider > -1, `the CLI drew the second tier's divider:\n${svg.slice(0, 400)}`)
+    assert.ok(svg.indexOf('Windsurf') < divider, 'main tier above')
+    assert.ok(svg.indexOf('Gemini API') > divider, 'medium tier below, and present at all')
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => {
+  // The other CLI call site: when the month has no `_data` snapshot, the current trend entry is built
+  // from the parsed Score TABLES. Reading `scores` alone silently drops every medium-tier service
+  // from the trend — a different omission from the bar chart's, and unreachable by any pure test of
+  // `trendRowsFromTiers` itself. Two prior months are seeded so the ≥2-entry gate is met and
+  // trend-chart.svg is actually written.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'charts-trend-'))
+  try {
+    fs.mkdirSync(path.join(tmp, '2026-07'))
+    fs.mkdirSync(path.join(tmp, '_data'))
+    fs.writeFileSync(path.join(tmp, '2026-07', 'index.md'), TWO_TIER_REPORT)
+    for (const m of ['2026-05', '2026-06']) {
+      fs.writeFileSync(path.join(tmp, '_data', `${m}.json`), JSON.stringify({
+        month: m, daysInMonth: 30, daysCollected: 30,
+        services: { windsurf: { score: 90, grade: 'excellent' }, gemini: { score: 70, grade: 'fair' } },
+      }))
+    }
+    spawnSync(process.execPath, [SCRIPT, '2026-07/index.md'], { encoding: 'utf8', cwd: tmp })
+    const trend = fs.readFileSync(path.join(tmp, 'assets', '2026-07', 'trend-chart.svg'), 'utf-8')
+    assert.ok(trend.includes('Windsurf'), 'main tier is trended')
+    assert.ok(trend.includes('Gemini API'), 'and so is the medium tier — it has its own past to plot')
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
 })
 
 test('CLI accepts the flag in either position', () => {

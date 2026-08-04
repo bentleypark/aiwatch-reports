@@ -32,7 +32,7 @@ Each monthly report includes:
 
 - **45 services monitored**: 16 LLM APIs, 6 coding agents, 3 voice, 8 inference & infra, 3 observability, 2 video, 2 image, 5 AI apps
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, AWS Health Dashboard, Azure Status RSS, OnlineOrNot
-- **AIWatch Score**: Weighted composite of uptime (40pts), incident affected days (25pts), recovery time (15pts), and probe-based responsiveness (20pts). Services without probe data use 80→100 score redistribution.
+- **AIWatch Score**: Weighted composite of uptime (40pts), incident affected days (25pts), recovery time (15pts), and probe-based responsiveness (20pts). Services without probe data use 80→100 score redistribution. A service whose status page publishes no uptime records drops the 40-point Uptime component and is rescaled over the remaining three onto the same 0–100 range, so that number is not on the same scale as one built from a measured uptime. Where a month's data records which services those are, they get their **own ranking table**, never a shared rank sequence (aiwatch-reports#106). A service with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked at all.
 - **Uptime figures**: Official status page metrics — single primary component basis where available, platform-wide average otherwise
 - **Incident counts**: Per-component aggregation — some providers (e.g., Anthropic) report per model, so counts may exceed distinct outages
 - **API probe**: Direct RTT measurement every 5 minutes to 33 probe targets with public endpoints (supplementary monitoring data)

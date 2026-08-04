@@ -9,7 +9,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { parseTable } = require('./generate-summary')
+const { parseTableGroups } = require('./generate-summary')
 
 // ── Color constants ──────────────────────────────────────
 const COLORS = {
@@ -80,23 +80,86 @@ function nameToId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-// ── Score Bar Chart ──────────────────────────────────────
-function generateScoreBarSvg(scores) {
-  const ranked = scores
+// ── Score tiers, read back out of the report ─────────────
+// aiwatch-reports#106 — the same CI convention `emitUptimeWarnings` uses in generate-report.js: a
+// bare stderr line in the "Generate charts" step is read by nobody, while a `::warning::` becomes an
+// annotation on the draft PR. Duplicated rather than imported because generate-report.js requires
+// THIS module, not the other way round.
+function chartWarn(message, env = process.env) {
+  if (env.GITHUB_ACTIONS) console.log(`::warning::${message}`)
+  else console.warn(`[generate-charts] WARNING: ${message}`)
+}
+
+// aiwatch-reports#106 — the trend fallback's row set: BOTH tiers, flattened. Unlike the bar chart
+// there is no ABSOLUTE-score sequence here — each trend line plots a service against its own past —
+// so the only risk is dropping services from the chart, which is what reading `scores` alone would
+// do. `computeNotableMovers` does rank services against each other downstream, but on DELTAS, each
+// measured inside one service's own series — a service whose tier flips mid-window spans two scales,
+// a pre-existing trend limitation this split neither creates nor fixes.
+function trendRowsFromTiers({ scores, mediumScores }) {
+  return [...scores, ...mediumScores]
+}
+
+/**
+ * aiwatch-reports#106 — read the report's Score section back as its two ranking tiers: group [0] the
+ * main ranking, [1] the no-official-uptime tier when the month has one.
+ *
+ * Positional, with the column set used only as a CROSS-CHECK on a two-table section. Classifying a
+ * lone table by its columns instead misreads the published legacy reports, whose single table has a
+ * `Confidence` column and no `Uptime Source` — the whole of 2026-03 would file as the medium tier.
+ * The cost is that a month with no high-confidence service at all charts without the divider; that
+ * shape needs every tracked provider to stop publishing uptime records at once, and the report body
+ * still carries the caption unconditionally.
+ *
+ * Warn, never throw: a hand-edited report still has to produce a chart.
+ */
+function scoreTiersFromReport(md, warn = chartWarn) {
+  const groups = parseTableGroups(md, 'AIWatch Score')
+  if (groups.length > 2) {
+    warn(`AIWatch Score section has ${groups.length} tables — only the first two are charted (aiwatch-reports#106)`)
+  }
+  const [scores = [], mediumScores = []] = groups
+  const hasUptimeCol = g => g.length > 0 && 'Uptime Source' in g[0]
+  // Swapped: the medium table first, or a second table that still carries the main table's column.
+  if (groups.length === 2 && (hasUptimeCol(mediumScores) || !hasUptimeCol(scores))) {
+    warn('AIWatch Score tables are not in the expected tier shape (main table first) — the chart may merge incomparable scores (aiwatch-reports#106)')
+  }
+  // Glued: no blank line between the two tables, so the second one's header and separator lines are
+  // read as DATA rows of the first and the whole medium tier lands inside the main sequence. One
+  // group, so the shape check above cannot see it; the swallowed header row can.
+  if (groups.some(g => g.some(r => r.Rank === 'Rank' || /^:?-{3,}:?$/.test(r.Rank || '')))) {
+    warn('an AIWatch Score table absorbed another table\'s header row — the tiers are not separated by a blank line, and the chart is merging them (aiwatch-reports#106)')
+  }
+  return { scores, mediumScores }
+}
+
+// aiwatch-reports#106 — `mediumScores` is the report's SECOND ranking table (services with no
+// official uptime, whose Score omits the uptime component). They are drawn below a labelled divider
+// instead of being sorted into the bars above: merging the two into one descending chart is the same
+// incomparable-numbers claim the split tables exist to stop making, and dropping them would delete
+// services from the chart that the report still ranks. Defaults to [] so a month with no such
+// service — and every legacy month — renders exactly the chart it did before.
+function generateScoreBarSvg(scores, mediumScores = []) {
+  const toBars = rows => rows
     .filter(r => r.Score && r.Score !== 'N/A')
     .map(r => ({ name: r.Service, score: parseInt(r.Score), grade: r.Grade || '' }))
     .filter(r => !isNaN(r.score))
     .sort((a, b) => b.score - a.score)
 
+  const ranked = toBars(scores)
+  const rankedMedium = toBars(mediumScores)
+
   const labelWidth = 130
   const barMaxWidth = 320
   const rowHeight = 28
+  const dividerHeight = rankedMedium.length > 0 ? 30 : 0
   const padding = { top: 50, right: 120, bottom: 20, left: 16 }
   const width = padding.left + labelWidth + barMaxWidth + padding.right
-  const height = padding.top + ranked.length * rowHeight + padding.bottom
+  const bodyHeight = (ranked.length + rankedMedium.length) * rowHeight + dividerHeight
+  const height = padding.top + bodyHeight + padding.bottom
 
-  const rows = ranked.map((r, i) => {
-    const y = padding.top + i * rowHeight
+  const renderBars = (bars, yStart) => bars.map((r, i) => {
+    const y = yStart + i * rowHeight
     const barW = Math.round((r.score / 100) * barMaxWidth)
     const color = scoreColorByGrade(r.grade)
     return [
@@ -106,10 +169,19 @@ function generateScoreBarSvg(scores) {
     ].join('\n')
   }).join('\n')
 
-  const naServices = scores.filter(r => !r.Score || r.Score === 'N/A')
+  const mediumStart = padding.top + ranked.length * rowHeight + dividerHeight
+  const rows = [
+    renderBars(ranked, padding.top),
+    rankedMedium.length > 0
+      ? `  <text x="${padding.left}" y="${mediumStart - 10}" fill="${COLORS.textMuted}" font-size="10" font-family="ui-monospace,monospace">No official uptime — ranked separately</text>`
+      : '',
+    renderBars(rankedMedium, mediumStart),
+  ].filter(Boolean).join('\n')
+
+  const naServices = [...scores, ...mediumScores].filter(r => !r.Score || r.Score === 'N/A')
   let naText = ''
   if (naServices.length > 0) {
-    const naY = padding.top + ranked.length * rowHeight + 4
+    const naY = padding.top + bodyHeight + 4
     naText = `  <text x="${padding.left}" y="${naY + 14}" fill="${COLORS.textMuted}" font-size="10" font-family="ui-monospace,monospace">${naServices.map(r => escapeXml(r.Service)).join(', ')} — N/A (insufficient data)</text>`
   }
 
@@ -920,7 +992,7 @@ ${partialNote}
 
 // ── Exports ──────────────────────────────────────────────
 module.exports = {
-  generateScoreBarSvg, generateUptimeHeatmapSvg, scoreColorByGrade,
+  generateScoreBarSvg, scoreTiersFromReport, trendRowsFromTiers, chartWarn, generateUptimeHeatmapSvg, scoreColorByGrade,
   // trend (aiwatch-reports#41)
   monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
@@ -959,14 +1031,15 @@ if (require.main === module) {
     process.exit(1)
   }
 
-  const scores = parseTable(md, 'AIWatch Score')
+  const { scores, mediumScores } = scoreTiersFromReport(md)
 
-  if (scores.length === 0) { console.error('Failed to parse AIWatch Score table. Check "## AIWatch Score" heading exists.'); process.exit(1) }
-  // The Incident Summary renders as an HTML <table> (not a markdown pipe table), so parseTable()
-  // can't read it and charts don't consume incident data anyway — the scores guard above is the
+  // #106 — counts BOTH tiers, so a section whose first table is empty is not reported as a missing heading.
+  if (scores.length + mediumScores.length === 0) { console.error('No ranked service found under "## AIWatch Score". Either the heading is missing/renamed, or every service was excluded from the ranking (withheld / stale feed / added mid-month) and the table is genuinely empty.'); process.exit(1) }
+  // The Incident Summary renders as an HTML <table> (not a markdown pipe table), so the parser
+  // can't read it and charts don't consume incident data anyway — the guard above is the
   // report-well-formedness check. A markdown-table guard here false-failed on zero-security months:
-  // parseTable's non-greedy scan skipped the HTML table and matched the next markdown table further
-  // down — the Security Alerts section, which is conditionally omitted (buildSecuritySection returns
+  // the pre-#106 parser scanned PAST the section for its first table and matched a later section's —
+  // the Security Alerts section, which is conditionally omitted (buildSecuritySection returns
   // '' when totalAlerts <= 0) — so the guard aborted the whole pipeline when it was absent (#49).
 
   const relDir = path.dirname(file)
@@ -983,7 +1056,7 @@ if (require.main === module) {
   fs.mkdirSync(outDir, { recursive: true })
 
   // Score chart (sync — no API needed)
-  const scoreSvg = generateScoreBarSvg(scores)
+  const scoreSvg = generateScoreBarSvg(scores, mediumScores)
   const scorePath = path.join(outDir, 'score-chart.svg')
   fs.writeFileSync(scorePath, scoreSvg + '\n', 'utf-8')
   console.log(`✓ ${scorePath}`)
@@ -998,7 +1071,8 @@ if (require.main === module) {
   const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
   const currentEntry = monthArchive
     ? toMonthEntry(monthKey, monthArchive)
-    : monthEntryFromScoreRows(monthKey, scores)
+    // aiwatch-reports#106 — see trendRowsFromTiers: both tiers, since nothing here ranks them.
+    : monthEntryFromScoreRows(monthKey, trendRowsFromTiers({ scores, mediumScores }))
   const trendEntries = loadTrendEntries(monthKey, currentEntry, { dataDir: path.resolve('_data') })
   if (trendEntries.length >= 2) {
     const trend = buildTrendSeries(trendEntries)

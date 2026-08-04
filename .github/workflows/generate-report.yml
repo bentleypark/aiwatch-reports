@@ -126,7 +126,7 @@ jobs:
               --body "Auto-generated draft for ${MONTH}.
 
               **Before merging:**
-              1. Open the \"Generate report draft\" step log and check for \`::warning::\` uptime annotations. An UNVERIFIED archive means it was built before aiwatch#962 and its \"Official\" figures cannot be trusted; a contradictory row was withheld from the report and the archive needs fixing at the source (aiwatch#951)
+              1. Open the \"Generate report draft\" AND \"Generate charts\" step logs and check for \`::warning::\` annotations. UNVERIFIED archive = built before aiwatch#962, its \"Official\" figures cannot be trusted; a contradictory row was withheld and the archive needs fixing at the source (aiwatch#951); a \`monthlyScoreConfidence=\"high\"\` row with no figure means the month-end value must be recovered from the worker's \`history:{date}\` keys and patched into \`archive:monthly:${MONTH}\` before publishing (aiwatch-reports#106); a tier-shape warning from the charts step means the generated Score section did not come out as two properly separated tiers, so the chart may be merging incomparable scores; and \"auto-draft skipped entirely\" means no service is on the main scale this month — write the Summary and Key Insight by hand and say which scale the numbers are on
               2. Fill narrative sections: Summary, Recommendations, Key Insight, Notable Incidents, Observations
               3. Verify Incident Summary counts against source status pages
               4. Flip \`published: false\` → \`published: true\` in the frontmatter
