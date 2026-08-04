@@ -1,17 +1,17 @@
 // generate-summary.js — Library: table parser + monthly-report analyzer/narrative generators.
-// Consumed by generate-report.js (auto-draft narrative injection) and generate-charts.js
-// (parseTable for the Score table). NOT a CLI: the former standalone `node generate-summary.js
-// <report>.md` path was removed (#52) — it re-parsed the rendered markdown, but the Incident
-// Summary renders as an HTML <table> that parseTable (markdown pipe tables only) can't read, so
+// Consumed by generate-report.js (auto-draft narrative injection, and parseTableGroups for the prose
+// lexicon) and generate-charts.js (parseTableGroups for the Score tables). NOT a CLI: the former
+// standalone `node generate-summary.js <report>.md` path was removed (#52) — it re-parsed the
+// rendered markdown, but the Incident
+// Summary renders as an HTML <table> that the parser here (markdown pipe tables only) can't read, so
 // analyze() ran on mis-parsed rows. generate-report.js feeds analyze() correct rows built directly
 // from archive.services (archiveToAnalysisRows), superseding the CLI.
 
 // ── Table parser ──────────────────────────────────────────
-function parseTable(md, heading) {
-  const re = new RegExp(`## ${heading}[\\s\\S]*?\\n(\\|.+\\|\\n\\|[-| ]+\\|\\n(?:\\|.+\\|\\n)*)`, 'i')
-  const match = md.match(re)
-  if (!match) return []
-  const lines = match[1].trim().split('\n')
+// Rows of ONE markdown pipe table (header line, separator line, then rows). Split out so the
+// escaped-pipe cell split and the header→key mapping have a single home.
+function parseTableText(text) {
+  const lines = text.trim().split('\n')
   const headers = lines[0].split('|').map(s => s.trim()).filter(Boolean)
   return lines.slice(2).map(line => {
     const cells = line.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim())
@@ -19,6 +19,33 @@ function parseTable(md, heading) {
     headers.forEach((h, i) => { row[h] = cells[i] ?? '' })
     return row
   })
+}
+
+// aiwatch-reports#106 — EVERY markdown pipe table under `## <heading>`, one row-array per table.
+// The AIWatch Score section renders TWO tables in any month that carries medium-confidence services
+// (buildScoreTable ranks the confidence tiers as separate sequences), and the callers here read the
+// report back to build the score chart and the prose lexicon — so a first-table-only read would drop
+// the second tier out of both while it sits visibly in the report. Returning GROUPS rather than one
+// flat array also lets the chart mirror the tables' own separation instead of re-deriving it from a
+// column, which would be wrong for legacy months (their single table can still contain "No uptime"
+// rows — see scoreTier in generate-report.js).
+//
+// Bounded to the section: the next `## ` at the start of a line ends it. The predecessor of this
+// function scanned PAST the section end for its first table, which once made a guard on a table-less
+// section silently match the next section's table (#49).
+//
+// `heading` is a PREFIX (the Score heading carries a "— Month Year" suffix) and is escaped, so a
+// caller may pass one containing regex metacharacters — `## Official Uptime (Primary Component)` is
+// a real heading in this report, and unescaped it would match nothing and return `[]` silently.
+// Anchored to a line start so prose mentioning `## AIWatch Score` mid-sentence, or a deeper
+// `### AIWatch Score`, is not mistaken for the section.
+function parseTableGroups(md, heading) {
+  const esc = String(heading).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`(?:^|\\n)##\\s+${esc}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i')
+  const match = String(md).match(re)
+  if (!match) return []
+  const tables = match[1].match(/^\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*/gm) || []
+  return tables.map(parseTableText)
 }
 
 // ── Parse duration string to minutes ──────────────────────
@@ -40,11 +67,28 @@ function fmtDuration(mins) {
 }
 
 // ── Analysis engine ───────────────────────────────────────
+// aiwatch-reports#106 — two populations, deliberately separate:
+//   `ranked`   — every scored service. The month's CENSUS: grade distribution, `isStable`,
+//                `unranked`. A claim like "a relatively stable month across all
+//                monitored services" is only true if every service was counted, so nothing may be
+//                filtered out of it.
+//   `rankable` — the subset the report actually RANKS in its main table: one confidence tier (a
+//                no-official-uptime Score is rescaled over 60, so it is not comparable) and present
+//                in that table at all. Every pick derived from the SCORE order comes from here, so
+//                the draft cannot call a service the month's best or worst on an incomparable number,
+//                nor name one the reader will not find in the ranking.
+// The INCIDENT-ordered picks (`mostIncidents`, `fastestRecovery`, `slowestRecovery`) are deliberately
+// NOT gated: they rank on published incident counts and durations, which every tracked service has on
+// the same footing — the incomparability this split exists for is a property of the Score, not of an
+// incident count. That is also why held-out services keep every incident-derived figure in the draft.
+// Rows with no `Rankable` key (hand-built, or a report parsed back out of markdown) count as
+// rankable, so a caller that knows nothing about tiers behaves exactly as before.
 function analyze(scores, incidents) {
   const ranked = scores.filter(r => r.Score && r.Score !== 'N/A')
+  const rankable = ranked.filter(r => r.Rankable !== false)
   const unranked = scores.filter(r => !r.Score || r.Score === 'N/A')
-  const top = ranked.slice(0, 3)
-  const bottom = ranked.slice(-3).reverse()
+  const top = rankable.slice(0, 3)
+  const bottom = rankable.slice(-3).reverse()
   const excellent = ranked.filter(r => parseInt(r.Score) >= 85)
   const good = ranked.filter(r => parseInt(r.Score) >= 70 && parseInt(r.Score) < 85)
   const fair = ranked.filter(r => parseInt(r.Score) >= 55 && parseInt(r.Score) < 70)
@@ -59,10 +103,11 @@ function analyze(scores, incidents) {
     .filter(r => toMinutes(r['Avg Resolution']) > 0)
     .sort((a, b) => toMinutes(a['Avg Resolution']) - toMinutes(b['Avg Resolution']))
 
-  const perfectServices = ranked.filter(r => parseInt(r.Score) === 100)
+  // "Most reliable" — an ordered pick, so rankable-only.
+  const perfectServices = rankable.filter(r => parseInt(r.Score) === 100)
 
   // Best balance: score > 90, has incidents, lowest downtime
-  const balanceCandidates = ranked
+  const balanceCandidates = rankable
     .filter(r => {
       const score = parseInt(r.Score)
       const incRow = incidents.find(i => i.Service === r.Service)
@@ -74,10 +119,10 @@ function analyze(scores, incidents) {
       const bDown = toMinutes(incidents.find(i => i.Service === b.Service)?.['Total Downtime'] ?? '—')
       return aDown - bDown
     })
-  const balanceSvc = balanceCandidates[0] ?? ranked.find(r => parseInt(r.Score) >= 80 && parseInt(r.Score) < 100 && r.Confidence === 'High')
+  const balanceSvc = balanceCandidates[0] ?? rankable.find(r => parseInt(r.Score) >= 80 && parseInt(r.Score) < 100 && r.Confidence === 'High')
 
   return {
-    ranked, unranked, top, bottom,
+    ranked, rankable, unranked, top, bottom,
     excellent, good, fair, degrading,
     withIncidents, zeroIncidents, totalDowntimeMins,
     mostIncidents: byCount[0] ?? null,
@@ -149,11 +194,12 @@ function generateTldr(a, incidents, momByService = {}) {
   // Recommendations
   lines.push('')
   lines.push('**Recommendations**')
-  const primary = a.ranked.filter(r => parseInt(r.Score) >= 85 && r.Confidence === 'High')
+  // Recommendations are ordered picks too — never recommend on an incomparable Score.
+  const primary = a.rankable.filter(r => parseInt(r.Score) >= 85 && r.Confidence === 'High')
   if (primary.length > 0) {
     lines.push(`- **Primary**: ${primary.slice(0, 2).map(r => r.Service).join(' or ')}`)
   }
-  const fallback = a.ranked.filter(r => parseInt(r.Score) >= 80 && parseInt(r.Score) < 95 && r.Confidence === 'High')
+  const fallback = a.rankable.filter(r => parseInt(r.Score) >= 80 && parseInt(r.Score) < 95 && r.Confidence === 'High')
   if (fallback.length > 0) {
     const fbText = fallback.slice(0, 2).map(r => {
       const incRow = incidents.find(i => i.Service === r.Service)
@@ -183,4 +229,4 @@ function generateStats(a) {
 }
 
 // ── Exports for testing ───────────────────────────────────
-module.exports = { parseTable, toMinutes, fmtDuration, analyze, generateOpening, generateTldr, generateStats }
+module.exports = { parseTableGroups, toMinutes, fmtDuration, analyze, generateOpening, generateTldr, generateStats }

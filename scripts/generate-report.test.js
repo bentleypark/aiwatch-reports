@@ -8,6 +8,8 @@ const {
   confidence,
   uptimeSourceLabel,
   buildRankingNote,
+  scoreTier,
+  isScoreWithheld,
   buildServiceBreakdown,
   GROUP_LABELS,
   findUngroupedServices,
@@ -19,6 +21,7 @@ const {
   buildIncidentTable,
   officialUptimeFor,
   findUptimeInconsistencies,
+  publishesNoOfficialUptime,
   emitUptimeWarnings,
   buildStaleSourceCaveat,
   buildUptimeTable,
@@ -46,6 +49,7 @@ const {
 } = require('./generate-report')
 const assert = require('assert')
 const charts = require('./generate-charts')
+const summaryMod = require('./generate-summary')
 
 let passed = 0
 let failed = 0
@@ -235,6 +239,332 @@ test('ranking table shows monthlyScore, matching what toMonthEntry feeds Notable
 
   const entry = charts.toMonthEntry('2026-06', archive)
   assert.strictEqual(entry.services.deepgram.score, 61, 'trend/Movers use the same monthly score')
+})
+
+// ── Confidence-tier split (#106) ─────────────────────────
+console.log('\nscoreTier + buildScoreTable — confidence-tier split (#106)')
+
+// Modelled on the real 2026-07 archive: high services carry an officialUptime, medium ones carry
+// `officialUptime: null` + `scoreConfidence: 'medium'`, and fireworks disagrees between the
+// build-day snapshot and the monthly value.
+const TIER_SERVICES = [
+  { id: 'windsurf', data: { score: 100, grade: 'excellent', officialUptime: 100, uptimeSource: 'official', scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 0, avgResolutionMin: null } },
+  // The 2026-07 fireworks CONFIDENCE pair, with a figure present: the build-day snapshot read no
+  // uptime, the monthly compute did. This is the shape the whole `printedScoreConfidence` split exists
+  // for. Score/uptime values are illustrative — only the two confidence fields are from the archive.
+  { id: 'fireworks', data: { score: 84, grade: 'good', officialUptime: 99.9, uptimeSource: 'platform_avg', scoreConfidence: 'medium', monthlyScoreConfidence: 'high', incidents: 4, avgResolutionMin: 20 } },
+  { id: 'gemini', data: { score: 87, grade: 'good', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 0, avgResolutionMin: null } },
+  { id: 'deepgram', data: { score: 48, grade: 'degrading', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 2, avgResolutionMin: 30 } },
+]
+const TIER_META = {
+  windsurf: { name: 'Windsurf' }, fireworks: { name: 'Fireworks AI' },
+  gemini: { name: 'Gemini API' }, deepgram: { name: 'Deepgram' },
+}
+// The two tables, split on the caption. [0] = main ranking, [1] = no-official-uptime tier.
+function scoreTableParts(table) {
+  const parts = table.split('**No Official Uptime**')
+  return { high: parts[0], medium: parts[1] ?? '', split: parts.length === 2 }
+}
+
+test('scoreTier reads the MONTHLY confidence, not the build-day snapshot', () => {
+  // The 2026-07 archive really does carry fireworks at snapshot 'medium' / monthly 'high'. The table
+  // prints the MONTHLY score, so keying on the snapshot would file it under the wrong table.
+  eq(scoreTier({ data: { scoreConfidence: 'medium', monthlyScoreConfidence: 'high' } }), 'high')
+  eq(scoreTier({ data: { scoreConfidence: 'high', monthlyScoreConfidence: 'medium' } }), 'medium')
+})
+
+test('scoreTier falls back to the snapshot when the archive carries no monthly confidence', () => {
+  // monthly-archive.ts writes `monthlyScoreConfidence` only when it has one.
+  eq(scoreTier({ data: { scoreConfidence: 'medium' } }), 'medium')
+  eq(scoreTier({ data: { scoreConfidence: 'high' } }), 'high')
+})
+
+test('isScoreWithheld reads the same confidence the Score does', () => {
+  // `s.data.score` is already normalized to the MONTHLY value, so the monthly confidence is what
+  // explains a null one. Pairing a null monthly Score with the build-day field left the service
+  // matching no exclusion clause at all, which buildRankingNote reports as an unexplained omission —
+  // an operator-facing warning with no cause to chase.
+  eq(isScoreWithheld({ id: 'x', data: { score: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'low' } }), true)
+  eq(isScoreWithheld({ id: 'x', data: { score: null, scoreConfidence: 'low', monthlyScoreConfidence: 'low' } }), true)
+  eq(isScoreWithheld({ id: 'x', data: { score: 80, scoreConfidence: 'low', monthlyScoreConfidence: 'high' } }), false, 'a scored service is not withheld')
+  eq(isScoreWithheld({ id: 'bedrock', data: { score: 90 } }), true, 'the legacy id-set fallback still applies')
+})
+
+test('scoreTier calls a legacy archive (neither field) high, so its report keeps ONE table', () => {
+  // ≤2026-05 archives predate both fields; their Scores DID consume a daily-counter uptime, so
+  // splitting them off would assert a rescale that never happened.
+  eq(scoreTier({ data: { score: 88, uptime: 99.9 } }), 'high')
+})
+
+test('buildScoreTable ranks the two tiers as separate sequences, each starting at 1', () => {
+  const { high, medium, split } = scoreTableParts(buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'))
+  assert.ok(split, 'a month with medium-confidence services renders a second table')
+  // Main ranking: Windsurf 100 → 1, Fireworks 84 → 2. Gemini's 87 does NOT sit between them.
+  assert.match(high, /\| 1 \| Windsurf \| 100 \|/)
+  assert.match(high, /\| 2 \| Fireworks AI \| 84 \|/)
+  assert.ok(!high.includes('Gemini API'), 'a medium-confidence service is not in the main ranking')
+  assert.ok(!high.includes('Deepgram'), 'a medium-confidence service is not in the main ranking')
+  // Second sequence restarts at 1 — never continued from the first table's last rank.
+  assert.match(medium, /\| 1 \| Gemini API \| 87 \|/)
+  assert.match(medium, /\| 2 \| Deepgram \| 48 \|/)
+  assert.ok(!medium.includes('Windsurf'), 'the main-ranking services are not repeated below')
+})
+
+test('buildScoreTable keeps a monthly-high service in the MAIN table despite a medium snapshot', () => {
+  // The scoreTier unit test proves the predicate; this proves the table is wired to it.
+  const { high, medium, split } = scoreTableParts(buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'))
+  assert.ok(split, 'a second table exists to be filed into')
+  assert.ok(high.includes('Fireworks AI'), 'monthly confidence decides the table')
+  assert.ok(!medium.includes('Fireworks AI'))
+})
+
+test('buildScoreTable renders ONE table (no caption) when no service is medium-confidence', () => {
+  const highOnly = TIER_SERVICES.filter(s => s.id === 'windsurf' || s.id === 'fireworks')
+  const table = buildScoreTable(highOnly, TIER_META, '2026-07')
+  assert.ok(!table.includes('**No Official Uptime**'), 'no empty second table under a caption')
+  eq(table.split('| Rank | Service |').length - 1, 1, 'exactly one table header')
+})
+
+test('an all-medium month renders ONE table and KEEPS the caption', () => {
+  // No empty main table — and the caption stays, because with no main table it is the only thing in
+  // the report saying these Scores were rescaled. Dropping it here was how an earlier revision turned
+  // the all-medium month into a plain-looking ranking of /60 numbers.
+  const mediumOnly = TIER_SERVICES.filter(s => scoreTier(s) === 'medium')
+  assert.ok(mediumOnly.length > 0, 'the fixture really has a medium tier')
+  const table = buildScoreTable(mediumOnly, TIER_META, '2026-07')
+  assert.ok(table.startsWith('**No Official Uptime**'), `caption leads: ${table.slice(0, 80)}`)
+  assert.ok(!table.includes('| Uptime Source |'), 'no empty main table above it')
+  eq(table.split('| Rank | Service |').length - 1, 1, 'exactly one table header')
+  const rows = table.trim().split('\n').filter(l => /^\| \d+=? \|/.test(l))
+  eq(rows.length, mediumOnly.length, 'and every service is in it')
+})
+
+
+test('buildScoreTable renders ONE table for a legacy archive with no confidence fields', () => {
+  // The 2026-03..05 shape: score + uptime, no scoreConfidence. Regenerating a published month must
+  // not restructure it.
+  const legacy = [
+    { id: 'cohere', data: { score: 89, grade: 'good', uptime: 100, incidents: 0, avgResolutionMin: null } },
+    { id: 'gemini', data: { score: 87, grade: 'good', uptime: 99.9, incidents: 1, avgResolutionMin: 12 } },
+  ]
+  const table = buildScoreTable(legacy, { cohere: { name: 'Cohere API' }, gemini: { name: 'Gemini API' } }, '2026-05')
+  assert.ok(!table.includes('**No Official Uptime**'))
+  assert.ok(table.includes('Gemini API'), 'a legacy no-public-uptime service stays in the one ranking')
+})
+
+test('the second table drops Uptime Source; the main one keeps it', () => {
+  const table = buildScoreTable(TIER_SERVICES, TIER_META, '2026-07')
+  eq(table.split('| Rank | Service | Score | Grade | Uptime Source | Why |').length - 1, 1)
+  eq(table.split('| Rank | Service | Score | Grade | Why |').length - 1, 1)
+})
+
+test('every row carries exactly as many cells as its own table\'s header', () => {
+  // Asserting the HEADER alone is one-directional: re-adding uptimeSourceLabel to the medium ROW
+  // builder leaves a 5-column header over 6-column rows, and both the markdown renderer and
+  // parseTableGroups (header-indexed) silently file `buildWhy`'s text under "No uptime" instead.
+  const { high, medium } = scoreTableParts(buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'))
+  const cellCount = line => line.split('|').length
+  for (const table of [high, medium]) {
+    const lines = table.trim().split('\n').filter(l => l.trim().startsWith('|'))
+    const width = cellCount(lines[0])
+    assert.ok(lines.length > 2, 'a header, a separator and at least one row')
+    for (const line of lines.slice(1)) eq(cellCount(line), width, `${line} does not match ${lines[0]}`)
+  }
+})
+
+// The premise of dropping that column: in the medium tier it is a constant. If a medium-tier service
+// could ever resolve a figure, the column would be carrying information and removing it would hide
+// it — so assert the invariant itself, not just the rendered header. Both routes into
+// `officialUptimeFor` are covered: the archive carrying a figure, and the archive carrying NO
+// `officialUptime` key at all, where the legacy `s.data.uptime` fallback would otherwise resolve one.
+test('no medium-tier service can resolve an official uptime figure', () => {
+  const mediumConf = { scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' }
+  const cases = [
+    // A modern archive contradicting itself: a figure beside a Score rescaled without one.
+    { id: 'gemini', data: { score: 70, grade: 'fair', officialUptime: 99.9, ...mediumConf, incidents: 1, avgResolutionMin: 10 } },
+    { id: 'deepgram', data: { score: 48, grade: 'degrading', officialUptime: null, ...mediumConf, incidents: 2, avgResolutionMin: 30 } },
+    // Hand-patched / mixed-provenance: confidence present, `officialUptime` key absent, a legacy
+    // counter still in the row. `cohere` is deliberately NOT in NO_PUBLIC_UPTIME, so nothing else
+    // stops the fallback — only the confidence gate does. This is the shape that, ungated, rendered
+    // "Platform · 99.42%" in the 30-Day Uptime table for a service ranked in the no-uptime tier.
+    { id: 'cohere', data: { score: 70, grade: 'fair', uptime: 99.42, uptimeSource: 'platform_avg', ...mediumConf, incidents: 1, avgResolutionMin: 10 } },
+  ]
+  for (const s of cases) {
+    eq(scoreTier(s), 'medium', s.id)
+    eq(officialUptimeFor(s), null, `${s.id}: a medium-tier row must never resolve a figure`)
+    eq(uptimeSourceLabel(s, s.id), 'No uptime', `${s.id}: the dropped column would have read "No uptime"`)
+  }
+})
+
+test('the confidence gate does not touch a legacy archive or a high-confidence row', () => {
+  // The gate keys on a confidence field being present AND not 'high'. A legacy row (no field) must
+  // keep resolving its daily counter, or every pre-2026-06 regeneration loses its uptime column.
+  eq(officialUptimeFor({ id: 'cohere', data: { score: 89, uptime: 99.42 } }), 99.42)
+  eq(officialUptimeFor({ id: 'cohere', data: { score: 89, officialUptime: 99.9, scoreConfidence: 'high', monthlyScoreConfidence: 'high' } }), 99.9)
+})
+
+test('ties inside the second tier get "=" labels and skip ranks, like any other sequence', () => {
+  const tied = [
+    { id: 'gemini', data: { score: 74, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 1, avgResolutionMin: 10 } },
+    { id: 'xai', data: { score: 74, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 1, avgResolutionMin: 10 } },
+    { id: 'deepgram', data: { score: 48, grade: 'degrading', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 2, avgResolutionMin: 30 } },
+  ]
+  const meta = { gemini: { name: 'Gemini API' }, xai: { name: 'xAI API' }, deepgram: { name: 'Deepgram' } }
+  const { medium } = scoreTableParts(buildScoreTable([...TIER_SERVICES.slice(0, 2), ...tied], { ...TIER_META, ...meta }, '2026-07'))
+  assert.match(medium, /\| 1= \| Gemini API \| 74 \|/)
+  assert.match(medium, /\| 1= \| xAI API \| 74 \|/)
+  assert.match(medium, /\| 3 \| Deepgram \| 48 \|/, 'the tie skips rank 2, same competition rule as the main table')
+})
+
+test('removing a medium service un-ties a rank in the MAIN table and renumbers below it', () => {
+  // The split changes the main table's own rank labels, not just its membership — 2026-06 really has
+  // `14= OpenRouter / 14= Cursor` pairs that come apart once the medium tier leaves.
+  const svcs = [
+    { id: 'windsurf', data: { score: 90, grade: 'excellent', officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 0 } },
+    { id: 'openrouter', data: { score: 80, grade: 'good', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 1, avgResolutionMin: 5 } },
+    { id: 'cursor', data: { score: 80, grade: 'good', officialUptime: 99, scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 1, avgResolutionMin: 5 } },
+    { id: 'codex', data: { score: 70, grade: 'fair', officialUptime: 99, scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 2, avgResolutionMin: 9 } },
+  ]
+  const meta = { windsurf: { name: 'Windsurf' }, openrouter: { name: 'OpenRouter' }, cursor: { name: 'Cursor' }, codex: { name: 'Codex' } }
+  const { high } = scoreTableParts(buildScoreTable(svcs, meta, '2026-07'))
+  assert.match(high, /\| 2 \| Cursor \| 80 \|/, 'no longer tied with the medium service that left')
+  assert.match(high, /\| 3 \| Codex \| 70 \|/, 'and the rank below it moves up from 4')
+  assert.ok(!high.includes('2='), `no stale tie label: ${high}`)
+})
+
+test('the second tier caption states the scale difference without referring to another table', () => {
+  // It has to stay true wherever it is printed: an all-medium month has no main table, and this is
+  // then the only sentence in the report saying those Scores were rescaled. A wording that points at
+  // "the table above" reintroduces exactly that hole.
+  const { medium } = scoreTableParts(buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'))
+  assert.match(medium, /Scored on Incidents \+ Recovery \+ Responsiveness only/, medium.slice(0, 200))
+  assert.match(medium, /not on the same scale/, medium.slice(0, 200))
+  assert.ok(!/table above/.test(medium), `must not presuppose a table above: ${medium.slice(0, 200)}`)
+})
+
+test('a blank line separates the caption and each table from what precedes it', () => {
+  // Markdown needs the blank line to start a new block; without it kramdown renders the whole table
+  // as literal pipe text inside the preceding paragraph. No parse-based assertion can see this —
+  // parseTableGroups scans line by line and is blank-line-insensitive, so the round-trip test below
+  // still reports two tiers while the published page shows a wall of `|`.
+  const lines = buildScoreTable(TIER_SERVICES, TIER_META, '2026-07').split('\n')
+  const captionIdx = lines.indexOf('**No Official Uptime**')
+  assert.ok(captionIdx > 0, 'the caption is present and not first')
+  eq(lines[captionIdx - 1], '', 'blank line between the main table and the caption')
+  const mediumHeadIdx = lines.indexOf('| Rank | Service | Score | Grade | Why |')
+  assert.ok(mediumHeadIdx > captionIdx, 'the medium table follows the caption')
+  eq(lines[mediumHeadIdx - 1], '', 'blank line between the caption and the medium table')
+})
+
+test('the emitted tables round-trip through parseTableGroups as exactly two tiers', () => {
+  // The coupling nothing else pins: buildScoreTable WRITES the section and parseTableGroups READS it
+  // back for the chart and the prose lexicon. A caption that gained a `## ` prefix, or a lost blank
+  // line fusing the two tables, would break the chart while every isolated test stayed green.
+  const section = ['## AIWatch Score — July 2026 Reliability Rankings', '',
+    buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'), '', '## 30-Day Uptime', ''].join('\n')
+  const groups = summaryMod.parseTableGroups(section, 'AIWatch Score')
+  eq(groups.length, 2)
+  eq(groups[0].map(r => r.Service).join('|'), 'Windsurf|Fireworks AI')
+  eq(groups[1].map(r => r.Service).join('|'), 'Gemini API|Deepgram')
+  eq(groups[0][0].Rank, '1')
+  eq(groups[1][0].Rank, '1', 'the second tier restarts at rank 1 in the PARSED output too')
+})
+
+// Every fixture above is hand-written. These run the split over the REAL committed archives, which is
+// where the shapes that actually occur live — cross-tier ties, mid-month additions, low-confidence
+// withholds — and where a hand-written fixture can quietly disagree with production data.
+console.log('\nconfidence-tier split on the real _data archives (#106)')
+const REAL_ARCHIVE_DIR = require('path').join(__dirname, '..', '_data')
+const loadReal = (month) => {
+  const arc = JSON.parse(require('fs').readFileSync(require('path').join(REAL_ARCHIVE_DIR, `${month}.json`), 'utf8'))
+  const services = Object.entries(arc.services).map(([id, data]) => {
+    const { score, grade } = charts.resolveMonthlyScore(data)
+    return { id, data: { ...data, score, grade } }
+  })
+  return { arc, services, meta: projectServiceMeta(services) }
+}
+
+test('2026-03/04/05 (legacy: no confidence field) still render exactly ONE table', () => {
+  for (const month of ['2026-03', '2026-04', '2026-05']) {
+    const { services, meta } = loadReal(month)
+    const table = buildScoreTable(services, meta, month)
+    eq(table.split('| Rank | Service |').length - 1, 1, `${month} must not restructure`)
+    assert.ok(!table.includes('**No Official Uptime**'), month)
+    eq(services.every(s => scoreTier(s) === 'high'), true, `${month} has no tier data to split on`)
+  }
+})
+
+test('2026-06 splits into two tiers, and every ranked service lands in exactly one', () => {
+  const { services, meta } = loadReal('2026-06')
+  const table = buildScoreTable(services, meta, '2026-06')
+  const groups = summaryMod.parseTableGroups(`## AIWatch Score — June 2026\n\n${table}\n\n## Next\n`, 'AIWatch Score')
+  eq(groups.length, 2)
+  const names = [...groups[0], ...groups[1]].map(r => r.Service)
+  eq(new Set(names).size, names.length, 'no service appears in both tables')
+  eq(groups[1].every(r => !('Uptime Source' in r)), true, 'the second table drops the column that would be constant')
+  eq(groups[0].some(r => r['Uptime Source'] === 'No uptime'), false, 'and no no-uptime row is left in the main table')
+  const ranked = new Set([...groups[0], ...groups[1]].map(r => r.Service))
+  const mediumSvcs = services.filter(s => ranked.has(meta[s.id]?.name || s.id) && scoreTier(s) === 'medium')
+  eq(mediumSvcs.length, groups[1].length, 'the second table is exactly the medium tier')
+  eq(mediumSvcs.every(s => officialUptimeFor(s) === null), true, 'so the dropped column would have read "No uptime" for every row')
+  eq(groups[0][0].Rank, '1')
+  eq(groups[1][0].Rank, '1', 'each tier is its own rank sequence')
+})
+
+test("the ranking note's ranked count equals the combined rows of both tables", () => {
+  // The note and the tables are built by different functions off the same exclusions; nothing else
+  // holds them together, so "30 of 41 services ranked" above 23 + 7 rows would go unnoticed.
+  for (const month of ['2026-03', '2026-04', '2026-05', '2026-06']) {
+    const { services, meta } = loadReal(month)
+    const table = buildScoreTable(services, meta, month)
+    const rows = (table.match(/^\| (?:\d+=?) \|/gm) || []).length
+    const note = buildRankingNote(services, meta, month)
+    const claimed = note ? Number(note.match(/\*(\d+) of \d+ services ranked/)[1]) : rows
+    eq(claimed, rows, `${month}: note claims ${claimed}, tables carry ${rows}`)
+  }
+})
+
+test("on a split month the note breaks its count down per table; on a single-table month it doesn't", () => {
+  // The note sits directly above the FIRST table, so an undecomposed "30 of 41 services ranked" over
+  // 23 rows invites the reader to count and find a different number.
+  const { services: june, meta: juneMeta } = loadReal('2026-06')
+  const note = buildRankingNote(june, juneMeta, '2026-06')
+  const [, main, medium] = note.match(/(\d+) in the table below, (\d+) with no official uptime/) || []
+  const table = buildScoreTable(june, juneMeta, '2026-06')
+  const groups = summaryMod.parseTableGroups(`## AIWatch Score\n\n${table}\n\n## Next\n`, 'AIWatch Score')
+  eq(Number(main), groups[0].length, 'the main-table count matches the main table')
+  eq(Number(medium), groups[1].length, 'the second count matches the second table')
+
+  const { services: may, meta: mayMeta } = loadReal('2026-05')
+  assert.ok(!/in the table below/.test(buildRankingNote(may, mayMeta, '2026-05')), 'no split, no breakdown')
+
+  // …and no breakdown on the other single-table shape either: with every ranked service medium,
+  // "0 in the table below" would describe a main table that buildScoreTable does not emit.
+  const allMedium = [
+    { id: 'gemini', data: { score: 64, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 3, avgResolutionMin: 40 } },
+    { id: 'deepgram', data: { score: 45, grade: 'degrading', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 6, avgResolutionMin: 66 } },
+    { id: 'bedrock', data: { score: null, grade: null, scoreConfidence: 'low', monthlyScoreConfidence: 'low' } },  // an exclusion, or the note is ''
+  ]
+  const meta = { gemini: { name: 'Gemini API' }, deepgram: { name: 'Deepgram' }, bedrock: { name: 'Amazon Bedrock' } }
+  const allMediumNote = buildRankingNote(allMedium, meta, '2026-07')
+  assert.ok(allMediumNote, 'the note still renders (there IS an exclusion to explain)')
+  assert.ok(!/in the table below/.test(allMediumNote), `no main table to count into: ${allMediumNote}`)
+  assert.ok(!buildScoreTable(allMedium, meta, '2026-07').includes('| Uptime Source |'), 'and indeed there is none')
+})
+
+test('the breakdown counts the RANKED population, not every medium service', () => {
+  // A medium-tier service the ranking excludes is in neither table; counting it would make the
+  // breakdown describe rows that are not there — the very mismatch the breakdown exists to remove.
+  const services = [
+    { id: 'windsurf', data: { score: 96, grade: 'excellent', officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 0 } },
+    { id: 'gemini', data: { score: 64, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 3, avgResolutionMin: 40 } },
+    { id: 'replicate', data: { score: 58, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 2, avgResolutionMin: 30, addedAt: '2026-07-20' } },
+  ]
+  const meta = { windsurf: { name: 'Windsurf' }, gemini: { name: 'Gemini API' }, replicate: { name: 'Replicate' } }
+  const note = buildRankingNote(services, meta, '2026-07')
+  assert.match(note, /1 in the table below, 1 with no official uptime/, note)
+  const groups = summaryMod.parseTableGroups(`## AIWatch Score\n\n${buildScoreTable(services, meta, '2026-07')}\n\n## Next\n`, 'AIWatch Score')
+  eq(groups.map(g => g.length).join('|'), '1|1', 'and the tables really do carry 1 and 1')
 })
 
 console.log('\nbuildScoreTable + buildRankingNote — stale exclusion (#591)')
@@ -1251,7 +1581,7 @@ test('strips the placeholder cleanly when archive.security is missing entirely',
 // generated opening; fences the TL;DR with BEGIN/END markers inside `## Summary`
 // without touching the placeholder bullets that the operator will fill.
 
-const { injectAutoDraft, archiveToAnalysisRows, applyAutoDraft, SUMMARY_OPEN_MARKER, SUMMARY_CLOSE_MARKER } = require('./generate-report')
+const { injectAutoDraft, archiveToAnalysisRows, applyAutoDraft, buildHeldOutNote, SUMMARY_OPEN_MARKER, SUMMARY_CLOSE_MARKER } = require('./generate-report')
 
 console.log('\narchiveToAnalysisRows')
 
@@ -1313,8 +1643,113 @@ test('row shape matches generate-summary.analyze() expectations exactly', () => 
   const { scores, incidents } = archiveToAnalysisRows(archive, { claude: { name: 'Claude' } })
   const scoreKeys = Object.keys(scores[0]).sort()
   const incKeys = Object.keys(incidents[0]).sort()
-  assert.deepStrictEqual(scoreKeys, ['Confidence', 'Grade', 'Score', 'Service'])
+  assert.deepStrictEqual(scoreKeys, ['Confidence', 'Grade', 'Rankable', 'Score', 'Service'])
   assert.deepStrictEqual(incKeys, ['Avg Resolution', 'Incidents', 'Service', 'Total Downtime'])
+})
+
+// aiwatch-reports#106 — analyze() reads top/bottom straight off the `scores` ORDER to write
+// "led the reliability rankings" / "Riskiest this month", so a medium-confidence service must not be
+// an ordered pick — but it must still be COUNTED, or the month's census claims go wrong.
+test('archiveToAnalysisRows marks a medium-confidence service unrankable but KEEPS it', () => {
+  const archive = { services: {
+    windsurf: { score: 100, monthlyScore: 100, grade: 'excellent', incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high' },
+    deepgram: { score: 48, monthlyScore: 48, grade: 'degrading', incidents: 2, avgResolutionMin: 30, uptime: 97, officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' },
+  } }
+  const meta = { windsurf: { name: 'Windsurf' }, deepgram: { name: 'Deepgram' } }
+  const { scores, incidents, heldOut } = archiveToAnalysisRows(archive, meta, '2026-07')
+  eq(scores.map(r => r.Service).join('|'), 'Windsurf|Deepgram', 'the census keeps every scored service')
+  eq(scores.find(r => r.Service === 'Deepgram').Rankable, false)
+  eq(scores.find(r => r.Service === 'Windsurf').Rankable, true)
+  eq(heldOut.join('|'), 'Deepgram', 'held-out services are named for the operator warning')
+  assert.ok(incidents.some(r => r.Service === 'Deepgram'), 'medium service keeps its incidents row')
+  eq(incidents.length, 2)
+})
+
+// The regression this shape caused when the rows were DROPPED instead of marked: on the real 2026-06
+// archive it emptied `degrading`, satisfying one of the two conditions `generateOpening` requires
+// before calling a month "relatively stable across all monitored services" — a census claim, false of
+// a service sitting in the report's own second table. The fixture below holds the other condition
+// (total downtime) low so the flip is observable in one assertion.
+test('a Degrading medium service still counts toward the month census', () => {
+  const archive = { services: {
+    windsurf: { score: 96, monthlyScore: 96, grade: 'excellent', incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high' },
+    deepgram: { score: 45, monthlyScore: 45, grade: 'degrading', incidents: 1, avgResolutionMin: 5, totalDowntimeMin: 5, uptime: 97, officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' },
+  } }
+  const meta = { windsurf: { name: 'Windsurf' }, deepgram: { name: 'Deepgram' } }
+  const { scores, incidents } = archiveToAnalysisRows(archive, meta, '2026-07')
+  const a = summaryMod.analyze(scores, incidents)
+  eq(a.degrading.map(r => r.Service).join('|'), 'Deepgram', 'the census still sees the Degrading service')
+  eq(a.isStable, false, 'a month with a Degrading service is not "relatively stable"')
+  assert.ok(!summaryMod.generateOpening('July 2026', a).includes('relatively stable month across all monitored services'))
+  // …while the ordered picks still refuse it.
+  eq(a.bottom.map(r => r.Service).join('|'), 'Windsurf', 'riskiest is chosen from the comparable tier')
+})
+
+// A service the ranking TABLE excludes must not be an ordered pick either — the draft would name a
+// service the reader cannot find in the ranking. Observed on 2026-06: a tier-only hold-out promoted
+// recently-added `helicone` into "Riskiest this month".
+test('a service excluded from the ranking table is not an ordered pick', () => {
+  const archive = { services: {
+    windsurf: { score: 96, monthlyScore: 96, grade: 'excellent', incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high' },
+    helicone: { score: 58, monthlyScore: 58, grade: 'fair', incidents: 2, avgResolutionMin: 60, uptime: 98, officialUptime: 98, scoreConfidence: 'high', monthlyScoreConfidence: 'high', addedAt: '2026-07-20' },
+  } }
+  const meta = { windsurf: { name: 'Windsurf' }, helicone: { name: 'Helicone' } }
+  const { scores } = archiveToAnalysisRows(archive, meta, '2026-07')
+  eq(scores.find(r => r.Service === 'Helicone').Rankable, false, 'recently-added → excluded from the table → not rankable')
+  eq(scores.length, 2, 'still counted in the census')
+})
+
+test('`inTable` covers withheld and stale-feed services too, not just recently-added', () => {
+  // Each clause is a separate one-word deletion. Both shapes are real: bedrock/azureopenai carry a
+  // pre-#713 invented score in the committed 2026-03..05 archives, and the Worker sets
+  // `incidentSourceStale` on a frozen feed (#591) — so dropping either clause promotes a service the
+  // ranking note calls "excluded from this ranking" into the draft's superlatives.
+  const archive = { services: {
+    windsurf: { score: 96, monthlyScore: 96, grade: 'excellent', incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high' },
+    bedrock: { score: 90, monthlyScore: 90, grade: 'excellent', incidents: 0, uptime: 100 },
+    characterai: { score: 88, monthlyScore: 88, grade: 'good', incidents: 0, uptime: 99, incidentSourceStale: true },
+  } }
+  const meta = { windsurf: { name: 'Windsurf' }, bedrock: { name: 'Amazon Bedrock' }, characterai: { name: 'Character.AI' } }
+  const { scores } = archiveToAnalysisRows(archive, meta, '2026-07')
+  eq(scores.find(r => r.Service === 'Amazon Bedrock').Rankable, false, 'SCORE_WITHHELD → not rankable')
+  eq(scores.find(r => r.Service === 'Character.AI').Rankable, false, 'stale feed → not rankable')
+  eq(scores.find(r => r.Service === 'Windsurf').Rankable, true)
+  eq(scores.length, 3, 'all three still counted in the census')
+})
+
+test('a medium-tier service the ranking DROPS is not named as "ranked in their own table"', () => {
+  // heldOut is the note's subject, and the note says those services are ranked in the second table.
+  // A medium-tier service that is also recently-added is in NO table, and the ranking note already
+  // carries its real reason — so it must not appear in both lists with contradictory explanations.
+  const archive = { services: {
+    windsurf: { score: 96, monthlyScore: 96, grade: 'excellent', incidents: 0, uptime: 100, officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'high' },
+    gemini: { score: 64, monthlyScore: 64, grade: 'fair', incidents: 3, avgResolutionMin: 40, officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' },
+    replicate: { score: 58, monthlyScore: 58, grade: 'fair', incidents: 2, avgResolutionMin: 30, officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', addedAt: '2026-07-20' },
+  } }
+  const meta = { windsurf: { name: 'Windsurf' }, gemini: { name: 'Gemini API' }, replicate: { name: 'Replicate' } }
+  const { scores, heldOut } = archiveToAnalysisRows(archive, meta, '2026-07')
+  eq(heldOut.join('|'), 'Gemini API', 'only the medium service that IS in the second table')
+  eq(scores.find(r => r.Service === 'Replicate').Rankable, false, 'still barred from the picks')
+})
+
+test('archiveToAnalysisRows marks every service rankable on a legacy archive (no confidence fields)', () => {
+  const archive = { services: {
+    cohere: { score: 89, grade: 'good', incidents: 0, uptime: 100 },
+    gemini: { score: 87, grade: 'good', incidents: 1, uptime: 99.9 },
+  } }
+  const { scores, heldOut } = archiveToAnalysisRows(archive, { cohere: { name: 'Cohere API' }, gemini: { name: 'Gemini API' } }, '2026-05')
+  eq(scores.length, 2, 'a legacy month narrates exactly as it did before')
+  eq(scores.every(r => r.Rankable), true)
+  eq(heldOut.length, 0)
+})
+
+test('a monthly-high service is rankable even when the build-day snapshot says medium', () => {
+  const archive = { services: {
+    fireworks: { score: 84, monthlyScore: 84, grade: 'good', incidents: 4, uptime: 99.9, officialUptime: 99.9, uptimeSource: 'platform_avg', scoreConfidence: 'medium', monthlyScoreConfidence: 'high' },
+  } }
+  const { scores, heldOut } = archiveToAnalysisRows(archive, { fireworks: { name: 'Fireworks AI' } }, '2026-07')
+  eq(scores[0].Rankable, true)
+  eq(heldOut.length, 0)
 })
 
 console.log('\ninjectAutoDraft')
@@ -1468,6 +1903,99 @@ test('happy path — applies opening + fence on a normal archive', () => {
 test('returns filled unchanged when archive.services is empty (skip guard)', () => {
   const out = applyAutoDraft(SAMPLE_FILLED, { services: {} }, {}, '2026-04')
   assert.strictEqual(out, SAMPLE_FILLED, 'no-op when nothing to summarize')
+})
+
+// aiwatch-reports#106 — scored-but-none-rankable. `scores.length > 0` used to imply the ranking picks
+// were non-empty; splitting the tiers broke that, and the picks are optional-chained into prose, so
+// the failure is the literal string "undefined" inside the fence rather than a throw the catch arm
+// could absorb.
+const ALL_MEDIUM_ARCHIVE = {
+  services: {
+    gemini: { score: 64, monthlyScore: 64, grade: 'fair', monthlyScoreConfidence: 'medium', scoreConfidence: 'medium', officialUptime: null, incidents: 3, totalDowntimeMin: 120, avgResolutionMin: 40 },
+    deepgram: { score: 45, monthlyScore: 45, grade: 'degrading', monthlyScoreConfidence: 'medium', scoreConfidence: 'medium', officialUptime: null, incidents: 6, totalDowntimeMin: 400, avgResolutionMin: 66 },
+  },
+}
+
+test('skips the draft when every scored service is held out of the ranking', () => {
+  // …and SAYS so on the alarm channel. Skipping silently leaves the operator with a report whose
+  // Summary placeholders are simply unfilled and no statement of why — on the one month where the
+  // ranking language has to be written by hand.
+  const seen = []
+  const realLog = console.log, realWarn = console.warn
+  console.log = m => seen.push(String(m)); console.warn = m => seen.push(String(m))
+  let out
+  try {
+    out = applyAutoDraft(SAMPLE_FILLED, ALL_MEDIUM_ARCHIVE, { gemini: { name: 'Gemini' }, deepgram: { name: 'Deepgram' } }, '2026-07')
+  } finally { console.log = realLog; console.warn = realWarn }
+  assert.strictEqual(out, SAMPLE_FILLED, 'no fence at all beats a fence full of "undefined"')
+  assert.ok(seen.some(m => /auto-draft skipped entirely/.test(m)), seen.join('\n'))
+})
+
+test('the draft it does inject never contains the literal "undefined"', () => {
+  // The shape of the bug, pinned independently of the guard that prevents it: if a future change
+  // re-admits an empty pick pool, this catches the symptom even if the guard moves.
+  const out = applyAutoDraft(SAMPLE_FILLED, SAMPLE_ARCHIVE, SAMPLE_META, '2026-04')
+  const fence = out.slice(out.indexOf(SUMMARY_OPEN_MARKER), out.indexOf(SUMMARY_CLOSE_MARKER))
+  assert.ok(!fence.includes('undefined'), fence)
+})
+
+test('the held-out notice rides INSIDE the draft fence, not the ::warning:: channel', () => {
+  // emitUptimeWarnings is the archive-corruption alarm the workflow checklist tells the operator to
+  // act on; a routine every-month message there trains them to ignore it. Both halves are asserted:
+  // present in the fence, absent from stderr.
+  // Capture BOTH channels: emitUptimeWarnings writes its `::warning::` prefix on console.LOG in CI
+  // and `[generate-report] WARNING: ` on console.warn locally, so stubbing only one makes the
+  // negative assertion unsatisfiable — it would test the environment, not the wiring.
+  const warnings = []
+  const origWarn = console.warn, origLog = console.log
+  console.warn = m => warnings.push(String(m))
+  console.log = m => warnings.push(String(m))
+  let out
+  try {
+    out = applyAutoDraft(SAMPLE_FILLED, {
+      services: {
+        ...SAMPLE_ARCHIVE.services,
+        deepgram: { score: 45, monthlyScore: 45, grade: 'degrading', monthlyScoreConfidence: 'medium', scoreConfidence: 'medium', officialUptime: null, incidents: 6, totalDowntimeMin: 400, avgResolutionMin: 66 },
+      },
+    }, { ...SAMPLE_META, deepgram: { name: 'Deepgram' } }, '2026-07')
+  } finally {
+    console.warn = origWarn
+    console.log = origLog
+  }
+  const fence = out.slice(out.indexOf(SUMMARY_OPEN_MARKER), out.indexOf(SUMMARY_CLOSE_MARKER))
+  // Assert on the NOTE LINE, not the fence: the deliberately-ungated incident picks already name
+  // Deepgram elsewhere in the fence, so a fence-wide `includes` passes even with the names stripped.
+  const note = fence.split('\n').find(l => l.includes('Ranking language above excludes'))
+  assert.ok(note, `the note line is in the fence:\n${fence}`)
+  assert.ok(note.includes('Deepgram'), note)
+  assert.ok(note.includes('aiwatch-reports#106'), 'carries an issue number, so a copy lifted out of the fence is greppable')
+  assert.ok(!warnings.some(w => w.includes('Deepgram')), `the routine notice must not reach the alarm channel:\n${warnings.join('\n')}`)
+})
+
+test('buildHeldOutNote is empty when no service is held out', () => {
+  eq(buildHeldOutNote([]), '')
+  eq(buildHeldOutNote(undefined), '')
+  assert.ok(buildHeldOutNote(['Gemini API']).includes('Gemini API'))
+})
+
+test('applyAutoDraft passes the month through, so a mid-month addition cannot be "Riskiest"', () => {
+  // The wiring, not the predicate: `isRecentlyAdded` inside archiveToAnalysisRows is pinned by its
+  // own test, but every one of those calls it directly with an explicit period. Dropping `month` at
+  // THIS call site flips 8 of 38 rows to rankable on the real 2026-06 archive and promotes a
+  // mid-month addition into the draft's "Riskiest this month", with nothing else changing.
+  const archive = { services: {
+    ...SAMPLE_ARCHIVE.services,
+    helicone: { score: 30, monthlyScore: 30, grade: 'unstable', incidents: 9, totalDowntimeMin: 900, avgResolutionMin: 100, uptime: 95, officialUptime: 95, scoreConfidence: 'high', monthlyScoreConfidence: 'high', addedAt: '2026-04-20' },
+  } }
+  const out = applyAutoDraft(SAMPLE_FILLED, archive, { ...SAMPLE_META, helicone: { name: 'Helicone' } }, '2026-04')
+  const riskiest = out.split('\n').find(l => l.includes('Riskiest this month'))
+  assert.ok(riskiest, 'the draft has a Riskiest line')
+  assert.ok(!riskiest.includes('Helicone'), `a mid-month addition must not be the month's riskiest: ${riskiest}`)
+})
+
+test('a single-tier month gets no held-out note at all', () => {
+  const out = applyAutoDraft(SAMPLE_FILLED, SAMPLE_ARCHIVE, SAMPLE_META, '2026-04')
+  assert.ok(!out.includes('Ranking language above excludes'), 'nothing was held out; say nothing')
 })
 
 test('returns filled unchanged when archive has no services key', () => {
@@ -2051,6 +2579,23 @@ test('High-incident subjects are canonicalized to the lexicon (Mistral → Mistr
   eq(s.summary.join('|'), 'Mistral API|Together AI')
 })
 
+// aiwatch-reports#106 — the lexicon is built from the Score table, which is now TWO tables. Reading
+// only the first would silently stop canonicalizing every second-tier service.
+test('the lexicon spans BOTH ranking tables, so a second-tier name still canonicalizes', () => {
+  const md = sampleReport({
+    highIncident: 'Gemini (12 incidents) and Together AI (139 incidents)',
+    keyInsight: '- x',
+    affected: 'Together AI',
+  }).replace(
+    '| 6 | Gemini API | 64 | Fair |\n',
+    // Move Gemini into a second table under the caption buildScoreTable emits.
+    '\n**No Official Uptime**\n\n*not directly comparable to the table above.*\n\n'
+    + '| Rank | Service | Score | Grade |\n|------|---------|-------|-------|\n| 1 | Gemini API | 64 | Fair |\n',
+  )
+  const s = extractNarrativeSubjects(md)
+  eq(s.summary.join('|'), 'Gemini API|Together AI', 'bare "Gemini" folds onto the second table\'s row')
+})
+
 test('Key Insight subjects come from bold-lead bullets (Pattern OR free-form label), not prose', () => {
   const md = sampleReport({
     highIncident: 'Together AI (85 incidents)',
@@ -2548,7 +3093,7 @@ test('flags an official uptime the Score did not consume (the #951 shape)', () =
   ])
   eq(msgs.length, 1)
   assert.ok(msgs[0].includes('stability'), msgs[0])
-  assert.ok(msgs[0].includes('scoreConfidence="medium"'), msgs[0])
+  assert.ok(msgs[0].includes('confidence is "medium"'), msgs[0])
 })
 test('flags an archive built before aiwatch#962 as UNVERIFIED (no scoreConfidence)', () => {
   // Concretely: the aiwatch#962 deploy slipping past 2026-08-01 would let the OLD worker write
@@ -2562,6 +3107,80 @@ test('flags an archive built before aiwatch#962 as UNVERIFIED (no scoreConfidenc
 })
 test('a legacy archive with no officialUptime at all is not flagged (nothing to distrust)', () => {
   eq(findUptimeInconsistencies([{ id: 'cohere', data: { uptime: 100 } }]).length, 0)
+})
+// aiwatch-reports#106 — the mirror shape: the printed monthly Score consumed an uptime, but no figure
+// survived to label it, so the row reads "No uptime" inside the ranked table.
+test('flags a monthly-high service the archive left with no uptime figure (the #106 shape)', () => {
+  // The same 2026-07 fireworks confidence pair, with the figure MISSING — the archive shape the
+  // branch exists to report. Score value illustrative.
+  const msgs = findUptimeInconsistencies([
+    { id: 'fireworks', data: { officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'high', monthlyScore: 80 } },
+  ])
+  eq(msgs.length, 1)
+  assert.ok(msgs[0].includes('fireworks'), msgs[0])
+  assert.ok(msgs[0].includes('monthlyScoreConfidence="high"'), msgs[0])
+})
+
+test('…and the report makes no PROVIDER claim about that same row', () => {
+  // Fail-open on the NUMBER is right — it is not ours to invent. The claim is ours, and this row is
+  // the one case where we hold the evidence it is false: the monthly Score consumed an official
+  // uptime, so the provider published one. Saying "does not publish a comparable uptime percentage"
+  // here is the same class of false claim as the "Official · 100.00%" aiwatch#951 removed.
+  const svc = { id: 'fireworks', data: { score: 80, grade: 'good', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'high', incidents: 0 } }
+  eq(publishesNoOfficialUptime(svc, 'fireworks'), false, 'the provider DID publish; our archive lost it')
+  eq(buildWhy(svc, 'fireworks'), 'Zero incidents', 'no "(no published uptime)" parenthetical')
+  const note = buildUptimeExclusionNote([svc], { fireworks: { name: 'Fireworks AI' } })
+  assert.ok(!note.includes('Fireworks'), `the exclusion caption must not name it: ${note}`)
+  // The number is still withheld — the figure genuinely is not in the archive.
+  eq(officialUptimeFor(svc, 'fireworks'), null)
+})
+test('a figure the gate withheld is reported even when it came from the legacy field', () => {
+  // The gate refuses a figure at any non-high confidence, whichever field it would have come from.
+  // Reading `officialUptime` directly here made the two asymmetric: the absent-key shape was
+  // withheld from the uptime table and announced by nobody. `cohere` is deliberately outside
+  // NO_PUBLIC_UPTIME, so only the confidence decides.
+  const svc = { id: 'cohere', data: { score: 70, uptime: 99.42, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' } }
+  eq(officialUptimeFor(svc, 'cohere'), null, 'still withheld')
+  const msgs = findUptimeInconsistencies([svc])
+  eq(msgs.length, 1, 'and no longer silently')
+  assert.ok(msgs[0].includes('99.42'), msgs[0])
+})
+
+test('the #106 shape clears once the archive carries the figure', () => {
+  // The patched 2026-07 row. `scoreConfidence` stays 'medium' — the build-day snapshot genuinely had
+  // no uptime and is not ours to rewrite — but the figure agrees with the Score the report PRINTS,
+  // so nothing is contradictory and nothing is missing.
+  eq(findUptimeInconsistencies([
+    { id: 'fireworks', data: { officialUptime: 99.9, uptimeSource: 'platform_avg', scoreConfidence: 'medium', monthlyScoreConfidence: 'high' } },
+  ]).length, 0)
+})
+test('a figure the PRINTED score did not consume is still refused (the #951 guard survives)', () => {
+  // Same shape, monthly confidence medium: the monthly Score was rescaled over /60, so a displayed
+  // figure beside it is the original contradiction — gating on the printed score must not lose this.
+  const row = { id: 'stability', data: { officialUptime: 100, scoreConfidence: 'high', monthlyScoreConfidence: 'medium' } }
+  const msgs = findUptimeInconsistencies([row])
+  eq(msgs.length, 1)
+  assert.ok(msgs[0].includes('WITHHELD'), msgs[0])
+  // The message must quote the confidence that actually triggered the refusal. Quoting the build-day
+  // `scoreConfidence` here would print `"high" — that Score was computed without any uptime`, which
+  // is nonsense on its face and sends the operator to the wrong field.
+  assert.ok(msgs[0].includes('confidence is "medium"'), msgs[0])
+  assert.ok(!msgs[0].includes('"high"'), `must not quote the build-day confidence: ${msgs[0]}`)
+  eq(uptimeSourceLabel(row, 'stability'), 'No uptime')
+})
+test('a medium-confidence monthly Score is NOT the #106 shape — it legitimately has no figure', () => {
+  eq(findUptimeInconsistencies([
+    { id: 'deepgram', data: { officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' } },
+  ]).length, 0)
+})
+test('the #106 detector reads the MONTHLY field, not printedScoreConfidence', () => {
+  // Deliberately asymmetric with contradictsScore: the claim being made is specifically that the
+  // MONTHLY compute consumed an uptime. A legacy/partial archive that only carries the build-day
+  // field says nothing about the monthly one, so it must not be reported as a dropped figure — and a
+  // future "consistency" refactor onto printedScoreConfidence would silently start reporting it.
+  eq(findUptimeInconsistencies([
+    { id: 'cohere', data: { officialUptime: null, scoreConfidence: 'high', uptime: 100 } },
+  ]).length, 0)
 })
 test('bedrock is never flagged — the hard guard already forces it to null', () => {
   eq(findUptimeInconsistencies([{ id: 'bedrock', data: { officialUptime: 100, scoreConfidence: 'low' } }]).length, 0)
@@ -2807,6 +3426,16 @@ function archiveExercisingEverySection(base) {
 test('no retired false claim survives a full report render', () => {
   const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
   for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
+})
+
+test('the second-table sentence stays scoped to months that have the tier data', () => {
+  // A positive assertion rather than a RETIRED_CLAIMS row: here the falsehood is the ABSENCE of the
+  // qualifier, which a "must not contain" ratchet expresses badly. 2026-05 is a legacy archive, so
+  // this very render produces ONE table — an unconditional "they are ranked in their own table"
+  // would be false in the same document that states it.
+  const out = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
+  assert.match(out, /Where this report knows which services those are/, 'the scoping qualifier survives')
+  assert.ok(!out.includes('**No Official Uptime**'), 'and this render really is single-table')
 })
 
 // #1006 — guards the replaceTableBody('30-Day Uptime') anchor against heading drift. The section was

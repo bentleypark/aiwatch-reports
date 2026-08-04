@@ -393,7 +393,37 @@ function joinNames(svcs, meta) {
  * and still carry the invented estimate (bedrock score=90), so the id-set remains the fallback.
  */
 function isScoreWithheld(s) {
-  return SCORE_WITHHELD.has(s.id) || (s.data.score === null && s.data.scoreConfidence === 'low')
+  // aiwatch-reports#106 — the printed score's confidence, for the same reason `scoreTier` uses it:
+  // `s.data.score` is already normalized to the monthly value, so pairing it with the build-day
+  // confidence could leave a null-scored service matching neither this clause nor any other exclusion
+  // — which `buildRankingNote` reports as an unexplained omission.
+  return SCORE_WITHHELD.has(s.id) || (s.data.score === null && printedScoreConfidence(s) === 'low')
+}
+
+/**
+ * aiwatch-reports#106 / aiwatch#1186 — which ranking sequence a service belongs to.
+ *
+ * 'medium' means the Score was computed with NO uptime component: aiwatch#713's rescale divides
+ * Incidents+Recovery+Responsiveness by 60 instead of 100, which is algebraically the same as keeping
+ * uptime in a /100 sum at the fixed ratio 40/60 of the other three — an imputed uptime figure, not
+ * the absence of one. So a 'medium' number and a 'high' number are not on one scale despite sharing
+ * the 0-100 range, and ranking them in one sequence compares incomparable figures. Two sequences,
+ * never merged. Not a claim about the DIRECTION of the error: the imputed component sits at the other
+ * three's achievement ratio, so the rescale scores a service LOWER when uptime is its strongest
+ * component (the common case on real data) and higher when uptime is its weakest. Incomparable either
+ * way — which is the point, and all the split needs.
+ *
+ * Keyed on `printedScoreConfidence` — the tier must describe the number in the row, and the row shows
+ * the monthly Score.
+ *
+ * A legacy archive (≤2026-05) carries neither confidence field, so every service reads 'high' and the
+ * report renders the single table it always did. Deliberate: nothing in those archives records which
+ * services were rescaled, and filing a row under "no official uptime" is a claim, not a default.
+ * This is also why the tier is not read off the Uptime Source column — that column is 'No uptime'
+ * for any row whose figure we withhold, which is not the same question.
+ */
+function scoreTier(s) {
+  return printedScoreConfidence(s) === 'medium' ? 'medium' : 'high'
 }
 
 function buildRankingNote(services, meta, period) {
@@ -447,25 +477,78 @@ function buildRankingNote(services, meta, period) {
     const poss = recent.length === 1 ? 'it was' : 'they were'
     clauses.push(`**${joinNames(recent, meta)} ${verb} excluded from this ranking** — ${poss} added to AIWatch mid-month, so the partial-month Score rests on insufficient coverage; ${recent.length === 1 ? 'it rejoins' : 'they rejoin'} once a full month of data accrues`)
   }
-  return `*${ranked} of ${considered} services ranked. ${clauses.join('. ')}.*`
+  // aiwatch-reports#106 — say where those ranked services ended up. The note sits directly above the
+  // FIRST table, so on a split month "30 of 41 services ranked" stands over 23 rows and a reader who
+  // counts gets a different number than the one they just read.
+  // Counted over `rankedSvcs`, the same population the tables are built from — counting over all
+  // `services` would credit the second table with services the ranking excluded entirely. Both tiers
+  // must be non-empty: buildScoreTable renders a single table otherwise, and there is no "below" and
+  // "under it" to describe.
+  const medium = rankedSvcs.filter(s => scoreTier(s) === 'medium').length
+  const split = medium > 0 && medium < ranked
+    ? ` — ${ranked - medium} in the table below, ${medium} with no official uptime ranked separately under it`
+    : ''
+  return `*${ranked} of ${considered} services ranked${split}. ${clauses.join('. ')}.*`
 }
 
 // ── Table builders ───────────────────────────────────────────────────
+const SCORE_TABLE_HEAD = [
+  '| Rank | Service | Score | Grade | Uptime Source | Why |',
+  '|---|---|---|---|---|---|',
+]
+
+// aiwatch-reports#106 — the medium tier drops the Uptime Source column, because there the cell is a
+// constant: reaching that tier means the printed Score's confidence is 'medium', and `officialUptimeFor`
+// refuses to resolve a figure at any confidence but 'high' — so every row reads "No uptime". That is
+// an invariant of THIS repo's own code, not a bet on what the worker writes into the archive; the
+// test named for it pins both halves. Saying it a third time, under a heading and a caption that both
+// already say it, is not disclosure. The column stays in the main table, where it is NOT constant: a
+// legacy month ranks its no-uptime services there, and `findUptimeInconsistencies` reports the modern
+// case of a monthly-high service whose figure did not survive.
+const MEDIUM_TABLE_HEAD = [
+  '| Rank | Service | Score | Grade | Why |',
+  '|---|---|---|---|---|',
+]
+
+// aiwatch-reports#106 — the disclosure that labels the second rank sequence. Adapted from the
+// dashboard's `ranking.mediumTable` / `ranking.mediumReason` (aiwatch src/locales/en.js) so a reader
+// who meets the split on both surfaces reads the same explanation. Deliberately says nothing about
+// "the table above": it has to be true wherever it is printed, and a month with no main table is the
+// one where it is the ONLY thing left saying these Scores were rescaled.
+const MEDIUM_TIER_CAPTION = [
+  '**No Official Uptime**',
+  '',
+  '*Scored on Incidents + Recovery + Responsiveness only — no official uptime metric, so these Scores are not on the same scale as a Score built from a measured uptime. Ranked separately rather than merged into one shared rank.*',
+].join('\n')
+
 function buildScoreTable(services, meta, period) {
   // Drop SCORE_WITHHELD services (no uptime metric + no reliable incidents), STALE_SOURCE services
   // (#591 — frozen feed inflates the Score from an empty window), and recently-added services
   // (reports#45 — partial-month coverage would rank off insufficient data) from the ranking; all are
   // surfaced in the ranking-exclusion note + the Incident Summary ("No incident feed" / "Stale source").
   const withScore = services.filter(s => s.data.score !== null && !isScoreWithheld(s) && !isStaleSource(s) && !isRecentlyAdded(s, period))
-  const ranked = competitionRank(withScore, s => s.data.score)
-  const rows = ranked.map(r => {
-    const s = r.item
-    return `| ${r.rankLabel} | ${serviceName(s.id, meta)} | ${s.data.score} | ${gradeLabel(s.data.grade)} | ${uptimeSourceLabel(s, s.id)} | ${buildWhy(s, s.id)} |`
-  })
+  // aiwatch-reports#106 — rank each confidence tier on its OWN sequence (see scoreTier). The two
+  // tables carry different columns (see MEDIUM_TABLE_HEAD); every consumer reads them back through
+  // parseTableGroups, which maps each table against its OWN header row, and no consumer reads a
+  // medium row's Uptime Source VALUE. The column's absence is load-bearing rather than cosmetic:
+  // `scoreTiersFromReport` uses it to tell the two tables apart.
+  const rowsFor = (tier, cells) => competitionRank(withScore.filter(s => scoreTier(s) === tier), s => s.data.score)
+    .map(r => `| ${cells(r.item, r.rankLabel).join(' | ')} |`)
+  const highRows = rowsFor('high', (s, rank) =>
+    [rank, serviceName(s.id, meta), s.data.score, gradeLabel(s.data.grade), uptimeSourceLabel(s, s.id), buildWhy(s, s.id)])
+  const mediumRows = rowsFor('medium', (s, rank) =>
+    [rank, serviceName(s.id, meta), s.data.score, gradeLabel(s.data.grade), buildWhy(s, s.id)])
+  const table = (head, rows) => [...head, ...rows].join('\n')
+  // One rule, no special cases: an empty tier contributes nothing, and the caption always travels
+  // with the medium table. Earlier revisions branched on which tier was empty and dropped the caption
+  // with the main table — which deleted the only sentence saying those Scores were rescaled, in the
+  // one month where it was the only one left.
+  if (mediumRows.length === 0) return table(SCORE_TABLE_HEAD, highRows)
   return [
-    '| Rank | Service | Score | Grade | Uptime Source | Why |',
-    '|---|---|---|---|---|---|',
-    ...rows,
+    ...(highRows.length > 0 ? [table(SCORE_TABLE_HEAD, highRows), ''] : []),
+    MEDIUM_TIER_CAPTION,
+    '',
+    table(MEDIUM_TABLE_HEAD, mediumRows),
   ].join('\n')
 }
 
@@ -546,15 +629,44 @@ function buildIncidentTable(services, meta) {
   }
 }
 
-// aiwatch#951/#962 — a figure the Score did not consume is wrong by construction. The worker emits
-// `officialUptime` only at `scoreConfidence: 'high'`, so a non-null value beside any other confidence
-// means the archive contradicts itself. REFUSE the value rather than print "Official · 100.00%" beside
-// a Score that was rescaled over /60 without it — that contradiction is the whole bug. Fail-safe, not
-// fail-loud: a warning in a CI log is not seen by whoever reviews the generated draft.
-// Only decidable when the archive carries provenance; a pre-#962 archive has no `scoreConfidence`.
-function contradictsScore(s) {
-  const conf = s.data.scoreConfidence
-  return s.data.officialUptime != null && conf !== undefined && conf !== 'high'
+/**
+ * The confidence of the SCORE THIS REPORT PRINTS. Every Score shown here is the calendar-month value
+ * (`resolveMonthlyScore` / aiwatch#993), so the monthly confidence is the one that describes it;
+ * `scoreConfidence` describes the build-day rolling snapshot, which the report stopped displaying.
+ * `undefined` on a legacy archive (≤2026-05), which carries neither field.
+ *
+ * The two disagree in real data — verified 2026-08-03 against the live `archive:monthly:2026-07`,
+ * where `fireworks` reads snapshot `medium` / monthly `high`; no committed `_data` archive carries a
+ * disagreement, so this is not re-derivable from inside this repo. Every reader of "was this Score
+ * computed with an uptime?" is therefore routed through here rather than answering it again:
+ * aiwatch-reports#106 was that one question answered differently in different places.
+ */
+function printedScoreConfidence(s) {
+  return s.data.monthlyScoreConfidence ?? s.data.scoreConfidence
+}
+
+// aiwatch#951/#962 — a figure the Score did not consume is wrong by construction. REFUSE the value
+// rather than print "Official · 100.00%" beside a Score that was rescaled over /60 without it — that
+// contradiction is the whole bug. Fail-safe, not fail-loud: withhold the number, because a warning in
+// a CI log is not seen by whoever reviews the generated draft.
+// Only decidable when the archive carries provenance; a pre-#962 archive has neither field.
+//
+// aiwatch-reports#106 — gated on the PRINTED score's confidence, not the build-day snapshot's. The
+// implication that matters runs one way: when the archive carries a figure at all, it is the value
+// `computeMonthlyScore` consumed, because aiwatch's monthly-archive.ts feeds the same
+// `officialUptimeMap[id]` to that and to `resolveArchiveOfficialUptime`. The converse does NOT hold —
+// a monthly-high service can reach us with no figure, which is what the #106 branch below reports.
+// A worker-written archive cannot trip this check with the build-day confidence anyway (the worker
+// already nulls the figure in exactly that case); the reachable subject is a HAND-PATCHED archive —
+// the remedy that same branch prescribes — whose recovered figure the stale build-day confidence
+// would otherwise refuse all over again.
+// aiwatch-reports#106 — asks the SAME question `officialUptimeFor` answers, so the two cannot drift:
+// "would a figure have resolved if the Score's confidence did not veto it?". Reading `officialUptime`
+// directly made the two asymmetric — a row whose figure came from the legacy `uptime` fallback was
+// withheld by the gate and reported by nobody.
+function contradictsScore(s, id = s?.id) {
+  const conf = printedScoreConfidence(s)
+  return conf !== undefined && conf !== 'high' && resolveUptimeIgnoringConfidence(s, id) != null
 }
 
 // Does the PROVIDER publish no official uptime? A statement about THEM, and strictly narrower than
@@ -566,6 +678,11 @@ function contradictsScore(s) {
 // evidence we have.
 function publishesNoOfficialUptime(s, id = s?.id) {
   if (NEVER_PUBLISHES_UPTIME.has(id)) return true
+  // aiwatch-reports#106 — except when the MONTHLY Score consumed an official uptime: that says the
+  // provider published one and the archive lost the figure, which is the shape the #106 branch of
+  // findUptimeInconsistencies reports. `officialUptime: null` is then a fact about our archive, not
+  // about the provider, and the caption and buildWhy would otherwise assert the opposite out loud.
+  if (s.data.monthlyScoreConfidence === 'high') return false
   const o = s.data.officialUptime
   if (o !== undefined) return o === null  // modern archive is authoritative
   return NO_PUBLIC_UPTIME.has(id)         // legacy archive: the maintained set is the only evidence
@@ -594,9 +711,27 @@ function findUptimeInconsistencies(services) {
     if (NEVER_PUBLISHES_UPTIME.has(s.id)) continue
     if (contradictsScore(s)) {
       messages.push(
-        `${s.id}: archive shows an official uptime of ${s.data.officialUptime} but scoreConfidence=` +
-        `"${s.data.scoreConfidence}" — the Score was computed without any uptime, so the figure has ` +
-        `been WITHHELD from the report (aiwatch#951). The archive is inconsistent; fix it at the source`,
+        `${s.id}: archive resolves an uptime of ${resolveUptimeIgnoringConfidence(s)} but the printed Score's ` +
+        `confidence is "${printedScoreConfidence(s)}" — that Score was computed without any uptime, so ` +
+        'the figure has been WITHHELD from the report (aiwatch#951). The archive is inconsistent; fix ' +
+        'it at the source',
+      )
+    }
+    // aiwatch-reports#106 — the MIRROR of the case above, and the one the tier split made visible.
+    // `monthlyScoreConfidence: 'high'` means score.ts's `hasUptime` was true for the value
+    // monthly-archive.ts feeds `computeMonthlyScore`, i.e. the MONTHLY Score — the one this report
+    // prints — consumed an official uptime. When no figure survives to display beside it, the row
+    // reads "No uptime": a claim about the PROVIDER, and a false one, since the provider published a
+    // figure the worker's build-day gate happened to drop. Fail-OPEN like case 2 — the number is not
+    // ours to invent — but the operator must see it, because the fix is upstream: recover the
+    // month-end value from the worker's `history:{date}` archive (90d, unlike `daily:`'s 2d) and patch
+    // `archive:monthly:{period}` (NOT /api/admin/rebuild-archive, which is not idempotent).
+    if (s.data.monthlyScoreConfidence === 'high' && officialUptimeFor(s) === null) {
+      messages.push(
+        `${s.id}: monthlyScoreConfidence="high" — the monthly Score this report prints DID consume an ` +
+        'official uptime — but the archive carries no figure to display, so anywhere this service is ' +
+        'shown it reads "No uptime" (aiwatch-reports#106). Recover the month-end value from the ' +
+        "worker's history:{date} keys and patch archive:monthly:{period} before publishing",
       )
     }
   }
@@ -645,11 +780,27 @@ function officialUptimeFor(s, id = s?.id) {
     throw new TypeError(`officialUptimeFor expects a { id, data } service, got the string "${s}"`)
   }
   if (NEVER_PUBLISHES_UPTIME.has(id)) return null
+  // aiwatch-reports#106 — decide on the SCORE first, before deciding which field to read. A Score
+  // whose confidence says it was computed without an uptime must not print one, whichever field the
+  // figure would have come from: `officialUptime` present-and-contradictory (the aiwatch#951 case
+  // below) or ABSENT, where the legacy `s.data.uptime` fallback would otherwise resolve a real
+  // number for a rescaled Score. That second shape is mixed-provenance data — a partially migrated or
+  // hand-edited archive — and gating only the first left it printing a real uptime percentage in the
+  // 30-Day Uptime table beside a service ranked in the no-official-uptime tier. Refusing it here is
+  // also what makes that tier's Uptime Source column a constant by CONSTRUCTION rather than by
+  // assumption about what the worker writes (see MEDIUM_TABLE_HEAD). Legacy archives carry no
+  // confidence at all → unaffected.
+  const conf = printedScoreConfidence(s)
+  if (conf !== undefined && conf !== 'high') return null
+  return resolveUptimeIgnoringConfidence(s, id)
+}
+
+// The field-resolution half, with no confidence gate — shared with `contradictsScore` so the "what
+// would print" question has one answer.
+function resolveUptimeIgnoringConfidence(s, id = s?.id) {
+  if (NEVER_PUBLISHES_UPTIME.has(id)) return null
   const o = s.data.officialUptime
-  if (o !== undefined) {
-    if (contradictsScore(s)) return null  // the Score never consumed it → refuse to print it
-    return o                              // modern archive: authoritative, null included
-  }
+  if (o !== undefined) return o           // modern archive: authoritative, null included
   if (NO_PUBLIC_UPTIME.has(id)) return null
   if (id === 'chatgpt') return null
   return s.data.uptime ?? null           // legacy archive: the measured figure is the best we have
@@ -1233,7 +1384,9 @@ function fillTemplate(template, month, archive, meta) {
   // CALENDAR-MONTH value here, at the single load point, so the ranking table, score chart, Summary
   // and buildWhy all read the same number the trend/Notable-Movers do (which resolve it in
   // toMonthEntry). Legacy archives without monthlyScore keep their build-day snapshot via the
-  // fallback. scoreConfidence / officialUptime gating are left untouched — a separate signal.
+  // fallback. The raw `officialUptime` field is left untouched here, but aiwatch-reports#106 made its
+  // gating read the MONTHLY confidence (see `printedScoreConfidence`) so the gate describes the score
+  // this normalization produces, not the build-day snapshot it replaced.
   const services = Object.entries(archive.services).map(([id, data]) => {
     const { score, grade } = charts.resolveMonthlyScore(data)
     return { id, data: { ...data, score, grade } }
@@ -1397,14 +1550,29 @@ function fillTemplate(template, month, archive, meta) {
 // the narrative draft is a nice-to-have on top. Failing the workflow over a
 // narrative-generation hiccup would block the data the operator does need.
 
-// Synthesize analyzer-compatible row shapes from raw archive data. Mirrors the
-// vocabulary that generate-summary.analyze() expects (see its `parseTable()`
-// output keys), so the analyzer can't tell apart these rows from CLI-parsed
-// ones. Including services without incidents lets `zeroIncidents.length` and
-// `totalServices` reflect reality rather than the filtered table.
-function archiveToAnalysisRows(archive, meta) {
+// Synthesize analyzer-compatible row shapes from raw archive data. Mirrors the row
+// vocabulary that generate-summary.analyze() reads. `Rankable` exists only here, and
+// `analyze()` treats its absence as the pre-#106 behaviour. Including services without incidents
+// lets `zeroIncidents.length` and `totalServices` reflect reality rather than the filtered table.
+//
+// aiwatch-reports#106 — every scored service stays in `scores`; a row that must not be RANKED is
+// marked `Rankable: false` instead of being dropped. `analyze()` reads two different populations off
+// this one array — the month's census (grade distribution, `isStable`, `unranked`, `totalServices`)
+// and the ordered picks the draft turns into superlatives — and dropping rows silently rewrote the
+// census: on the real 2026-06 archive it emptied `degrading`, which is one of the two conditions
+// `generateOpening` requires before calling a month "relatively stable across all monitored services".
+// Marking instead of dropping keeps the census whole and still stops the ordered picks from naming a
+// service on an incomparable number.
+//
+// `Rankable` mirrors the ranking TABLE's own membership, not just the tier: `buildScoreTable` also
+// drops withheld / stale / mid-month-added services (#591, reports#45), and a draft that calls one of
+// those "riskiest" names a service the reader cannot find in the ranking. Verified on 2026-06: a
+// tier-only hold-out promoted `helicone` — excluded from the table as recently-added — into
+// "Riskiest this month".
+function archiveToAnalysisRows(archive, meta, period) {
   const scores = []
   const incidents = []
+  const heldOut = []
   for (const [id, data] of Object.entries(archive.services || {})) {
     const name = meta[id]?.name || id
     // aiwatch#993 — the auto-draft Summary/TL;DR narrates these score NUMBERS, so they must be the
@@ -1413,11 +1581,20 @@ function archiveToAnalysisRows(archive, meta) {
     // table says "77".
     const { score, grade } = charts.resolveMonthlyScore(data)
     if (score !== null && score !== undefined) {
+      const svc = { id, data: { ...data, score, grade } }
+      const comparable = scoreTier(svc) === 'high'
+      const inTable = !isScoreWithheld(svc) && !isStaleSource(svc) && !isRecentlyAdded(svc, period)
+      // Held out for the TIER reason, and only when the service is actually in the second table —
+      // `buildHeldOutNote` tells the reader it is "ranked in their own table", which is false for a
+      // medium-tier service the ranking drops outright (stale feed, mid-month addition). Those keep
+      // their real reason in the ranking note, which the note points at.
+      if (!comparable && inTable) heldOut.push(name)
       scores.push({
         Service: name,
         Score: String(score),
         Grade: gradeLabel(grade),
         Confidence: confidence({ data }),
+        Rankable: comparable && inTable,
       })
     }
     incidents.push({
@@ -1428,7 +1605,7 @@ function archiveToAnalysisRows(archive, meta) {
     })
   }
   scores.sort((a, b) => parseInt(b.Score) - parseInt(a.Score))
-  return { scores, incidents }
+  return { scores, incidents, heldOut }
 }
 
 const SUMMARY_OPEN_MARKER = '<!-- BEGIN AUTO-DRAFT — review, then DELETE this entire block before merge -->'
@@ -1475,6 +1652,30 @@ function injectAutoDraft(filled, opening, tldr) {
   return out
 }
 
+/**
+ * aiwatch-reports#106 — the draft's own disclosure that some services could not compete for its
+ * superlatives. Rendered INSIDE the auto-draft fence, not on the `::warning::` channel: that channel
+ * is the archive-corruption alarm the generate-report workflow's PR checklist tells the operator to
+ * treat as "the archive is broken and needs fixing at the source", and a routine, every-modern-month
+ * message there teaches them the alarm is noise. The fence is read by the same person, in the PR
+ * diff, and is deleted before merge — so the notice costs the published report nothing.
+ *
+ * Names only the no-official-uptime tier, and says so rather than implying it is the whole held-out
+ * set: services dropped from the ranking outright (withheld / stale feed / added mid-month) are also
+ * barred from these picks, and the ranking note above the Score table already names them with their
+ * reason. '' for an empty set, so the caller's join collapses.
+ */
+function buildHeldOutNote(heldOut) {
+  if (!heldOut || heldOut.length === 0) return ''
+  // Carries its issue number so the string is greppable if it is ever lifted out of the fence with
+  // the prose an author is instructed to adapt — it is styled like the template's own reader-facing
+  // captions and would not otherwise look like scaffolding.
+  return `\n> _Ranking language above excludes ${heldOut.join(', ')} — no official uptime, so their ` +
+    'Score is not on the same scale and they are ranked in their own table (aiwatch-reports#106). ' +
+    'Services excluded from the ranking entirely are named in the note above the Score table. Name ' +
+    'any of them by hand if the month warrants it._'
+}
+
 // Extracted helper that wraps the full auto-draft path (archive→rows→analyze→inject)
 // behind a single seam. Lets tests exercise both the happy path AND the catch arm
 // (by passing a stub `summaryMod` whose `analyze` throws). main() routes through
@@ -1482,14 +1683,32 @@ function injectAutoDraft(filled, opening, tldr) {
 // blocks the deterministic data pipeline" — is testable, not just documented.
 function applyAutoDraft(filled, archive, meta, month, summaryMod = summary, momByService = {}) {
   try {
-    const { scores, incidents } = archiveToAnalysisRows(archive, meta)
+    const { scores, incidents, heldOut } = archiveToAnalysisRows(archive, meta, month)
     if (scores.length === 0 || incidents.length === 0) {
       console.warn(`[generate-report] Auto-draft skipped: no archive rows (scores=${scores.length}, incidents=${incidents.length}).`)
       return filled
     }
     const a = summaryMod.analyze(scores, incidents)
+    // aiwatch-reports#106 — every Score-ORDERED pick now comes from `rankable`, which `ranked` being
+    // non-empty no longer implies (a month whose every scored service is medium-tier, or excluded from
+    // the table as stale/recently-added). `generateOpening`/`generateTldr` optional-chain those picks
+    // straight into prose, so an empty pool prints the literal string "undefined" INSIDE the fence a
+    // human is told to review rather than re-derive — it never reaches the catch arm below. Skip the
+    // injection instead; the deterministic tables are unaffected.
+    if (Array.isArray(a.rankable) && a.rankable.length === 0) {
+      // The notice normally rides in the fence, but there is no fence on this path. The channel rule
+      // is the one stated on buildHeldOutNote: it carries what the operator must act on before
+      // publishing. Writing the whole Summary by hand qualifies; a routine every-month notice does not.
+      emitUptimeWarnings([
+        'auto-draft skipped entirely: no service this month has a Score on the main scale, so there ' +
+        'is no ranking language to derive (aiwatch-reports#106). Write the Summary and Key Insight ' +
+        'by hand, and say which scale the numbers are on',
+      ])
+      return filled
+    }
     const opening = summaryMod.generateOpening(`${monthName(month)} ${month.split('-')[0]}`, a)
-    const tldr = summaryMod.generateTldr(a, incidents, momByService)
+    const tldr = [summaryMod.generateTldr(a, incidents, momByService), buildHeldOutNote(heldOut)]
+      .filter(Boolean).join('\n')
     return injectAutoDraft(filled, opening, tldr)
   } catch (err) {
     console.warn('[generate-report] Auto-draft injection failed (continuing with un-injected draft):', err instanceof Error ? err.message : err)
@@ -1760,7 +1979,15 @@ function sectionText(md, headingPrefix) {
 // Service display-names the report names in its own AIWatch Score table — a
 // self-contained lexicon so the prose slots can be scanned without external meta.
 function serviceNameLexicon(md) {
-  return summary.parseTable(md, 'AIWatch Score')
+  // aiwatch-reports#106 — BOTH ranking tables. The lexicon is what canonicalizes author-typed name
+  // variants in the prose slots; reading only the first table would quietly stop canonicalizing
+  // every medium-confidence service the moment the ranking split in two. Flattens every group, so
+  // unlike the chart (which is positional and warns) an extra table would simply widen the lexicon —
+  // harmless here: `canonicalizeToLexicon` resolves a prefix only when exactly one name matches, so
+  // an extra name can at worst make a resolve ambiguous, and an ambiguous resolve keeps the author's
+  // raw token rather than picking a wrong canonical name.
+  return summary.parseTableGroups(md, 'AIWatch Score')
+    .flat()
     .map(r => r.Service)
     .filter(Boolean)
 }
@@ -1986,7 +2213,11 @@ function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
   const prevMonth = charts.monthsBefore(month, 1)[0]
   const prev = charts.readDataArchive(prevMonth, dataDir)
   if (!prev || !prev.services) return map
-  const { incidents } = archiveToAnalysisRows(archive, meta)
+  // `month` matters even though only `incidents` is read here: without it `isRecentlyAdded` sees an
+  // undefined period and every mid-month-added service is silently marked rankable (8 of 38 rows on
+  // 2026-06). Harmless while this destructures one key, silently wrong the moment it destructures
+  // another — so pass it rather than rely on that.
+  const { incidents } = archiveToAnalysisRows(archive, meta, month)
   for (const r of incidents) {
     const curr = parseInt(r.Incidents, 10)
     if (Number.isNaN(curr)) continue
@@ -2005,7 +2236,7 @@ function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
 // gap (fewer than 2 months of _data) just drops the movers.
 function computeCurrentSubjects(archive, meta, month, opts = {}) {
   const { dataDir = path.join(__dirname, '..', '_data') } = opts
-  const { scores, incidents } = archiveToAnalysisRows(archive, meta)
+  const { scores, incidents } = archiveToAnalysisRows(archive, meta, month)
   if (scores.length === 0 || incidents.length === 0) return { summary: [], keyInsight: [], notable: [] }
   const a = summary.analyze(scores, incidents)
   const topIncident = [...incidents]
@@ -2091,6 +2322,9 @@ module.exports = {
   emitBreakdownWarnings,
   projectServiceMeta,
   buildScoreTable,
+  scoreTier,
+  isScoreWithheld,
+  buildHeldOutNote,
   isStaleSource,
   isRecentlyAdded,
   buildIncidentTable,
