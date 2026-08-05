@@ -165,6 +165,12 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      (MTTD) + RTT degradation, never a "faster than the official status page" claim. Do not
      hand-author. -->
 
+<!-- PREDICTION_ACCURACY_SECTION -->
+<!-- ^ Auto-rendered by generate-report.js (buildPredictionAccuracySection) from
+     archive.predictionAccuracy (aiwatch#827 F3 / worker-side aiwatch#840). Emits the whole
+     "## AI Prediction Accuracy" section ending in its own `---`, and is omitted entirely when the
+     month has no usable aggregate (the case for any month ≤ 2026-06). Do not hand-author. -->
+
 ## Incident Summary
 
 > **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7", "Degraded performance for Claude Sonnet 4.6"), and Together AI's status page tracks each model as its own resource — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability — adjust for granularity before comparing across providers. Full provider-by-provider rules: [About This Report → Incident Counting](#about-this-report).
