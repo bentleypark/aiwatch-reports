@@ -36,6 +36,8 @@ const {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildPredictionAccuracySection,
+  PREDICTION_ACCURACY_MIN_SAMPLE,
   buildComponentReliabilitySection,
   buildResponsivenessSection,
   buildTrendSection,
@@ -1537,6 +1539,159 @@ test('drops the Average line below the sample-size gate (count < 5)', () => {
   assert.ok(!out.includes('**Average early detection**'), 'no averaged figure below MIN_LEAD_SAMPLE_SIZE')
 })
 
+// ── buildPredictionAccuracySection (aiwatch#827 F3) ─────────────────
+console.log('\nbuildPredictionAccuracySection (aiwatch#827 F3)')
+// The real 2026-07 aggregate, as served by GET /api/report?month=2026-07 on 2026-08-05.
+const julyAccuracy = {
+  total: 172, accurate: 44, underPredicted: 51, overPredicted: 77,
+  hitRate: 0.2558139534883721, medianAbsErrorHours: 0.9166666666666666,
+}
+const paSection = (pa, month = '2026-07') => buildPredictionAccuracySection({ predictionAccuracy: pa }, month, {})
+// Renders with the operator/author channels captured, so a test can assert not just WHAT was
+// omitted but whether the omission was announced.
+function paRender(pa, month = '2026-07') {
+  const origLog = console.log; const origWarn = console.warn
+  const logged = []; const warned = []
+  console.log = m => logged.push(String(m)); console.warn = m => warned.push(String(m))
+  try {
+    const out = buildPredictionAccuracySection({ predictionAccuracy: pa }, month, {})
+    return { out, logged, warned }
+  } finally { console.log = origLog; console.warn = origWarn }
+}
+
+test('a month with no aggregate omits the section SILENTLY', () => {
+  // buildMonthlyAccuracy returns null for a month with no predicted+resolved incident, and always
+  // writes the key — so this is the one legitimate empty, and it must not cry corruption.
+  for (const pa of [null, undefined]) {
+    const { out, logged, warned } = paRender(pa)
+    eq(out, '')
+    assert.deepEqual([...logged, ...warned], [], `absence must be silent, got: ${[...logged, ...warned]}`)
+  }
+  eq(buildPredictionAccuracySection({}, '2026-07', {}), '')
+})
+test('a malformed aggregate omits the section LOUDLY — a lost section is otherwise invisible', () => {
+  // summarizeAccuracy always emits all six fields as numbers, so a truthy-but-partial aggregate is
+  // schema drift or a corrupt archive, never an empty month. Omitting that silently drops a whole
+  // section from a report nobody is comparing against a checklist.
+  for (const field of ['total', 'accurate', 'overPredicted', 'underPredicted', 'medianAbsErrorHours']) {
+    const partial = { ...julyAccuracy }
+    delete partial[field]
+    const { out, warned } = paRender(partial)
+    eq(out, '', `expected omission with ${field} absent`)
+    assert.ok(warned.some(m => m.includes(field)), `the warning must name ${field}: ${warned.join('|')}`)
+  }
+  // A present-but-unusable value is the same class.
+  for (const bad of [null, NaN, Infinity, '44']) {
+    const { out, warned } = paRender({ ...julyAccuracy, accurate: bad })
+    eq(out, '')
+    assert.equal(warned.length, 1, `accurate=${String(bad)} must warn`)
+  }
+  // ...as is a non-object, and an impossible negative median.
+  assert.ok(paRender('nope').warned.some(m => /not an object/.test(m)), 'a scalar aggregate warns')
+  assert.ok(paRender({ ...julyAccuracy, medianAbsErrorHours: -1 }).warned.some(m => /negative/.test(m)),
+    'a negative median is impossible from a median of absolute values')
+})
+test('verdicts that do not partition the total omit the section rather than publish a self-contradicting row', () => {
+  // The late share is derived as `100 - byPct`, so a broken partition prints a count beside a
+  // percentage of a different quantity — or a negative share. Worse than a missing section.
+  const { out, warned } = paRender({ ...julyAccuracy, total: 300 }) // 44+77+51 = 172 ≠ 300
+  eq(out, '')
+  assert.ok(warned.some(m => /do not sum to the total/.test(m)), `expected a partition warning: ${warned.join('|')}`)
+  const over = paRender({ ...julyAccuracy, total: 100 }) // byBound 121 > total → byPct 121%, late -21%
+  eq(over.out, '')
+  assert.ok(over.warned.length, 'an over-100% partition must not render')
+})
+test('a thin month omits the section with an author-facing note, not a corruption warning', () => {
+  eq(PREDICTION_ACCURACY_MIN_SAMPLE, 10) // the literal the "noise" rationale assumes
+  const { out, logged, warned } = paRender({ ...julyAccuracy, total: 9, accurate: 3, overPredicted: 3, underPredicted: 3 })
+  eq(out, '')
+  assert.deepEqual(warned, [], 'a thin month is not corruption')
+  assert.ok(logged.some(m => m.includes('below the 10 floor')), `expected an author note: ${logged.join('|')}`)
+  assert.ok(paSection({ ...julyAccuracy, total: 10, accurate: 3, overPredicted: 4, underPredicted: 3 }),
+    'renders AT the floor')
+})
+test('renders the July aggregate', () => {
+  const out = paSection(julyAccuracy)
+  assert.ok(out.startsWith('## AI Prediction Accuracy'), `heading first: ${out.slice(0, 40)}`)
+  assert.ok(out.includes('**172** of those estimates'), `headline sample: ${out}`)
+  assert.ok(out.includes("actual recovery in July"), `headline month: ${out}`)
+  assert.ok(out.includes('Median absolute error: **55m**'), `headline error: ${out}`)
+  // Both blank lines are load-bearing in kramdown, and neither shows up in a rendered-string
+  // `includes` of the rows alone: without the one before the table the whole table renders as
+  // literal pipe-text inside the preceding <p>, and without the one before the trailing `---` the
+  // blockquote swallows the rule (the section stops emitting its own separator). The delimiter row
+  // is the third way to get literal pipe-text.
+  assert.ok(out.includes('\n\n| Metric | Value |\n|---|---|\n'), `blank line + table header + delimiter: ${out}`)
+  assert.ok(out.endsWith('\n\n---\n'), `blank line before the trailing rule: ${JSON.stringify(out.slice(-24))}`)
+  assert.ok(out.includes('| Estimates scored | 172 |'), 'sample row')
+  assert.ok(out.includes('| Median absolute error | 55m |'), 'error row')
+  assert.ok(out.includes('| Recovered by the estimated time | 121 (70%) |'), `on-time row = accurate + overPredicted: ${out}`)
+  assert.ok(out.includes('| Took longer than the estimate | 51 (30%) |'), `late row = underPredicted: ${out}`)
+  assert.ok(out.trimEnd().endsWith('---'), 'section ends with its own trailing separator')
+})
+test('the on-time row is the SUM of both inside-the-bound verdicts, not the accurate band alone', () => {
+  // The band that summarizeAccuracy calls `accurate` is [0.5×bound, bound]; `overPredicted`
+  // recovered in under half the bound — also inside the estimate. Publishing the band alone under
+  // an "estimated time" label understates AIWatch's own calibration (44 vs 121 in July).
+  const out = paSection(julyAccuracy)
+  assert.ok(!out.includes('| Recovered by the estimated time | 44 '), 'must not publish the band as the total')
+  assert.ok(!/\b26%/.test(out), 'the band rate must not appear in any format')
+  assert.ok(!/hit ?rate/i.test(out), 'nor under its own label — pa.hitRate IS that band rate')
+  const swapped = paSection({ ...julyAccuracy, accurate: 77, overPredicted: 44 })
+  assert.ok(swapped.includes('| Recovered by the estimated time | 121 (70%) |'),
+    'the two are summed, so swapping them cannot change the published figure')
+})
+test('the two shares always sum to 100%, and the on-time share is rounded not truncated', () => {
+  // [50,51,99] is the case that catches an independently-rounded late share: 101/200 = 50.5% and
+  // 99/200 = 49.5%, so rounding each separately prints 51% + 50% = 101%. Deriving the second from
+  // the first is what prevents it.
+  for (const [accurate, early, late] of [[1, 1, 98], [33, 33, 34], [0, 0, 100], [50, 50, 0], [7, 4, 9], [50, 51, 99]]) {
+    const out = paSection({ ...julyAccuracy, total: accurate + early + late, accurate, overPredicted: early, underPredicted: late })
+    const pcts = [...out.matchAll(/\((\d+)%\)/g)].map(m => Number(m[1]))
+    assert.equal(pcts.length, 2, `two shares expected: ${out}`)
+    assert.equal(pcts[0] + pcts[1], 100, `shares must sum to 100: ${pcts} for ${accurate}/${early}/${late}`)
+  }
+  // 101/200 = 50.5% must round UP to 51%, not floor to 50%.
+  const out = paSection({ ...julyAccuracy, total: 200, accurate: 50, overPredicted: 51, underPredicted: 99 })
+  assert.ok(out.includes('| Recovered by the estimated time | 101 (51%) |'), `rounded up: ${out}`)
+  assert.ok(out.includes('| Took longer than the estimate | 99 (49%) |'), `complement: ${out}`)
+})
+test('the on-time row leads the late row', () => {
+  // Deliberate: the section's point is calibration, and leading with the 30% miss rate is a
+  // different editorial claim than leading with the 70% hit rate.
+  const out = paSection(julyAccuracy)
+  assert.ok(out.indexOf('| Recovered by the estimated time') < out.indexOf('| Took longer than the estimate'),
+    'row order is part of the claim')
+})
+test('formats the median error in minutes, rounded, with no "—" for a real tiny value', () => {
+  assert.ok(paSection({ ...julyAccuracy, medianAbsErrorHours: 0.004 }).includes('Median absolute error: **<1m**'),
+    'sub-minute renders <1m, never the no-data dash')
+  assert.ok(paSection({ ...julyAccuracy, medianAbsErrorHours: 1 / 60 }).includes('Median absolute error: **1m**'),
+    'exactly one minute is 1m, not <1m')
+  assert.ok(paSection({ ...julyAccuracy, medianAbsErrorHours: 0.925 }).includes('Median absolute error: **56m**'),
+    '0.925h = 55.5min rounds up to 56m (not floored to 55m)')
+  assert.ok(paSection({ ...julyAccuracy, medianAbsErrorHours: 2.5 }).includes('Median absolute error: **2h 30m**'),
+    'over an hour uses fmtDurationMin')
+})
+test('every claim in the methodology block is true', () => {
+  // Each claim below is pinned against the aiwatch worker's incident-history.ts, which this repo
+  // cannot import: `scoringBaselineHours` (the compared value is the window's UPPER BOUND),
+  // `summarizeAccuracy` (absErrors = |actual − bound|; records deduped by incId before counting),
+  // and `buildMonthlyAccuracy` (a per-service rolling corpus → the scored set is a sample).
+  const note = paSection(julyAccuracy).split('\n').find(l => l.startsWith('> **How this is scored**'))
+  assert.ok(note, 'the section must carry its one methodology block')
+  assert.match(note, /upper bound of the recovery window/, 'what the actual is compared against')
+  assert.match(note, /gap between that bound and the actual recovery/, 'what the error measures')
+  assert.match(note, /affecting several services is scored once/, 'the incId dedup')
+  assert.match(note, /Not every incident carries an estimate/, 'the scored set is disclosed as partial')
+  assert.match(note, /not comparable to the incident counts elsewhere/, 'the scored set is a sample, not a share')
+  // Claims that would be FALSE, and that earlier drafts made:
+  assert.ok(!/half/.test(note), "the 0.5 band is not published, so it must not be explained")
+  assert.ok(!/over-estimated|under-estimated|within the estimate/.test(note), 'the three-verdict vocabulary is retired')
+  assert.ok(!/\ball incidents\b|\beach incident\b/.test(note), 'never claim full coverage of the month')
+  assert.ok(!/first published/.test(note), 'scoringBaselineHours falls back to the CURRENT estimate, so "first" is not always true')
+})
+
 // ── fillTemplate × security ─────────────────────────────────────────
 console.log('\nfillTemplate × security')
 test('inserts the security block when archive.security has data', () => {
@@ -2169,6 +2324,48 @@ test('real template: Detection section renders when degradation/detectionLead pr
   assert.ok(!out.includes('<!-- DETECTION_SECTION -->'), 'marker consumed')
   assert.ok(!out.includes('buildDetectionSection)'), 'explainer not leaked')
   assert.ok(!/---\s*\n\s*---/.test(out.slice(out.indexOf('## API Response'), out.indexOf('## Incident Summary'))), 'no double rule around the section')
+})
+
+// ── fillTemplate × prediction accuracy (aiwatch#827 F3) ─────────────
+console.log('\nfillTemplate × prediction accuracy')
+const predArchive2604 = () => JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-04.json'), 'utf-8'))
+const predMetaFor = (archive) => {
+  const meta = {}
+  for (const id of Object.keys(archive.services)) meta[id] = { name: id }
+  return meta
+}
+test('real template: section omitted (no double rule) when the archive has no aggregate', () => {
+  const archive = predArchive2604()
+  // 2026-04 predates the corpus — the common ≤2026-06 case.
+  assert.ok(!archive.predictionAccuracy, 'fixture genuinely lacks the field')
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const out = fillTemplate(tmpl, '2026-04', archive, predMetaFor(archive))
+  assert.ok(!out.includes('## AI Prediction Accuracy'), 'no section without data')
+  assert.ok(!out.includes('<!-- PREDICTION_ACCURACY_SECTION -->'), 'marker consumed on omission')
+  assert.ok(!out.includes('buildPredictionAccuracySection)'), 'explainer comment removed on omission')
+  assert.ok(!/---\s*\n\s*---/.test(out), 'no double horizontal rule after omission')
+})
+test('real template: section renders AFTER Detection and BEFORE Incident Summary', () => {
+  const archive = predArchive2604()
+  archive.predictionAccuracy = julyAccuracy
+  // The fixture renders no Detection section on its own, so an ordering assertion against
+  // Detection would pass vacuously (indexOf -1). Give it degradation data: this combined render
+  // is the shape that actually ships once both features are live.
+  archive.degradation = { total: 12, noStatusTotal: 8, byService: { deepgram: 5 }, noStatusByService: { deepgram: 4 } }
+  const tmpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const out = fillTemplate(tmpl, '2026-04', archive, predMetaFor(archive))
+  assert.ok(out.includes('## AI Prediction Accuracy'), 'section renders')
+  assert.ok(!out.includes('<!-- PREDICTION_ACCURACY_SECTION -->'), 'marker consumed')
+  assert.ok(!out.includes('buildPredictionAccuracySection)'), 'explainer not leaked')
+
+  const detection = out.indexOf('## Detection & RTT Degradation')
+  const prediction = out.indexOf('## AI Prediction Accuracy')
+  const summary = out.indexOf('## Incident Summary')
+  assert.ok(detection !== -1, 'the Detection side of the ordering must really render')
+  assert.ok(detection < prediction, 'sits after Detection')
+  assert.ok(prediction < summary, 'and before Incident Summary')
+  assert.ok(out.includes("actual recovery in April"), 'headline month follows the report month, not the fixture')
+  assert.ok(!/---\s*\n\s*---/.test(out.slice(detection, summary)), 'no double rule around the section')
 })
 
 // ── injectNarrativeDraft (refs aiwatch-reports#4 Phase 3 / aiwatch#426) ──
@@ -3405,6 +3602,7 @@ const RETIRED_CLAIMS = [
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
   [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],
   [/Score delta[\s\S]{0,80}for a no-official-uptime service/, '#69 — scoped the Score-delta warning to no-official-uptime services; aiwatch#993 makes the basis shift fleet-wide'],
+  [/Recovered within the estimate/, 'aiwatch#827 F3 — that label named only the [0.5×bound, bound] band while the row beside it also recovered inside the estimate, so it read as a total and understated calibration 26% vs 70%'],
 ]
 
 /**
@@ -3420,6 +3618,7 @@ function archiveExercisingEverySection(base) {
     { name: 'API', uptime: 98.7 }, { name: 'Console', uptime: 99.99 },
   ]
   a.services[ids[2]] = { ...a.services[ids[2]], score: null, scoreConfidence: 'low' } // → withheld clause (data path)
+  a.predictionAccuracy = julyAccuracy                      // → AI Prediction Accuracy section
   return a
 }
 
@@ -3478,6 +3677,7 @@ test('the ratchet actually exercises every conditional section', () => {
   assert.match(out, /excluded from this ranking/, 'withheld/stale ranking clause must render')
   assert.match(out, /no longer read/, 'stale caveat must render')
   assert.match(out, /Component Reliability/, 'component reliability section must render')
+  assert.match(out, /AI Prediction Accuracy/, 'AI prediction accuracy section must render')
   for (const [re, why] of RETIRED_CLAIMS) assert.ok(!re.test(out), `retired claim resurfaced (${why}): ${re}`)
 })
 

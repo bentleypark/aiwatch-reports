@@ -1071,6 +1071,89 @@ function buildDetectionSection(archive, meta) {
   return parts.join('\n')
 }
 
+// "AI Prediction Accuracy" (aiwatch#827 F3) — scores AIWatch's published recovery estimates against
+// what actually happened. Reads `archive.predictionAccuracy`, the worker-side aggregate (aiwatch#840,
+// `summarizeAccuracy` over the durable `incident:history:{svcId}` corpus). Overall-only: the worker
+// publishes no per-service split, so the coverage gate here is a minimum OVERALL sample rather than
+// aiwatch-reports#45's per-service one — a handful of predictions is noise. Emits its own trailing
+// `---` (like buildSecuritySection / buildDetectionSection); returns '' unless every figure it
+// states is present and the sample clears the floor.
+//
+// Publishes a TWO-way split (recovered by the bound / past it), NOT summarizeAccuracy's three
+// verdicts. `accurate` is only the [0.5×bound, bound] band, so a row labelled for it sits beside an
+// `overPredicted` row whose incidents ALSO recovered inside the estimate — a reader takes the first
+// row as the total and reads 26% where 70% is true. Collapsing the two is also what keeps aiwatch's
+// 0.5 factor out of reader-facing prose, where nothing in this repo can pin it. `pa.hitRate` is that
+// band's rate and is unused for the same reason.
+const PREDICTION_ACCURACY_MIN_SAMPLE = 10
+
+function buildPredictionAccuracySection(archive, month, env = process.env) {
+  const pa = archive && archive.predictionAccuracy
+  // Absence is a legitimate empty: buildMonthlyAccuracy returns null for a month it cannot summarize,
+  // and always writes the key. A truthy aggregate that fails a check below is the producer sending
+  // garbage — omitting THAT silently loses a section nobody notices is missing, so it goes to the
+  // operator channel, the same split buildSecuritySection draws on `totalAlerts`.
+  if (pa == null) return ''
+  const drop = (why) => {
+    emitUptimeWarnings([`archive.predictionAccuracy ${why} — the AI Prediction Accuracy section was OMITTED`], env)
+    return ''
+  }
+  if (typeof pa !== 'object') return drop(`is a ${typeof pa}, not an object`)
+
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const figures = {
+    total: num(pa.total), accurate: num(pa.accurate), overPredicted: num(pa.overPredicted),
+    underPredicted: num(pa.underPredicted), medianAbsErrorHours: num(pa.medianAbsErrorHours),
+  }
+  // EVERY figure the section states must be present. A partial aggregate must omit the section, not
+  // default a missing count to 0 — that publishes "0 of 172 recovered on time", a measurement nobody
+  // took, as a negative claim about AIWatch's own accuracy.
+  const missing = Object.keys(figures).filter((k) => figures[k] === null)
+  if (missing.length) return drop(`is present but ${missing.join(', ')} missing or non-finite`)
+  const { total, accurate, overPredicted: early, underPredicted: late, medianAbsErrorHours: errHours } = figures
+  if (errHours < 0) return drop(`carries a negative medianAbsErrorHours (${errHours}) — impossible from a median of absolute values`)
+  // The late share is DERIVED from the on-time one (see below), so verdicts that don't partition
+  // `total` would print a count beside a percentage of something else, or a negative share.
+  // summarizeAccuracy guarantees the partition today; a self-contradicting row is worse than a
+  // missing section, so check it rather than inherit the invariant from another repo.
+  if (accurate + early + late !== total) {
+    return drop(`verdicts do not sum to the total (${accurate}+${early}+${late} ≠ ${total})`)
+  }
+  // A thin month is a legitimate empty, not corruption — but the narrative runbook grounds every
+  // prose claim in one of this report's own tables, and this one will not be there. Say why, on the
+  // author-facing channel rather than the corruption alarm.
+  if (total < PREDICTION_ACCURACY_MIN_SAMPLE) {
+    console.log(`[generate-report] AI Prediction Accuracy: ${total} scored estimate(s), below the ${PREDICTION_ACCURACY_MIN_SAMPLE} floor — section omitted. Do not cite an accuracy figure in the narrative.`)
+    return ''
+  }
+
+  // fmtDurationMin renders <=0 as '—', which would read as "no data" for a genuinely tiny error.
+  const errMin = Math.round(errHours * 60)
+  const errLabel = errMin < 1 ? '<1m' : fmtDurationMin(errMin)
+  const byBound = accurate + early
+  // Derive the late share from the early one so the two rows always sum to 100% — rounding each
+  // independently prints 101% often enough to read as an arithmetic error.
+  const byPct = Math.round((byBound / total) * 100)
+
+  return [
+    '## AI Prediction Accuracy',
+    '',
+    `When an incident opens, AIWatch's AI publishes an estimated recovery window. **${total}** of those estimates could be scored against the incident's actual recovery in ${monthName(month)}. Median absolute error: **${errLabel}**.`,
+    '',
+    '| Metric | Value |',
+    '|---|---|',
+    `| Estimates scored | ${total} |`,
+    `| Median absolute error | ${errLabel} |`,
+    `| Recovered by the estimated time | ${byBound} (${byPct}%) |`,
+    `| Took longer than the estimate | ${late} (${100 - byPct}%) |`,
+    '',
+    '> **How this is scored**: the estimate is the upper bound of the recovery window AIWatch published for that incident, and the error is the gap between that bound and the actual recovery. One provider incident affecting several services is scored once. Not every incident carries an estimate, so this is a sample of the month\'s incidents — it is not comparable to the incident counts elsewhere in this report.',
+    '',
+    '---',
+    '',
+  ].join('\n')
+}
+
 // Auto-renders the "## N-Month Trend" section (aiwatch#637 quick-win / aiwatch-reports#41).
 // Turns the snapshot into a directional signal. The CURRENT month comes from the
 // freshly-fetched `archive`; PRIOR months from the committed `_data/{YYYY-MM}.json`
@@ -1514,6 +1597,19 @@ function fillTemplate(template, month, archive, meta) {
     out = out.replace(/<!-- COMPONENT_RELIABILITY_SECTION -->/, componentSection)
   } else {
     out = out.replace(/\n*<!-- COMPONENT_RELIABILITY_SECTION -->\n*/, '\n\n')
+  }
+
+  // AI Prediction Accuracy section (aiwatch#827 F3) — same marker pattern as security/detection:
+  // the section emits its own trailing `---` when the archive carries a usable aggregate, else
+  // nothing. When omitted, strip the marker + its explainer comment so the preceding
+  // Detection/API-Response `---` stays the single rule before Incident Summary. The `(?:---\n*)?`
+  // is a guard only — it would absorb a literal `---` if one were ever placed after the marker
+  // (none is today).
+  const predictionSection = buildPredictionAccuracySection(archive, month)
+  if (predictionSection) {
+    out = out.replace(/<!-- PREDICTION_ACCURACY_SECTION -->(?:\n*<!--[\s\S]*?-->)?/, predictionSection)
+  } else {
+    out = out.replace(/\n*<!-- PREDICTION_ACCURACY_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
   }
 
   return out
@@ -2345,6 +2441,8 @@ module.exports = {
   buildTopFindings,
   buildSecuritySection,
   buildDetectionSection,
+  buildPredictionAccuracySection,
+  PREDICTION_ACCURACY_MIN_SAMPLE,
   buildComponentReliabilitySection,
   buildResponsivenessSection,
   buildTrendSection,
