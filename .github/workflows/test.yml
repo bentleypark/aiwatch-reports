@@ -3,19 +3,24 @@ name: Tests
 # Guard the scripts/ test suite on every PR + push to main. The tests are plain
 # Node + assert (no test framework, no node_modules) — each scripts/*.test.js
 # file exits 1 on any failure, so we run them all and exit non-zero if any did.
-# Path filter scopes runs to PRs that actually touch scripts/ (or this workflow);
-# docs-only / Jekyll-content PRs don't burn CI minutes here.
+# aiwatch#671 — NO path filter. It used to scope runs to `scripts/**` plus this one file, which meant
+# a PR editing `generate-report.yml`'s action pins started no run at all: `ci-action-majors.test.js`
+# guards the pins in EVERY workflow here, so it was green because it never executed.
+#
+# Widening the filter to `.github/workflows/**` fixed that, and a test then pinned the filter so it
+# could not narrow back — but that test had to read YAML, and this repo is dependency-free by design
+# (see the package.json check below), so it was a hand-written parser. Three review rounds each found
+# another shape it read wrong: a deeper list indent, a flow-style `paths:`, a comment between entries.
+# Each was a FALSE RED — the filter was present and correct, and CI said it was missing.
+# Deleting the filter deletes the parser, the assertion, and that whole class of failure at once
+# (memory `feedback_pin_the_decision_not_the_spelling`: against a real language, a hand-written parser
+# loses). The suite is 6 files of plain Node with no install step and runs in ~3s, so what the filter
+# was saving is a few seconds on docs-only PRs — less than one round of this cost to get wrong.
 
 on:
   pull_request:
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/test.yml'
   push:
     branches: [main]
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/test.yml'
 
 # Cancel in-flight runs when a newer commit lands on the same ref — saves CI
 # minutes on rapid push sequences (rebase / force-with-lease re-runs).
@@ -31,9 +36,9 @@ jobs:
     name: scripts/*.test.js
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
 
