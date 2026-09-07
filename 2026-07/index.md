@@ -11,71 +11,24 @@ published: false
 > **Published**: August 2026
 > **Services monitored**: 45 — 16 LLM APIs, 8 inference & infra, 6 coding agents, 5 AI apps, 3 voice & transcription, 3 observability, 2 video, 2 image
 
-<!-- AUTHORING SELF-CHECK — read before writing prose; these are the recurring misses:
-     1. CLAIMS BACKED BY DATA, AT THE RIGHT SCOPE. Every superlative/absolute ("the slowest", "the most",
-        "worst month", "the only", "never") must be TRUE over the scope you state. Qualify to what the
-        measurement supports: p75 is an edge-RTT probe to ONE endpoint, not "the slowest SERVICE"; a
-        "worst month" must hold on the metric you mean (Score? downtime?) and beat EVERY peer — check the
-        data, a lower-scoring sibling breaks "worst coding agent". Prefer "highest edge-probe RTT among
-        probed services" / "most downtime of any coding agent" to a bare superlative. Soften unprovable
-        absolutes ("never" -> "rarely").
-     2. ONE HOME PER FACT — don't over-emphasise. A specific figure/superlative (e.g. one service's p75)
-        belongs in ONE analytical home (its Notable Incident, or the data table), not restated across
-        Summary + Notable Incidents + Observations. Weight a factor by its real contribution, not by how
-        many times you can repeat it.
-     3. ADVISORY != OUTAGE. Before calling something an outage, read the incident TITLE + impact, not just
-        its duration. A usage-limits / billing / model-access / policy notice (often impact:minor) is an
-        ADVISORY, not downtime — label it so (as the Anthropic entries do). If the archive counted such a
-        notice as downtime it inflates the Score drop (a worker-side classification bug, cf. aiwatch#707);
-        flag it. A long duration alone does not make an availability incident. -->
 
-<!-- BEGIN RECURRENCE CHECK — review, reframe around the change, then DELETE this entire block before merge -->
-_Narrative repeated vs prior months — lead with the month-over-month change or a fresh lens, then delete this block._
-
-- ⚠️ **Together AI** — led the Summary 'High incident count' bullet in 2 of the last 3 published months (2026-04, 2026-05) + this month (2026-07). (last month 85 → this month 65) → Reframe around the change or pick a fresh lens.
-- ⚠️ **Together AI** — led a Key Insight pattern in 2 of the last 3 published months (2026-05, 2026-06) + this month (2026-07). (last month 85 → this month 65) → Reframe around the change or pick a fresh lens.
-- ⚠️ **ChatGPT** — led a Key Insight pattern in 2 of the last 3 published months (2026-04, 2026-05) + this month (2026-07). (last month 14 → this month 26) → Reframe around the change or pick a fresh lens.
-- ⚠️ **Claude Code** — led Notable Incidents in 2 of the last 3 published months (2026-05, 2026-06) + this month (2026-07). (last month 42 → this month 47) → Reframe around the change or pick a fresh lens.
-- ⚠️ **Gemini API** — led Notable Incidents in 2 of the last 3 published months (2026-04, 2026-05) + this month (2026-07). (last month 3 → this month 0) → Reframe around the change or pick a fresh lens.
-- ⚠️ **ChatGPT** — led Notable Incidents in 2 of the last 3 published months (2026-04, 2026-05) + this month (2026-07). (last month 14 → this month 26) → Reframe around the change or pick a fresh lens.
-- ⚠️ **Mistral API** — led Notable Incidents in 2 of the last 3 published months (2026-05, 2026-06) + this month (2026-07). (last month 39 → this month 28) → Reframe around the change or pick a fresh lens.
-- ⚠️ **Claude API** — led Notable Incidents in 2 of the last 3 published months (2026-05, 2026-06) + this month (2026-07). (last month 45 → this month 45) → Reframe around the change or pick a fresh lens.
-
-<!-- END RECURRENCE CHECK -->
 
 ## Summary
-<!-- BEGIN AUTO-DRAFT — review, then DELETE this entire block before merge -->
-_Auto-generated narrative draft — English only; translate for the KO `<details>` block below._
-
-- **Most reliable**: Windsurf (100 — zero incidents, perfect uptime)
-- **Best balance (stability + ecosystem)**: Modal (97, only 37m downtime)
-- **Riskiest this month**: Helicone (39, 81h 10m total downtime)
-- **Most incidents**: Together AI (65 incidents, 29h 22m downtime — 85 last month (−20))
-
-**Recommendations**
-- **Primary**: Windsurf or Modal
-- **Fallback**: Cerebras Inference (1m avg resolution) or OpenRouter (16m avg resolution)
-
-**Recovery performance**: Fastest — Cerebras Inference (1m avg). Slowest — Helicone (40h 35m avg).
-
-> _Ranking language above excludes Gemini API, xAI API, Deepgram — no official uptime, so their Score is not on the same scale and they are ranked in their own table (aiwatch-reports#106). Services excluded from the ranking entirely are named in the note above the Score table. Name any of them by hand if the month warrants it._
-
-<!-- END AUTO-DRAFT -->
 
 > Every score in this report is the **AIWatch Score** (0–100): one number combining uptime, incident load, recovery speed and responsiveness. Higher is better. [How it's built →](#aiwatch-score--july-2026-reliability-rankings)
 
-- **Most reliable**:
-- **Riskiest this month**:
-- **High incident count, fast recovery**:
-- **Watch out**:
+- **Most reliable**: Windsurf (100) — zero incidents and 100.00% uptime, the top Score of the month's 35 fully-ranked services; Modal followed at 97 on 99.98% uptime, its three incidents totalling 37m.
+- **Riskiest this month**: Helicone (39, Unstable) — the lowest Score of any fully-ranked service. Only two incidents, but both were an API endpoint going hard down (`eu.api.helicone.ai` 59h 53m, `api.hconeai.com` 21h 17m) for 81h 10m of downtime and a 40h 35m average recovery.
+- **Falling incident count, still nominally #1**: Together AI's count has dropped for three straight months — 139 in April, 133 in May, 85 in June, 65 in July — more than halving. It's still the month's highest raw count, but that ranking says less each month: its 29h 22m of downtime placed only 11th of the 37 services that had any, and its Score barely moved (72 → 73).
+- **Watch out**: OpenAI's three surfaces slid together — several of the incidents behind ChatGPT (77 → 57), the OpenAI API (87 → 76) and Codex (76 → 74) were the same event, published against all three at once (see [Key Insight](#key-insight)). Among the coding agents Cursor dropped furthest (79 → 60 on 32 incidents), with just over a quarter of its downtime logged against upstream Anthropic degradations.
 
 <details>
 <summary><strong>Summary in Korean</strong></summary>
 <ul>
-<li><strong>가장 안정적</strong>: </li>
-<li><strong>이번 달 가장 위험</strong>: </li>
-<li><strong>잦은 장애, 빠른 복구</strong>: </li>
-<li><strong>주의 필요</strong>: </li>
+<li><strong>가장 안정적</strong>: Windsurf (100) — 장애 0건에 업타임 100.00%로, 이달 완전 순위에 오른 35개 서비스 중 1위입니다. Modal이 97로 뒤를 이었습니다 — 장애 3건에 업타임 99.98%, 총 다운타임은 37분이었습니다.</li>
+<li><strong>이번 달 가장 위험</strong>: Helicone (39, Unstable) — 완전 순위에 오른 서비스 중 최저점입니다. 장애는 2건뿐이지만 둘 다 API 엔드포인트가 완전히 멈춘 경우였고(<code>eu.api.helicone.ai</code> 59시간 53분, <code>api.hconeai.com</code> 21시간 17분), 총 다운타임 81시간 10분에 평균 복구 시간은 40시간 35분이었습니다.</li>
+<li><strong>장애 건수는 하락세, 그래도 여전히 1위</strong>: Together AI의 장애 건수는 4월 139건 → 5월 133건 → 6월 85건 → 7월 65건으로 석 달 연속 줄어 반토막 넘게 떨어졌습니다. 여전히 이달 최다 건수이긴 하지만, 그 순위가 갖는 의미는 갈수록 옅어지고 있습니다 — 다운타임 29시간 22분은 장애가 있었던 37개 서비스 중 11위에 그쳤고, 점수는 72에서 73으로 사실상 제자리였습니다.</li>
+<li><strong>주의 필요</strong>: OpenAI의 세 서비스가 나란히 내려앉았습니다 — ChatGPT(77 → 57), OpenAI API(87 → 76), Codex(76 → 74) 뒤에 있는 장애 중 여럿은 한 건이 세 곳에 동시에 게시된 같은 사건이었습니다(<a href="#key-insight">Key Insight</a> 참조). 코딩 에이전트 중에서는 Cursor의 낙폭이 가장 컸습니다(79 → 60, 장애 32건). Cursor 다운타임의 4분의 1 남짓은 Cursor가 의존하는 Anthropic 쪽 성능 저하로 기록된 것입니다.</li>
 </ul>
 </details>
 
@@ -88,11 +41,15 @@ _Auto-generated narrative draft — English only; translate for the KO `<details
 <tr><th>Use Case</th><th>Recommended</th><th>Why</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Production-critical</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Low latency / cost</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Coding Agents</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Voice / audio</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>General purpose</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
+<tr><td><strong>Production-critical</strong></td><td>Cerebras Inference / OpenRouter</td><td>Both 88 on 100.00% uptime — Cerebras logged a single 1m disruption; OpenRouter's only two entries were scheduled database maintenance and an outage status it published in error</td></tr>
+<tr><td><strong>Low latency / cost</strong></td><td>Groq Cloud</td><td>87, 100.00% uptime, 182 ms p75, and the steadiest RTT of any service under 200 ms p50 (CV 0.33); one 1h 34m data-centre capacity incident. Gemini API is far quicker at 62 ms but publishes no uptime to score against</td></tr>
+<tr><td><strong>General purpose</strong></td><td>Cohere API</td><td>85 on 100.00% uptime; its one incident (51m) hit dashboard login, not the API. June's pick, OpenAI API, fell to 76 this month</td></tr>
+<tr><td><strong>Coding Agents</strong></td><td>Windsurf</td><td>100 — zero incidents and 100.00% uptime, the top Score among fully-ranked services. Junie is the next-safest at 95 (7 incidents, 1h 5m total)</td></tr>
+<tr><td><strong>Inference / infra</strong></td><td>Modal</td><td>97, 99.98% uptime — three incidents totalling 37m, and the highest Score of any fully-ranked service outside the coding-agent tier</td></tr>
+<tr><td><strong>Voice / audio</strong></td><td>AssemblyAI</td><td>83, 100.00% uptime, 21m of downtime all month; ElevenLabs 73. Deepgram scores 48 but publishes no official uptime, so it isn't on the same scale as the two figures above</td></tr>
+<tr><td><strong>Observability</strong></td><td>Langfuse</td><td>81 on 100.00% uptime, two incidents totalling 1h 28m; LangSmith 77 and Helicone 39, the lowest Score among fully-ranked services this month</td></tr>
+<tr><td><strong>Video</strong></td><td>Runway</td><td>78, 99.86% uptime across two incidents (avg 42m). Luma ties on Score (78) with one 1h 45m authentication incident traced to an upstream provider</td></tr>
+<tr><td><strong>Image</strong></td><td>Black Forest Labs (FLUX) / Stability AI</td><td>FLUX 86 and Stability 85, both on 100.00% uptime; FLUX's only entry was a 5h 9m latency increase on its US3 cluster, and Stability recorded no incidents at all</td></tr>
 </tbody>
 </table>
 
@@ -100,19 +57,19 @@ _Auto-generated narrative draft — English only; translate for the KO `<details
 
 ## Key Insight
 
-July 2026 showed a clear divide: Windsurf, Modal, and Junie remained highly stable, while Helicone (39) experienced the most challenges. 37 out of 45 services recorded at least one incident, with a combined downtime of 1033h 41m.
+July's downtime was concentrated rather than widespread. 37 of 45 services recorded at least one incident, for a combined 1033h 41m. Just nine of those entries ran 24 hours or longer, yet together they account for 403h 32m of it — 39% of that combined downtime. Where those long events landed explains most of the movement in the table.
 
-- **Pattern 1**:
-- **Pattern 2**:
-- **Pattern 3**:
+- **Pattern 1 — one provider event, three of its products.** On 23–24 July a single incident, *"Elevated error rates on ChatGPT"*, ran 27h 58m and was published against ChatGPT, the OpenAI API **and** Codex simultaneously; a 14h 13m enterprise-rollout failure hit ChatGPT and Codex, and a 16h 15m image-generation outage hit ChatGPT and the API. So the three surfaces moved as one: the OpenAI API went from a single 40m incident in June to 11 incidents and 58h 33m, ChatGPT from 26h 49m to 157h 57m, and Codex held its count at 8 while slipping to 74.
+- **Pattern 2 — the downtime column and the Score disagreed, and what the hours consisted of is why.** Mistral logged the month's longest single incident (120h 10m of *"Fine Tuning Jobs API Degraded"* — 93% of its 129h 28m total downtime this month) and still finished Good at 81: its computed uptime read 99.92%, so five days of a *degraded* fine-tuning job API barely registered as lost availability — the uptime and incident-total scopes differ (see [About This Report](#about-this-report)). Helicone logged two incidents to Mistral's 28 and finished at 39, the lowest of the fully-ranked services, because both were an endpoint going hard down — 96.24% uptime. The two figures also come from different **Uptime Sources** (Official vs Platform), which measure differently, so the downtime column is best read beside the Score and [Component Reliability](#component-reliability) rather than on its own. Mistral's weakest component in July was its Audio API, at 86.28% on the separate [Component Reliability](#component-reliability) measure — a surface the 129h headline never names.
+- **Pattern 3 — AIWatch's probes caught latency the status pages didn't.** Direct RTT probes flagged 194 latency degradations this month, 191 of them absent from the providers' own status pages: Fireworks AI 62 (none of them reported), Mistral 48 of 49, Replicate 28. Fireworks is the sharpest case — it finished Good at 80 with an 8m average recovery, so almost none of the slowdown its probes measured shows up anywhere in its incident record. Replicate's 28 sit alongside the month it had: 59h 45m of H100 capacity and queue-time incidents, where requests get slower rather than fail. Per-service breakdown in [RTT Degradation Detection](#rtt-degradation-detection).
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p><!-- Opening narrative in Korean --></p>
+<p>7월의 다운타임은 여기저기 흩어졌다기보다 몇 건에 몰렸습니다. 45개 서비스 중 37개가 최소 1건의 장애를 겪어 총 1033시간 41분을 기록했습니다. 이 중 24시간을 넘긴 기록은 9건에 불과했지만, 이 9건만으로 403시간 32분 — 다운타임 합계의 39%를 차지합니다. 순위표의 움직임도 대부분 이 긴 장애들이 어디를 덮쳤느냐로 설명됩니다.</p>
 <ul>
-<li><strong>패턴 1</strong>: </li>
-<li><strong>패턴 2</strong>: </li>
-<li><strong>패턴 3</strong>: </li>
+<li><strong>패턴 1 — 하나의 장애가 한 제공사의 세 제품을 동시에 덮쳤다</strong>: 7월 23~24일 <em>"Elevated error rates on ChatGPT"</em> 장애 한 건이 27시간 58분 이어졌는데, 이 건이 ChatGPT·OpenAI API·Codex 세 곳에 동시에 게시됐습니다. Codex 권한이 없는 기업 사용자에게는 신규 ChatGPT 앱 접근이 막혔는데, 이 14시간 13분짜리 장애가 ChatGPT와 Codex를, 16시간 15분짜리 이미지 생성 장애는 ChatGPT와 API를 함께 때렸습니다. 그래서 세 서비스가 한 몸처럼 움직였습니다 — OpenAI API는 6월 40분짜리 1건에서 7월 11건·58시간 33분으로 늘었고, ChatGPT는 26시간 49분에서 157시간 57분으로, Codex는 건수가 8건 그대로였지만 점수는 74로 내려갔습니다.</li>
+<li><strong>패턴 2 — 다운타임 수치와 점수가 엇갈렸고, 그 시간이 무엇으로 채워졌는지가 이유였다</strong>: Mistral은 이달 최장 단일 장애(<em>"Fine Tuning Jobs API Degraded"</em> 120시간 10분, 이달 총 다운타임 129시간 28분의 93%)를 기록하고도 Good 81점으로 마무리했습니다. AIWatch가 산출한 업타임이 99.92%로 나왔기 때문입니다 — 닷새간 <em>성능 저하</em> 상태였던 건 파인튜닝 작업 API였고 서빙 경로는 살아 있었던 터라, 가용성 손실로는 거의 잡히지 않았습니다 — 업타임과 인시던트 집계는 애초에 스코프가 다릅니다(<a href="#about-this-report">About This Report</a> 참고). 반면 Helicone은 Mistral의 28건에 견줘 단 2건이었지만 둘 다 엔드포인트가 완전히 멈춘 경우여서 업타임 96.24%, 점수는 완전 순위에 오른 서비스 중 최저인 39점이었습니다. 게다가 두 수치는 <strong>Uptime Source</strong>부터 갈립니다 — Mistral은 Official, Helicone은 Platform이라 측정 방식 자체가 같지 않습니다. 그러니 다운타임 수치는 단독으로 읽지 말고 점수, 그리고 <a href="#component-reliability">Component Reliability</a>와 함께 확인하세요. 7월 Mistral에서 가장 취약했던 컴포넌트는 정작 별도 측정치인 <a href="#component-reliability">Component Reliability</a> 기준 86.28%의 Audio API였는데, 129시간이라는 대표 숫자만으로는 드러나지 않습니다.</li>
+<li><strong>패턴 3 — AIWatch의 직접 측정은 상태 페이지가 놓친 지연을 잡아냈다</strong>: 이달 직접 측정한 RTT에서 지연 악화 194건이 잡혔고, 그중 191건은 제공사 공식 상태 페이지에 아예 없었습니다 — Fireworks AI 62건(전부 미게시), Mistral 49건 중 48건, Replicate 28건. Fireworks가 가장 두드러집니다. 평균 복구 8분에 Good 80점으로 한 달을 마쳤으니, 측정된 지연 악화가 장애 기록 어디에도 남지 않은 셈입니다. Replicate의 28건은 이달 상황과 맞아떨어집니다 — H100 용량 부족과 대기열 지연으로만 다운타임 59시간 45분이 쌓였는데, 이런 유형은 요청이 실패하는 게 아니라 느려지기만 합니다. 서비스별 상세는 <a href="#rtt-degradation-detection">RTT Degradation Detection</a>에서 확인하세요.</li>
 </ul>
 </details>
 
@@ -131,7 +88,7 @@ AIWatch Score direction over the last 3 months (2026-05 → 2026-07). The lines 
 *The 5 services whose **Score, recovery time (MTTR), or total downtime** changed most over the window (ranked by the largest single change, not a fixed threshold). The metric in **bold** is the change that ranked each service here; 🔺 / 🔻 mark whether that headline metric improved or worsened — so a service can show a small Score gain yet land here, and read 🔻, because its downtime regressed.*
 
 - 🔻 **ChatGPT** — Score 85 → 57 (−28) · MTTR 4h 38m → 6h 5m (+1h 27m) · **downtime 50h 55m → 157h 57m (+107h 2m)**
-- 🔺 **Gemini API** — Score 64 → 87 (+23) · **MTTR 22h 32m → 11h 46m (−10h 46m)** · downtime 45h 4m → 35h 17m (−9h 47m)
+- 🔺 **Gemini API** — Score 64 → 87 (+23) · **MTTR 22h 32m → 11h 46m, May→June (−10h 46m)** · downtime 45h 4m → 35h 17m, May→June (−9h 47m) — July itself logged zero incidents, so MTTR/downtime compare the last two months that had any
 - 🔻 **Mistral API** — Score 78 → 81 (+3) · MTTR 19m → 4h 37m (+4h 18m) · **downtime 48h 58m → 129h 28m (+80h 30m)**
 - 🔻 **Replicate** — Score 61 → 49 (−12) · **MTTR 3h 43m → 13h 55m (+10h 12m)** · downtime 14h 53m → 69h 33m (+54h 40m)
 - 🔻 **Claude API** — Score 63 → 61 (−2) · MTTR 1h 30m → 2h 42m (+1h 12m) · **downtime 51h → 121h 51m (+70h 51m)**
@@ -204,14 +161,14 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 <!-- Generate with: node scripts/generate-charts.js 2026-07/index.md -->
 ![AIWatch Score Rankings](../assets/2026-07/score-chart.svg)
 
-> **Uptime Source column**: **Official** (AIWatch computes the 30-day figure from the incident/outage records the provider publishes) · **Platform** (same computation, but the records come from the status page platform's own monitors — Better Stack — rather than incidents the provider declared) · **No uptime** (the status page publishes no records to compute from; the Score is built from the remaining signals). A service tracked for less than the full month is excluded from the ranking, not labelled — see the note above the ranking. Full definitions: [About This Report → Uptime Source](#about-this-report).
+> **Uptime Source column**: **Official** (AIWatch computes the figure from the incident/outage records the provider publishes) · **Platform** (a different computation, built from the status page platform's own monitors — Better Stack — rather than incidents the provider declared; not on the same basis as Official) · **No uptime** (no uptime figure resolved for this row — usually because the status page publishes none, occasionally a figure AIWatch withheld; it may still publish incident records; the Score is built from the remaining signals). A service tracked for less than the full month is excluded from the ranking, not labelled — see the note above the ranking. Full definitions: [About This Report → Uptime Source](#about-this-report).
 > <!-- Keep this caption short — full definitions live in the About This Report methodology section to avoid duplicating them here. -->
 
 ---
 
 ## 30-Day Uptime
 
-Uptime computed by AIWatch over a 30-day window from the incident and outage records each provider publishes on its status page — the same window and the same weighting for every service, so the figures compare. It is not a copy of the percentage a provider displays on its own page: those use different periods (30, 60 or 90 days) and different definitions of downtime, and cannot be compared across services. Full definitions: [ai-watch.dev/methodology](https://ai-watch.dev/methodology#uptime). The narrative-driven sections below (Incident Summary / Notable Incidents / Observations) cover what these numbers mean for vendor selection.
+Uptime computed by AIWatch — never a copy of the percentage a provider displays on its own page (those use different periods and different definitions of downtime). The exact method differs by source; see [About This Report → Uptime Source](#about-this-report) for what Official vs Platform means. Full method: [ai-watch.dev/methodology](https://ai-watch.dev/methodology#uptime). The narrative-driven sections below (Incident Summary / Notable Incidents / Observations) cover what these numbers mean for vendor selection.
 
 <table class="uptime-cols">
 <thead><tr><th>Service</th><th>Uptime</th></tr></thead>
@@ -435,7 +392,7 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 
 > **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7", "Degraded performance for Claude Sonnet 4.6"), and Together AI's status page tracks each model as its own resource — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability — adjust for granularity before comparing across providers. Full provider-by-provider rules: [About This Report → Incident Counting](#about-this-report).
 >
-> <!-- Cycle-specific data notes (excluded incidents, anomalies) go here. -->
+> **Kimi (Moonshot AI)** — 35 of its 40 entries are a single provider event re-published once an hour, which is why the row shows 40 incidents against 47m of downtime. Details in [Observations](#observations).
 
 <table>
 <thead>
@@ -490,110 +447,57 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 
 ## Notable Incidents
 
-<!-- BEGIN AUTO-DRAFT (Notable Incidents) — review, adapt into the entries below, then DELETE this entire block before merge -->
-_Auto-generated retrospective draft (gemma) — review for accuracy, adapt, then delete this block._
+### 1. Fine-tuning job API degraded for five days
+**Affected**: Mistral API — Fine-tuning API
+**Duration**: 120h 10m (1 July 15:38 → 6 July 15:47 UTC)
 
-### 1. Fine Tuning Jobs API Degraded · Fine-tuning API
-**Affected**: Mistral API
-**Duration**: 5 days
+The month's longest single incident, and 93% of Mistral's 129h 28m total downtime this month. The provider held the fine-tuning job API in a *degraded* state for five straight days while the serving path stayed up — which is why Mistral's computed uptime still read 99.92% and its Score rose to 81. Batch and fine-tuning workloads absorbed the whole cost; interactive traffic saw little of it. Mistral's incident count actually fell month over month (39 → 28) even as its recorded downtime more than doubled.
 
-The fine-tuning API experienced degraded performance for several days. The issue was eventually resolved.
+### 2. Both Helicone API endpoints down, on two separate occasions
+**Affected**: Helicone — `eu.api.helicone.ai`, then `api.hconeai.com`
+**Duration**: 59h 53m (2–5 July) and 21h 17m (24–25 July)
 
-### 2. eu.api.helicone.ai — down
-**Affected**: Helicone eu.api.helicone.ai
-**Duration**: 2d 12h
+Helicone's entire month is these two incidents, and both were hard endpoint outages rather than degradations — 81h 10m of downtime on a 40h 35m average recovery, an uptime of 96.24%, and the lowest Score of any fully-ranked service this month (39). For an observability layer, an ingest endpoint that is unreachable for two and a half days means the telemetry for that window is simply absent, which is a different kind of loss from a slow one.
 
-The European API endpoint for Helicone was completely unavailable for over two days.
+### 3. Claude API availability via the Microsoft Office add-in
+**Affected**: Claude API — Microsoft Office add-in
+**Duration**: 45h 41m (22 July 17:56 → 24 July 15:36 UTC)
 
-### 3. Microsoft Office add-in availability
-**Affected**: Claude API
-**Duration**: 1d 22h
+Anthropic's longest July entry, and 37% of the Claude API's 121h 51m total downtime this month. Note the scope: this is the Office add-in integration path, not the Messages API, so a direct API integration was not in its blast radius. It is a good illustration of why the Claude API's headline downtime doubled (61h 3m → 121h 51m) on an unchanged incident count of 45.
 
-Availability was impacted for users accessing Claude via Microsoft Office add-ins.
-
-### 4. Elevated errors affecting ChatGPT conversations
+### 4. Elevated errors in ChatGPT conversations
 **Affected**: ChatGPT
-**Duration**: 1d 18h
+**Duration**: 42h 23m (25 July 22:09 → 27 July 16:32 UTC)
 
-Users encountered increased error rates during active ChatGPT conversations.
+The largest contributor to the month's single highest downtime total (157h 57m across 26 incidents, up from 14 incidents and 26h 49m in June). Together with the shared OpenAI incidents below and a 16h 15m image-generation outage, it took ChatGPT from 77 to 57 — the steepest Score drop of any fully-ranked service this month.
 
-### 5. Agentic model error alert
-**Affected**: Kimi (Moonshot AI)
-**Duration**: 1d 11h
+### 5. One OpenAI incident, three OpenAI products
+**Affected**: ChatGPT, OpenAI API, and Codex simultaneously
+**Duration**: 27h 58m (23 July 15:36 → 24 July 19:33 UTC)
 
-The agentic model functionality triggered multiple error alerts throughout the period.
+OpenAI published *"Elevated error rates on ChatGPT"* against all three surfaces at once, and it is the longest incident on record for both the API and Codex this month. A second event on 17–18 July — new ChatGPT app access blocked for enterprise users without Codex permissions, 14h 13m — hit ChatGPT and Codex together.
 
-### 6. Elevated error rates on ChatGPT
-**Affected**: OpenAI API
-**Duration**: 1d 4h
+### 6. H100 capacity shortfalls driving queue times
+**Affected**: Replicate — H100 GPU hardware
+**Duration**: 26h 29m (22–23 July) and 25h 2m (13–14 July), plus 8h 14m of contention
 
-The API service experienced elevated error rates specifically impacting ChatGPT-related requests.
-
-<!-- END AUTO-DRAFT (Notable Incidents) -->
-
-<!-- Top 5-6 notable incidents — the report's main narrative content. Place this
-     section in the narrative cluster (Incident Summary → Notable Incidents →
-     Observations) that follows the metrics cluster (Score → 30-Day Uptime →
-     API Response Time → Detection & RTT Degradation). Each entry: title with key duration,
-     affected component(s), and a short prose paragraph that explains scope +
-     remediation/mitigation.
-     Each entry must describe the ACTUAL EVENT — pull the real title / root cause from the archive's
-     incidentList (what broke, which component, the provider's own wording), NOT just "downtime was N
-     hours". And verify it is a genuine availability incident (see AUTHORING SELF-CHECK #3): if the
-     longest "incident" is a usage-limits / policy advisory, say so and do not frame it as an outage. -->
-
-### 1. [Title]
-**Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
-**Duration**:
-
-<!-- Description -->
+Three capacity incidents account for 59h 45m of Replicate's 69h 33m, taking it to 49 (Degrading) on a 13h 55m average recovery — from 58 and 6h 42m of downtime in June. Note the Score isn't purely apples-to-apples across that comparison: June's 58 was rescaled over three components (Replicate published no official uptime yet), while July's 49 is a full four-component Score against a newly published 97.58% official uptime. That new component actually cushions the drop rather than deepening it — on June's same three-component basis, July would score closer to 47 — so the incidents alone account for a steeper decline than the printed 58 → 49 shows. The failure mode itself was queue depth rather than errors: requests were accepted and served slowly. AIWatch's probes flagged 28 latency degradations for Replicate over the month, none of which appeared on its status page, and Component Reliability put its H100 hardware at 94.58%.
 
 ---
 
 ## Observations
 
-<!-- BEGIN AUTO-DRAFT (Observations) — review, adapt into the bullets below, then DELETE this entire block before merge -->
-_Auto-generated retrospective draft (gemma) — review, adapt into prescriptive bullets, then delete this block._
-
-- Avoid using Replicate for production workloads until its degrading reliability and high recovery times improve.
-- Implement robust retry logic and circuit breakers when using Claude API or Claude Code due to high incident counts and slow recovery.
-- Treat Kimi (Moonshot AI) as high-risk for long-running agentic workflows given its extremely high average recovery time.
-- Prefer Fireworks AI or Together AI for latency-sensitive applications, as they demonstrate superior recovery speeds.
-- Monitor ChatGPT usage closely during peak periods to mitigate the impact of frequent conversational errors.
-
-<!-- END AUTO-DRAFT (Observations) -->
-
 **This month's** per-service resilience deltas — what each service's data *newly* argues for. The evergreen, month-to-month-stable patterns (per-model monitoring, Voice-Agent isolation, key rotation, retry-timeout tuning, failover mechanics) live once in **[Resilience Patterns](../resilience/)** — link there, don't re-explain them. Each bullet ties THIS month's failure mode to the relevant pattern and adds only what's new.
 
-<!-- ROLE BOUNDARY — this section vs its neighbours (they blur; keep each to its ONE job):
-     • Recommendations   = the PICKS TABLE — WHO to use per use case. Only place for picks.
-     • Notable Incidents = the EVENT — what happened + why it mattered. DESCRIBE; do not prescribe.
-     • Incident Summary note = how to READ the counts (granularity; count ≠ reliability). Only home for that.
-     • ../resilience/ (Resilience Patterns) = the EVERGREEN, structural how-to-build guidance that holds
-       every month (per-model monitoring, Voice-Agent isolation, Gemini key rotation + dual monitoring,
-       retry timeout = the Longest column, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
-       it monthly; that cross-month repetition is exactly what this split fixes. New evergreen pattern? Add it
-       to that page, not here — following the MAINTENANCE curation rules at the top of ../resilience/
-       (evergreen + high-value only, one pattern per failure-mode, prune stale bullets on edit).
-     • Observations (here) = THIS MONTH'S DELTA only — the specific failure mode the month surfaced, tied to
-       the relevant Resilience pattern with a link. The only home for the month's actionable advice, so Notable
-       Incidents stays descriptive (don't end an incident with "keep a fallback" — put the delta here + link).
-     THE TEST for a bullet: would it read identically next month? If yes, it's evergreen — move it to
-     ../resilience/ and link. Every bullet must carry a DATE-TIED fact (this month X's worst was a 27h Y; a
-     single 72h Z) and point at the pattern, not restate the architecture. A partial-month / withheld-Score
-     CAVEAT (e.g. Character.AI) is a legitimate month-specific bullet too. -->
-
-
-- **[Service]**: <!-- THIS month's date-tied failure fact (e.g. "its worst incident was a 27h streaming-STT degradation; p75 the highest probed"), DEEP-linked to the relevant Resilience pattern ([Resilience → Deepgram](../resilience/#deepgram)). Do NOT re-explain the evergreen pattern — link it. -->
-- **[Service]**: <!-- 2-4 bullets total; only services whose THIS-MONTH data yields a new lesson. If a service's story is unchanged from a prior report, omit it (the pattern already lives in ../resilience/). -->
-<!-- A partial-month / withheld-Score CAVEAT bullet (e.g. Character.AI: why its Score is absent + how to read
-     its half-month counts) belongs here too — it's month-specific and not an evergreen pattern. -->
+- **Replicate's July failure mode was capacity, not faults** (see [Notable Incidents](#notable-incidents)) — error-rate alarms do not fire on backpressure. Size client timeouts against the *Longest* column (26h 29m here, not the 13h 55m average) per [Resilience → Retry / timeout tuning](../resilience/#retry--timeout-tuning-general), and treat sustained queue growth as its own alert.
+- **Read Mistral's 129h 28m by component, not as a service-wide figure.** If you only call the chat completions endpoint, almost none of the fine-tuning degradation applies to you; if you run fine-tuning jobs, effectively all of it does (see [Key Insight](#key-insight) for the breakdown). Check [Component Reliability](#component-reliability) for the specific surface you depend on before reading the headline number as your risk.
+- **Kimi's 40-incident count is a feed artifact, not 40 outages.** 35 of the 40 are the same "Agentic model error alert" re-published once an hour from 10 July 18:22 through 12 July 04:29 UTC, every copy closing together at 12 July 05:05 UTC — one provider event recorded 35 times. AIWatch's downtime aggregation excluded those records, which is why the row reads 40 incidents but only 47m of downtime; the 47m is the five short search-error incidents. Kimi is separately excluded from the ranking as a mid-month addition, so treat the row as an incomplete first look rather than a July result.
 
 ---
 
 ## Security Alerts
 
-> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.
+> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities), Hacker News (security posts mentioning monitored services), and NVD (first-party product CVEs). Section omitted for months without detections.
 
 **Total alerts:** 65
 
@@ -603,6 +507,7 @@ _Auto-generated retrospective draft (gemma) — review, adapt into prescriptive 
 |---|---|
 | OSV.dev | 59 |
 | Hacker News | 3 |
+| nvd | 3 |
 
 **By severity**
 
@@ -622,6 +527,8 @@ _Auto-generated retrospective draft (gemma) — review, adapt into prescriptive 
 
 ### Top Findings
 
+*Two entries below were excluded after verification against their CVE source (NVD) found the "Affected" service wrong — a third-party tool (AgenticMail; a Vercel AI SDK adapter) misidentified as Claude Code / OpenAI Codex respectively — so this list runs 8, not the usual 10. The By-severity / By-source / Most-affected-services counts above are the unedited archive figures and still include both excluded entries, plus a third `nvd`-sourced alert (also counted toward Claude Code above) that was not individually checked — root cause tracked at aiwatch#1336.*
+
 
 
 #### 1. [langchain vulnerable to arbitrary code execution](https://nvd.nist.gov/vuln/detail/CVE-2023-36188) · `critical`
@@ -629,47 +536,37 @@ _Auto-generated retrospective draft (gemma) — review, adapt into prescriptive 
 - **Affected:** LangChain
 - **Detected:** 2026-07-06
 
-#### 2. [CVE-2026-57495: AgenticMail gives AI agents real email addresses and phone numbers.](https://nvd.nist.gov/vuln/detail/CVE-2026-57495) · `high`
-- **Source:** nvd
-- **Affected:** Claude Code
-- **Detected:** 2026-07-20
-
-#### 3. [huggingface/transformers: Arbitrary Code Execution During Model Initialization in the LightGlue Model Loading Path](https://nvd.nist.gov/vuln/detail/CVE-2026-5241) · `high`
+#### 2. [huggingface/transformers: Arbitrary Code Execution During Model Initialization in the LightGlue Model Loading Path](https://nvd.nist.gov/vuln/detail/CVE-2026-5241) · `high`
 - **Source:** OSV.dev
 - **Affected:** Hugging Face
 - **Detected:** 2026-07-13
 
-#### 4. [LangSmith SDK: Public prompt pull deserializes untrusted manifests without trust boundary warning](https://github.com/langchain-ai/langsmith-sdk/security/advisories/GHSA-3644-q5cj-c5c7) · `high`
+#### 3. [LangSmith SDK: Public prompt pull deserializes untrusted manifests without trust boundary warning](https://github.com/langchain-ai/langsmith-sdk/security/advisories/GHSA-3644-q5cj-c5c7) · `high`
 - **Source:** OSV.dev
 - **Affected:** LangChain
 - **Detected:** 2026-07-13
 
-#### 5. [LangChain vulnerable to unsafe deserialization of attacker-controlled objects through overly broad `load()` allowlists](https://github.com/langchain-ai/langchain/security/advisories/GHSA-pjwx-r37v-7724) · `high`
+#### 4. [LangChain vulnerable to unsafe deserialization of attacker-controlled objects through overly broad `load()` allowlists](https://github.com/langchain-ai/langchain/security/advisories/GHSA-pjwx-r37v-7724) · `high`
 - **Source:** OSV.dev
 - **Affected:** LangChain
 - **Detected:** 2026-07-13
 
-#### 6. [LangChain Core has Path Traversal vulnerabilites in legacy `load_prompt` functions](https://github.com/langchain-ai/langchain/security/advisories/GHSA-qh6h-p6c9-ff54) · `high`
+#### 5. [LangChain Core has Path Traversal vulnerabilites in legacy `load_prompt` functions](https://github.com/langchain-ai/langchain/security/advisories/GHSA-qh6h-p6c9-ff54) · `high`
 - **Source:** OSV.dev
 - **Affected:** LangChain
 - **Detected:** 2026-07-13
 
-#### 7. [HuggingFace transformers vulnerable to remote code execution](https://nvd.nist.gov/vuln/detail/CVE-2026-4372) · `high`
+#### 6. [HuggingFace transformers vulnerable to remote code execution](https://nvd.nist.gov/vuln/detail/CVE-2026-4372) · `high`
 - **Source:** OSV.dev
 - **Affected:** Hugging Face
 - **Detected:** 2026-07-01
 
-#### 8. [CVE-2026-64650: The `@ai-sdk/harness-opencode` tool is an HarnessV1 adapter backed by @openai/codex-sdk, which drives the codex command line interface.](https://nvd.nist.gov/vuln/detail/CVE-2026-64650) · `medium`
-- **Source:** nvd
-- **Affected:** OpenAI Codex
-- **Detected:** 2026-07-20
-
-#### 9. [PYSEC-2026-2288: PyPI/transformers](https://github.com/advisories/GHSA-69w3-r845-3855) · `medium`
+#### 7. [PYSEC-2026-2288: PyPI/transformers](https://github.com/advisories/GHSA-69w3-r845-3855) · `medium`
 - **Source:** OSV.dev
 - **Affected:** Hugging Face
 - **Detected:** 2026-07-20
 
-#### 10. [PYSEC-2026-2289: PyPI/transformers](https://github.com/advisories/GHSA-29pf-2h5f-8g72) · `medium`
+#### 8. [PYSEC-2026-2289: PyPI/transformers](https://github.com/advisories/GHSA-29pf-2h5f-8g72) · `medium`
 - **Source:** OSV.dev
 - **Affected:** Hugging Face
 - **Detected:** 2026-07-20
@@ -682,9 +579,9 @@ _Auto-generated retrospective draft (gemma) — review, adapt into prescriptive 
 * **Data Sources:** Real-time data is aggregated from official status pages via multiple frameworks, including Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, OnlineOrNot, and RSS feeds (Source: [ai-watch.dev](https://ai-watch.dev)).
 * **Monitoring Frequency:** All 45 services are polled every **5 minutes** via Cloudflare Workers. Those with a probeable API endpoint also get a direct response-time (RTT) health-check at the same interval.
 * **AIWatch Score (0–100):** Calculated from four components — **Uptime** (40%), **Incident affected days** (25%), **Recovery speed** (15%), and **Responsiveness** (20%). A service with no probe endpoint is scored on the remaining components rescaled to 100, with **no penalty**. A service that has a probe but fewer than 7 days of samples gets that same rescale **plus a 5% penalty** until its probe data matures. Full methodology: [ai-watch.dev/methodology#score](https://ai-watch.dev/methodology#score)
-* **Uptime Source:** *Official* = AIWatch computes a 30-day uptime figure from the incident and outage records the provider publishes on its status page — one window and one weighting for every service, so the figures compare. *Platform* = the same computation, but the records come from the status-page platform's own monitors (Better Stack) rather than incidents the provider declared. *No uptime* = the status page publishes no records to compute from. The Score then drops its 40-point Uptime component and is rescaled over the remaining signals (incidents, recovery, responsiveness), so the result is **not** on the same scale as a Score built from a measured uptime. Where this report knows which services those are, they are **ranked in their own table**, never merged into a single rank sequence. A service with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked at all. The note above the Score table names whichever services that is — the membership is read from the data, not fixed here. A service AIWatch tracked for only part of the month is **excluded from the ranking** rather than labelled — its partial-month Score would rest on insufficient coverage. The label describes the Uptime input, not the Score's rigour.
+* **Uptime Source:** *Official* = AIWatch computes an uptime figure from the incident and outage records the provider publishes on its status page. *Platform* = a different computation built from the status-page platform's own monitors (Better Stack) rather than incidents the provider declared. *No uptime* = no uptime figure resolved for this row — usually because the status page publishes none, occasionally a figure AIWatch computed but withheld; a service in this tier may still publish incident records, which is what drives the MTTR/downtime figures elsewhere in this report. The exact window and weighting behind each figure varies by status-page platform; full source-by-source method: [ai-watch.dev/methodology](https://ai-watch.dev/methodology#uptime). The Score then drops its 40-point Uptime component and is rescaled over the remaining signals (incidents, recovery, responsiveness), so the result is **not** on the same scale as a Score built from a measured uptime. Where this report knows which services those are, they are **ranked in their own table**, never merged into a single rank sequence. A service with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked at all. The note above the Score table names whichever services that is — the membership is read from the data, not fixed here. A service AIWatch tracked for only part of the month is **excluded from the ranking** rather than labelled — its partial-month Score would rest on insufficient coverage. The label describes the Uptime input, not the Score's rigour.
 * **Incident Counting:** Counts are the incidents each provider published, attributed to the service they affected. Providers differ in granularity, and in *where* that granularity lives: Anthropic maps to a single status-page component but posts one incident **per model**; Together AI tracks each model as its own **resource**, so one event can surface as several incidents. Others post one incident per event at the service level. Compare counts only across providers with comparable granularity.
-* **Uptime Metrics:** Every percentage in the 30-Day Uptime table is computed by AIWatch over a trailing 30-day window from the outage records the status page publishes — never copied from the figure a provider displays on its own page (see *Uptime Source* above for how those records are sourced and weighted). Its **scope** depends on what the page exposes: a single component for some services, a worst-of across a component set for others, an upstream platform monitor for others still. Services marked with "—" publish no records to compute from.
+* **Uptime Metrics:** Every percentage in the 30-Day Uptime table is computed by AIWatch from the outage records the status page publishes — never copied from the figure a provider displays on its own page, and computed by a different method depending on the Uptime Source (see *Uptime Source* above). Its **scope** depends on what the page exposes: a single component for some services, a worst-of across a component set for others, an upstream platform monitor for others still. A service with no resolved uptime figure (see *No uptime* under *Uptime Source* above) doesn't get a row in this table at all. A service's **Incident Summary** count and total downtime are not limited to that same scope, though — an incident on a component outside it still adds to those totals without moving the uptime percentage, which is why the two can diverge sharply for one long incident on a narrower surface.
 * **Component Reliability:** A **different measurement** from every other uptime figure in this report — do not compare them. AIWatch polls each service's status page every 5 minutes and, per component, counts a poll as good **only** when that component reads `operational`; `degraded` and `partial outage` both count against it, with no weighting by incident severity (severity is recorded per *service*, not per component). The percentage is that ratio of good polls, over the days AIWatch could read the page. Only components AIWatch surfaces for that service are counted — billing, docs and compliance surfaces are excluded — and a service needs at least two of them to appear at all. The table lists only each service's **weakest** component, and only when it fell below 99.9%: it is a list of where to look, not a ranking of everything.
 * **Timezone Standard:** All timestamps are recorded in **UTC**.
 

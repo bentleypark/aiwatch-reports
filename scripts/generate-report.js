@@ -362,11 +362,22 @@ function confidence(svc) {
 // aiwatch#1006 — three states, read from the DATA:
 //   'Official' — AIWatch computed the 30-day figure from the incident/outage records the provider
 //                publishes on its own status page.
-//   'Platform' — the same computation, but the records come from the status-page platform's own
-//                monitors (Better Stack). A measurement, not the provider declaring an incident —
-//                which is why it keeps a separate label even though the window and weights are identical.
-//   'No uptime' — the status page publishes no records to compute from; the Score omits the uptime
-//                component and rescales (aiwatch#713).
+//   'Platform' — a DIFFERENT computation: the records come from the status-page platform's own
+//                monitors (Better Stack) rather than the provider declaring an incident. Neither the
+//                window nor the weighting matches 'Official' (#1110) — Platform applies no severity
+//                weighting (every measured downtime second counts equally) and each RESOURCE is measured
+//                over its own monitored-day count before resources are averaged as equals — so one
+//                service's figure can blend a 7-day monitor with 30-day ones, not a fixed 30-day window
+//                per service. Never describe this as
+//                "the same computation" or "the same window/weights" as Official.
+//   'No uptime' — no uptime figure resolved for this row. Usually this means the provider's status
+//                page publishes no uptime records at all (the narrower, provider-specific claim is
+//                `publishesNoOfficialUptime` below — use THAT function, not this label, when the
+//                distinction matters); occasionally it means AIWatch withheld a figure it did compute
+//                (low confidence, legacy suppression, or an inconsistency check) even though the
+//                provider does publish one. Either way the page may still publish INCIDENT records
+//                (the Notable Movers MTTR/downtime figures use those — see toMonthEntry in
+//                generate-charts.js); the Score omits the uptime component and rescales (aiwatch#713).
 // `uptimeSource` is archived from aiwatch#1006 onward. An older archive has the figure but not the
 // provenance, so it falls back to 'Official' — which is what those archives meant, since 'platform_avg'
 // figures were the BetterStack averages the pre-#1006 code also labelled official.
