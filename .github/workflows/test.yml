@@ -14,7 +14,7 @@ name: Tests
 # Each was a FALSE RED — the filter was present and correct, and CI said it was missing.
 # Deleting the filter deletes the parser, the assertion, and that whole class of failure at once
 # (memory `feedback_pin_the_decision_not_the_spelling`: against a real language, a hand-written parser
-# loses). The suite is 6 files of plain Node with no install step and runs in ~3s, so what the filter
+# loses). The suite is plain Node with no install step and runs in a few seconds, so what the filter
 # was saving is a few seconds on docs-only PRs — less than one round of this cost to get wrong.
 
 on:
