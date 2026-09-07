@@ -74,6 +74,8 @@ After generation, fill in the narrative sections (`Summary`, `Recommendations`, 
 
 **Pre-publish recurrence lint** (aiwatch-reports#55): the publish-time enforcement of the same signal. `.github/workflows/lint-recurrence.yml` runs `scripts/lint-recurrence.js` on any PR that changes a `NNNN-NN/index.md`, reusing #54's `extractNarrativeSubjects`/`detectRecurrence` (single source of truth). On a `published: true` report it **fails** if any AUTO-DRAFT / RECURRENCE CHECK fence survived (draft scaffolding must never publish) and **warns** (PR annotation) when a service fills the same narrative slot as the immediately prior month — so a genuine recurrence can proceed after the author acknowledges it, but never *silently*. A `published: false` draft is exempt.
 
+**Korean copy drift check** (aiwatch-reports#115): `node scripts/lint-korean-drift.js NNNN-NN/index.md`, run from the checkout holding the draft. It prints each KO `<details>` slot beside the same slot from the prior three months, so the author can see how those months phrased it before phrasing it again. Advisory — it asserts nothing and exits 0; a month whose KO bullets are markdown rather than `<li><strong>` (2026-03) is reported as skipped rather than silently compared. Nothing else checks the report's Korean wording: `lint-recurrence.js` reads narrative structure, and aiwatch's `lint:korean` scans a fixed list of surfaces in that repo.
+
 ---
 
 ## About AIWatch
