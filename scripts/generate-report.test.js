@@ -1264,6 +1264,122 @@ test('returns empty string when no source has alerts', () => {
   eq(buildBySourceTable({ osv: 0, hackernews: 0 }), '')
 })
 
+// #111 — the defect: the row list was hand-maintained, so `nvd` (shipped in aiwatch#949) was
+// never rendered and the table stopped reconciling with `Total alerts`.
+test('renders the nvd source (#111)', () => {
+  // August 2026's real archive: nvd is the MAJORITY source, and hackernews is 0.
+  const out = buildBySourceTable({ osv: 4, hackernews: 0, nvd: 5 })
+  assert.ok(out.includes('NVD | 5'), `nvd row missing — this is the #111 defect: ${out}`)
+  assert.ok(out.includes('OSV.dev | 4'), `osv row: ${out}`)
+})
+
+// Sum the counts the table actually rendered, so a test can compare them against the input.
+function renderedSourceTotal(table) {
+  return table
+    .split('\n')
+    .slice(2) // drop the header + separator rows
+    .map(row => Number(row.split('|')[2].trim()))
+    .reduce((a, b) => a + b, 0)
+}
+
+test('every non-zero source reaches the table, including one this file does not name (#111)', () => {
+  // The generalized form of #111: the table exists to reconcile with `Total alerts`, so a source
+  // key the renderer has no label for must still be counted rather than dropped.
+  const bySource = { osv: 4, hackernews: 0, nvd: 5, somefuturesource: 2 }
+  const out = buildBySourceTable(bySource)
+  const expected = Object.values(bySource).reduce((a, b) => a + b, 0)
+  assert.strictEqual(
+    renderedSourceTotal(out), expected,
+    `table must sum to the archive's own total (${expected}): ${out}`,
+  )
+  assert.ok(out.includes('somefuturesource | 2'), `unlabelled source must still render: ${out}`)
+})
+
+test('orders rows by count, largest first', () => {
+  const out = buildBySourceTable({ osv: 4, hackernews: 0, nvd: 5 })
+  // Assert presence before order: `indexOf` returns -1 for a missing row, which would let this
+  // test pass against a renderer that dropped NVD entirely — the very defect above.
+  assert.ok(out.includes('NVD | 5') && out.includes('OSV.dev | 4'), `both rows present: ${out}`)
+  assert.ok(
+    out.indexOf('NVD | 5') < out.indexOf('OSV.dev | 4'),
+    `larger count should sort first: ${out}`,
+  )
+})
+
+test('breaks a count tie on the key, so row order does not follow the producer', () => {
+  // July 2026 really has two sources at 3. Without the tie-break the rendered order tracks the
+  // archive's key order, so the same data serialized differently publishes a different page.
+  const a = buildBySourceTable({ osv: 59, hackernews: 3, nvd: 3 })
+  const b = buildBySourceTable({ osv: 59, nvd: 3, hackernews: 3 })
+  assert.strictEqual(a, b, `key order must not change the table:\n${a}\n---\n${b}`)
+  assert.ok(a.indexOf('Hacker News') < a.indexOf('NVD'), `tie broken on key: ${a}`)
+})
+
+test('an unlabelled key cannot resolve to an inherited prototype member', () => {
+  // A plain `SOURCES[key]` lookup answers `toString`/`constructor` from Object.prototype, so the
+  // key takes the registry branch and renders as `undefined` instead of as itself.
+  const out = buildBySourceTable(JSON.parse('{"osv":2,"toString":1,"constructor":1}'))
+  assert.ok(out.includes('toString | 1'), `unknown key renders as itself: ${out}`)
+  assert.ok(out.includes('constructor | 1'), `unknown key renders as itself: ${out}`)
+})
+
+test('an unlabelled key cannot break the markdown table', () => {
+  const out = buildBySourceTable({ 'a|b\nc': 1 })
+  const rows = out.split('\n')
+  assert.strictEqual(rows.length, 3, `one header, one separator, one row: ${JSON.stringify(out)}`)
+  assert.ok(out.includes('| a b c | 1 |'), `pipe and newline stripped: ${out}`)
+})
+
+console.log('\nsecurity section — one source registry, three renderers (#111)')
+test('a finding from a registered source is labelled, not printed raw', () => {
+  // The by-source table and the per-finding label used to be separate hand-maintained lists, so a
+  // page could say "NVD" in the table and "nvd" in the findings below it.
+  const out = buildTopFindings([
+    { title: 'CVE-2026-49986', url: 'https://nvd.nist.gov/x', source: 'nvd', severity: 'high', detectedAt: '2026-08-14T19:10:19.170Z' },
+  ])
+  assert.ok(out.includes('**Source:** NVD'), `nvd must render through the registry: ${out}`)
+  assert.ok(!/\*\*Source:\*\* nvd\b/.test(out), `raw key must not reach the page: ${out}`)
+})
+
+const securityFixture = bySource => ({
+  totalAlerts: Object.values(bySource).reduce((a, b) => a + b, 0),
+  bySource,
+  bySeverity: { critical: 0, high: 4, medium: 5, low: 0 },
+  byService: { 'Claude Code': 3 },
+  topFindings: [],
+})
+
+test('the section Note names the sources that month was swept for', () => {
+  // The Note was a third copy of the source list and omitted NVD, so a regenerated page would
+  // introduce a table row for a source the Note said was not one.
+  const out = buildSecuritySection(securityFixture({ osv: 4, hackernews: 0, nvd: 5 }))
+  assert.ok(out.includes('| NVD | 5 |'), `table row: ${out}`)
+  for (const gloss of ['OSV.dev (', 'Hacker News (', 'NVD (first-party product CVEs)']) {
+    assert.ok(out.includes(gloss), `Note must name ${gloss}: ${out}`)
+  }
+})
+
+test('an archive with no bySource keys renders the section without a Note', () => {
+  // Deriving the Note from the key set made this shape reachable, where the old hardcoded string
+  // always printed. Pin it so the omission is a decision rather than an accident.
+  const out = buildSecuritySection({
+    totalAlerts: 5, bySeverity: { critical: 0, high: 5, medium: 0, low: 0 }, byService: {}, topFindings: [],
+  })
+  assert.ok(!out.includes('**Note:**'), `no sources named, so no Note: ${out}`)
+  assert.ok(out.includes('**Total alerts:** 5'), `the rest of the section still renders: ${out}`)
+})
+
+test('the Note does not name a source that month was not swept for', () => {
+  // NVD shipped 2026-07-16 (aiwatch#949), so the 2026-04/05/06 archives carry no `nvd` key at all.
+  // Regenerating one must not announce a source nothing looked for, beside a table showing none.
+  const out = buildSecuritySection(securityFixture({ osv: 8, hackernews: 0 }))
+  assert.ok(!out.includes('NVD'), `Note must not name NVD for a pre-NVD month: ${out}`)
+  assert.ok(
+    out.includes('from OSV.dev (AI SDK package vulnerabilities) and Hacker News ('),
+    `two-source Note, joined without a list comma: ${out}`,
+  )
+})
+
 console.log('\nbuildBySeverityTable')
 test('always shows all four severity buckets including zeros', () => {
   const out = buildBySeverityTable({ critical: 0, high: 2, medium: 5, low: 1 })

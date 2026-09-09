@@ -861,7 +861,7 @@ function buildUptimeTable(services, meta) {
 // ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
 //
 // Schema: archive.security shape from MonthlySecuritySummary in worker/src/monthly-archive.ts:
-//   { totalAlerts, bySource: { osv, hackernews }, bySeverity: { critical, high, medium, low },
+//   { totalAlerts, bySource: { osv, hackernews, nvd }, bySeverity: { critical, high, medium, low },
 //     byService: { [serviceName]: count },
 //     topFindings: { title, url, source, severity?, service?, detectedAt, timeline? }[] }
 // `timeline` only present on OSV findings whose security:timeline:osv:{id} key existed at
@@ -879,10 +879,55 @@ function fmtIso(d) {
   return m ? m[1] : '—'
 }
 
+// One registry per security-alert source: the label the tables print, and the gloss the section
+// Note uses. #111 was this list existing in THREE hand-maintained copies that drifted apart — the
+// by-source table (which dropped `nvd` entirely when that source shipped worker-side, aiwatch#949),
+// the per-finding `**Source:**` ternary, and the Note's prose enumeration. Registering a source
+// here now reaches all three at once, which is the property the fix is actually for.
+// A Map, not an object literal: `bySource` keys come from JSON, so a key like `toString` would
+// hit Object.prototype on a plain lookup and render as an inherited function (or, once the label
+// is read off it, as `undefined`). `Map.get` has no prototype chain, which removes that failure
+// instead of guarding against it.
+const SOURCES = new Map([
+  ['osv', { label: 'OSV.dev', note: 'AI SDK package vulnerabilities' }],
+  ['hackernews', { label: 'Hacker News', note: 'security posts mentioning monitored services' }],
+  ['nvd', { label: 'NVD', note: 'first-party product CVEs' }],
+])
+
+// A key the registry does not know still renders, under its own name, rather than vanishing — the
+// by-source table's only job is to reconcile with `Total alerts`. The characters that would break
+// a markdown cell are stripped (cf. fmtIso above).
+function sourceLabel(key) {
+  return SOURCES.get(key)?.label ?? String(key).replace(/[|\n\r]/g, ' ')
+}
+
+// Names the sources THAT MONTH was monitored for, read from the archive's own `bySource` keys —
+// a key is present (often at 0) for every source the sweep ran, so the key set is the record. Not
+// the registry's current contents: NVD shipped 2026-07-16 (aiwatch#949), so a regenerated April
+// would otherwise name a source nothing had looked for that month, next to a data-driven table
+// correctly showing no NVD row. A key with no registry entry contributes its label without a gloss.
+function buildSourceNote(bySource) {
+  const parts = Object.keys(bySource || {}).map((key) => {
+    const entry = SOURCES.get(key)
+    return entry ? `${entry.label} (${entry.note})` : sourceLabel(key)
+  })
+  // No key set means nothing records what was swept, so there is no sentence to write. The
+  // section still renders its total and tables — this is the one output shape deriving the Note
+  // introduced that the old hardcoded string could not produce.
+  if (parts.length === 0) return ''
+  const list = parts.length <= 2
+    ? parts.join(' and ')
+    : `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
+  return `> **Note:** Security alerts captured during the month from ${list}. Section omitted for months without detections.`
+}
+
 function buildBySourceTable(bySource) {
-  const rows = []
-  if (bySource.osv > 0) rows.push(`| OSV.dev | ${bySource.osv} |`)
-  if (bySource.hackernews > 0) rows.push(`| Hacker News | ${bySource.hackernews} |`)
+  const rows = Object.entries(bySource || {})
+    .filter(([, count]) => count > 0)
+    // Largest first, key as the tie-break. The tie-break is load-bearing, not tidiness: July 2026
+    // has two sources at 3, and without it their row order follows the producer's key order.
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([key, count]) => `| ${sourceLabel(key)} | ${count} |`)
   if (rows.length === 0) return ''
   return ['| Source | Count |', '|---|---|', ...rows].join('\n')
 }
@@ -936,11 +981,10 @@ function buildTopFindings(findings) {
   if (!Array.isArray(findings) || findings.length === 0) return ''
   const sections = findings.map((f, i) => {
     const sev = f.severity ? `\`${f.severity}\`` : '`unrated`'
-    const sourceLabel = f.source === 'osv' ? 'OSV.dev' : f.source === 'hackernews' ? 'Hacker News' : f.source
     const titleLink = f.url ? `[${f.title}](${f.url})` : f.title
     const heading = `#### ${i + 1}. ${titleLink} · ${sev}`
     const meta = [
-      `- **Source:** ${sourceLabel}`,
+      `- **Source:** ${sourceLabel(f.source)}`,
       `- **Detected:** ${fmtIso(f.detectedAt)}`,
     ]
     if (f.service) meta.splice(1, 0, `- **Affected:** ${f.service}`)
@@ -967,13 +1011,13 @@ function buildSecuritySection(security) {
   const parts = [
     '## Security Alerts',
     '',
-    `> **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities) and Hacker News (security posts mentioning monitored services). Section omitted for months without detections.`,
+    buildSourceNote(security.bySource),
     '',
     `**Total alerts:** ${security.totalAlerts}`,
     '',
   ]
 
-  const bySrc = buildBySourceTable(security.bySource || { osv: 0, hackernews: 0 })
+  const bySrc = buildBySourceTable(security.bySource || {})
   if (bySrc) parts.push('**By source**', '', bySrc, '')
 
   const bySev = buildBySeverityTable(security.bySeverity || {})
