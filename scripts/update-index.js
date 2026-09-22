@@ -7,10 +7,11 @@
 // Usage: node scripts/update-index.js 2026-04
 //
 // Reads `_data/{MONTH}.json` (already committed by the same workflow run via
-// scripts/fetch-archive.sh) for `services` count + `daysCollected`. The date
-// range follows the existing convention: end-aligned within the month, so a
-// 12-day window in a 31-day month renders as "Mar 20–31" — matches the
-// hand-authored 2026-03 entry. Full months render as "Apr 1–30".
+// scripts/fetch-archive.sh) for `services` count + `daysCollected`. Full months
+// render their span ("Apr 1–30"). A partial window renders a span only for the
+// onboarding month, where end-alignment is a fact rather than an inference
+// ("Mar 20–31"); after that a shortfall renders as a bare count. See
+// `buildPeriodSuffix` for why (#113).
 //
 // Idempotent: if a line for the same month already exists in `## Reports`,
 // it's replaced rather than duplicated. Re-running the workflow for the same
@@ -45,13 +46,41 @@ function parseMonth(arg) {
   return { year: Number(yearStr), month: Number(monthStr), period: arg }
 }
 
+// AIWatch began monitoring partway through 2026-03, so that ONE month's window is genuinely
+// end-aligned and its span is known (Mar 20–31) — the case end-alignment was written for. Every
+// month after it was monitored end to end, so a short `daysCollected` there is a LOST day, not a
+// late start, and the archive does not say WHICH day: `daysCollected` is a bare count (#113).
+// The two cases must not render alike — one knows its span, the other cannot state one.
+const MONITORING_START = { year: 2026, month: 3 }
+
+// Exactly the start month — no earlier one is claimed. A month before monitoring began has no
+// report and no archive; were one ever passed, end-aligning it would be a weaker inference than
+// the one #113 removed, so it takes the bare-count path with everything else.
+function isOnboardingMonth(year, month) {
+  return year === MONITORING_START.year && month === MONITORING_START.month
+}
+
 function buildPeriodSuffix(year, month, daysCollected) {
   const lastDay = lastDayOfMonth(year, month)
-  // End-aligned: a partial window is treated as days at the end of the month
-  // (matches the 2026-03 hand-authored entry: 12 days → Mar 20–31).
-  const startDay = Math.max(1, lastDay - daysCollected + 1)
   const abbr = MONTH_ABBR[month]
-  return `${daysCollected}-day monitoring period (${abbr} ${startDay}–${lastDay})`
+  // A window covering the whole month reads its span off the calendar. `>=` because an over-long
+  // count is still whole-month coverage.
+  if (daysCollected >= lastDay) {
+    return `${daysCollected}-day monitoring period (${abbr} 1–${lastDay})`
+  }
+  // A non-positive count names no days at all, so it cannot be end-aligned either: without this
+  // guard, 0 renders "Mar 32–31" (`readArchiveSnapshot` defaults a missing count to 0, and main()
+  // only rejects it when `services` is 0 too). Fall through to the bare count, which degrades
+  // honestly.
+  if (daysCollected > 0 && isOnboardingMonth(year, month)) {
+    // End-aligned: monitoring started mid-month, so the collected days really are the last N.
+    // The two guards above bound `daysCollected` to (0, lastDay), so this cannot go below 1.
+    const startDay = lastDay - daysCollected + 1
+    return `${daysCollected}-day monitoring period (${abbr} ${startDay}–${lastDay})`
+  }
+  // Post-onboarding shortfall. No start day can be stated, and "monitored" would overclaim too:
+  // AIWatch ran all month; what is short is the count of days whose counter read back.
+  return `${daysCollected} of ${lastDay} days with uptime data`
 }
 
 function buildEntry({ period, year, month, services, daysCollected }) {
@@ -144,7 +173,9 @@ function main() {
   }
 
   fs.writeFileSync(INDEX_PATH, updated)
-  console.log(`[update-index] ✓ ${period}: ${services} services, ${daysCollected}-day window`)
+  // Echo the rendered suffix rather than restating "N-day window" — that phrasing asserts on the
+  // console exactly the span the page now refuses to claim for a short month (#113).
+  console.log(`[update-index] ✓ ${period}: ${services} services, ${buildPeriodSuffix(year, month, daysCollected)}`)
 }
 
 if (require.main === module) {

@@ -81,9 +81,9 @@ test('partial windows align to the end of the month (matches 2026-03 hand-author
   )
 })
 
-test('clamps start day to 1 if window exceeds month length', () => {
-  // 35-day window in 30-day April — abnormal but defensive: clamp at Apr 1 rather
-  // than emit "Apr -4–30" or similar nonsense.
+test('an over-long count is still whole-month coverage', () => {
+  // 35-day window in 30-day April — abnormal, and it takes the full-month branch: the span is the
+  // whole month, and the count is printed as the archive gave it rather than being corrected here.
   assert.strictEqual(
     buildPeriodSuffix(2026, 4, 35),
     '35-day monitoring period (Apr 1–30)',
@@ -91,11 +91,67 @@ test('clamps start day to 1 if window exceeds month length', () => {
 })
 
 test('renders single-day partial as a degenerate range', () => {
-  // 1-day window at end of February 2026 → "Feb 28–28"
+  // 1-day window in the onboarding month → "Mar 31–31". (Re-pointed from a synthetic Feb 2026 in
+  // #113: end-alignment is now claimed for the start month only, and February 2026 precedes
+  // monitoring entirely — there is no window there to align.)
+  assert.strictEqual(
+    buildPeriodSuffix(2026, 3, 1),
+    '1-day monitoring period (Mar 31–31)',
+  )
+})
+
+// #113 — a short month after onboarding is a LOST day, not a late start. `daysCollected` is a
+// bare count, so no start day is knowable; inferring one published "Aug 2–31", where `Aug 2` was
+// `31 - 30 + 1` and not an observation. Both directions are asserted: the onboarding span must
+// survive (a fix that flattened every month into a count would lose real information).
+test('a post-onboarding short month states no span it cannot know (#113)', () => {
+  assert.strictEqual(
+    buildPeriodSuffix(2026, 8, 30),
+    '30 of 31 days with uptime data',
+  )
+})
+
+test('the onboarding month keeps its end-aligned span (#113 control)', () => {
+  // The direction that must NOT change: 2026-03 is genuinely end-aligned — monitoring began
+  // mid-month, so those 12 days really are Mar 20–31.
+  assert.strictEqual(
+    buildPeriodSuffix(2026, 3, 12),
+    '12-day monitoring period (Mar 20–31)',
+  )
+})
+
+test('a full month still renders its span (#113 control)', () => {
+  // August once its archive was rebuilt to 31 days — the span IS known here.
+  assert.strictEqual(
+    buildPeriodSuffix(2026, 8, 31),
+    '31-day monitoring period (Aug 1–31)',
+  )
+})
+
+test('2026-04 is the first month excluded from end-alignment (#113 boundary)', () => {
+  // Pins the far side of MONITORING_START. Without this, moving the constant forward one month
+  // reintroduces the defect on a real published month while the whole suite stays green.
+  assert.strictEqual(
+    buildPeriodSuffix(2026, 4, 25),
+    '25 of 30 days with uptime data',
+  )
+})
+
+test('a month before monitoring began is not end-aligned either (#113 boundary)', () => {
+  // The predicate names the start month exactly; it does not extend backwards, where alignment
+  // would be an even weaker inference than the one this issue removed.
   assert.strictEqual(
     buildPeriodSuffix(2026, 2, 1),
-    '1-day monitoring period (Feb 28–28)',
+    '1 of 28 days with uptime data',
   )
+})
+
+test('a zero count never renders a day past the end of the month (#113)', () => {
+  // `readArchiveSnapshot` defaults a missing `daysCollected` to 0 and main() rejects it only when
+  // `services` is 0 too, so a 2026-03 regeneration from a partial snapshot reaches here.
+  const out = buildPeriodSuffix(2026, 3, 0)
+  assert.ok(!out.includes('32'), `must not emit a 32nd of March: ${out}`)
+  assert.strictEqual(out, '0 of 31 days with uptime data')
 })
 
 console.log('\nbuildEntry')
@@ -120,6 +176,19 @@ test('matches the 2026-03 hand-authored entry exactly (regression baseline)', ()
   assert.strictEqual(
     entry,
     '- [**March 2026**](2026-03/) — 27 services, 12-day monitoring period (Mar 20–31)',
+  )
+})
+
+test('a short post-onboarding month renders a countable bullet, not a false span (#113)', () => {
+  // What the front page WOULD have published for August had its archive stayed at 30 days:
+  // "- [**August 2026**](2026-08/) — 45 services, 30-day monitoring period (Aug 2–31)".
+  const entry = buildEntry({
+    period: '2026-08', year: 2026, month: 8,
+    services: 45, daysCollected: 30,
+  })
+  assert.strictEqual(
+    entry,
+    '- [**August 2026**](2026-08/) — 45 services, 30 of 31 days with uptime data',
   )
 })
 
