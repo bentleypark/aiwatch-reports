@@ -312,7 +312,7 @@ function buildWhy(svc, id) {
     const official = officialUptimeFor(svc, id)
     if (typeof official === 'number') {
       pieces.push('Zero incidents', `${official.toFixed(2)}% uptime`)
-    } else if (publishesNoOfficialUptime(svc, id)) {
+    } else if (scoreTier(svc) !== 'medium' && publishesNoOfficialUptime(svc, id)) {
       // "They publish none" — a statement about the provider.
       return 'Zero incidents (no published uptime)'
     } else {
