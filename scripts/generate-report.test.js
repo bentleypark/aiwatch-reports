@@ -341,6 +341,33 @@ test('an all-medium month renders ONE table and KEEPS the caption', () => {
   eq(rows.length, mediumOnly.length, 'and every service is in it')
 })
 
+test('the medium table does not repeat its own heading in a Why cell (#120)', () => {
+  // Gemini is the shipped shape: zero incidents, no official uptime, medium confidence.
+  const { medium } = scoreTableParts(buildScoreTable(TIER_SERVICES, TIER_META, '2026-07'))
+  assert.match(medium, /\| 1 \| Gemini API \| 87 \| Good \| Zero incidents \|/)
+  assert.ok(!medium.includes('no published uptime'), `medium table repeats its heading: ${medium}`)
+})
+
+test('buildWhy decides it alone — the caller passes no table identity (#120)', () => {
+  // The two-argument shape every other buildWhy test uses. A fix that lived at the call sites would
+  // leave this returning the parenthetical, which is how the string shipped for two months.
+  const gemini = TIER_SERVICES.find(s => s.id === 'gemini')
+  eq(buildWhy(gemini, 'gemini'), 'Zero incidents')
+})
+
+test('the MAIN table still says "no published uptime" — the wording is not deleted (#120)', () => {
+  // A legacy archive (≤2026-05: no confidence fields, no officialUptime) is scored 'high' by
+  // scoreTier, so a NO_PUBLIC_UPTIME service lands in the main table — where the Uptime Source cell
+  // reads 'No uptime' for that row and 'Official' for its neighbours, so the claim still does work.
+  const legacy = [
+    { id: 'windsurf', data: { score: 100, grade: 'excellent', uptime: 100, incidents: 0, avgResolutionMin: null } },
+    { id: 'gemini', data: { score: 79, grade: 'good', uptime: 99.9, incidents: 0, avgResolutionMin: null } },
+  ]
+  const table = buildScoreTable(legacy, TIER_META, '2026-05')
+  assert.ok(!table.includes('**No Official Uptime**'), 'a legacy month renders one table')
+  assert.match(table, /\| Gemini API \| 79 \| Good \| No uptime \| Zero incidents \(no published uptime\) \|/)
+})
+
 
 test('buildScoreTable renders ONE table for a legacy archive with no confidence fields', () => {
   // The 2026-03..05 shape: score + uptime, no scoreConfidence. Regenerating a published month must

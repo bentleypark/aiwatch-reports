@@ -152,7 +152,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 
 | Rank | Service | Score | Grade | Why |
 |---|---|---|---|---|
-| 1 | Gemini API | 87 | Good | Zero incidents (no published uptime) |
+| 1 | Gemini API | 87 | Good | Zero incidents |
 | 2 | xAI API | 70 | Fair | 2 incidents, avg 45m |
 | 3 | Deepgram | 48 | Degrading | 4 incidents, avg 6h 48m |
 
