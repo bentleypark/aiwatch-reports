@@ -756,6 +756,26 @@ test('excludes SCORE_WITHHELD services (Bedrock/Azure) from the ranking (#29)', 
   assert.ok(table.includes('Modal'), 'a ranked service still appears')
 })
 
+test('an average taken over fewer entries than the count names its divisor (aiwatch-reports#128 — Kimi 2026-08)', () => {
+  const kimi = { id: 'kimi', data: { incidents: 44, countedIncidents: 21, avgResolutionMin: 86, totalDowntimeMin: 1808, longestIncidentMin: 566 } }
+  eq(buildWhy(kimi, 'kimi'), '44 incidents, avg 1h 26m over 21')
+  const { tableRows } = buildIncidentTable([kimi], sampleMeta)
+  assert.ok(tableRows.includes('<td class="hide-mobile">1h 26m over 21</td>'), tableRows)
+})
+test('no divisor when it equals the count, is absent, or there is no average', () => {
+  eq(buildWhy({ id: 'a', data: { incidents: 12, countedIncidents: 12, avgResolutionMin: 86 } }, 'a'), '12 incidents, avg 1h 26m')
+  eq(buildWhy({ id: 'a', data: { incidents: 12, avgResolutionMin: 86 } }, 'a'), '12 incidents, avg 1h 26m')
+  eq(buildWhy({ id: 'a', data: { incidents: 5, countedIncidents: 0, avgResolutionMin: null } }, 'a'), '5 incidents')
+})
+test('the fast-recovery phrasing names the divisor too (Modal 2026-08)', () => {
+  eq(buildWhy({ id: 'modal', data: { incidents: 12, countedIncidents: 11, avgResolutionMin: 19 } }, 'modal'), '12 incidents, fast recovery (avg 19m over 11)')
+})
+test('a service with no average prints no divisor in the Incident Summary (Helicone 2026-08)', () => {
+  const helicone = { id: 'helicone', data: { incidents: 5, countedIncidents: 0, avgResolutionMin: null, totalDowntimeMin: 4286, longestIncidentMin: null } }
+  const { tableRows } = buildIncidentTable([helicone], sampleMeta)
+  assert.ok(!tableRows.includes('over'), tableRows)
+})
+
 console.log('\nbuildIncidentTable')
 test('excludes services with zero incidents from the table body', () => {
   const { tableRows, zeroIncLine } = buildIncidentTable(sampleServices, sampleMeta)
