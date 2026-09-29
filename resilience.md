@@ -30,7 +30,7 @@ published: true
 
 Structural guidance for building reliably on the services AIWatch monitors. These patterns are properties of each service's architecture, so they hold month to month — the monthly reports' **Observations** point here and add only what's *new* that month. Read a report's Observations for this month's specific failure mode; read this page for how to build against it.
 
-<small>_Last reviewed: 2026-07_</small>
+<small>_Last reviewed: 2026-09_</small>
 
 **Jump to:** [LLM APIs](#llm-apis) · [Voice / transcription](#voice--transcription) · [Cross-cutting patterns](#cross-cutting-patterns)
 
@@ -65,5 +65,5 @@ Patterns that apply across services, not tied to one provider.
 
 ### Retry / timeout tuning (general)
 
-- **Set client-side timeouts to cover the *Longest* incident column, not the average**, so the retry budget survives the worst case rather than the mean.
+- **Don't plan fail-over around the average recovery time.** The *Longest* incident column shows how long a degraded window can actually last — days, at times — so set the point where you switch providers by how long you can tolerate degradation, not by when you expect the provider to recover. Retries and client timeouts cover a short blip, not a window that long.
 - **Standard exponential backoff with a sub-minute initial retry** absorbs the flap pattern some status pages show (e.g. Together AI, Mistral).

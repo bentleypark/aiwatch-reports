@@ -221,7 +221,7 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      • Incident Summary note = how to READ the counts (granularity; count ≠ reliability). Only home for that.
      • ../resilience/ (Resilience Patterns) = the EVERGREEN, structural how-to-build guidance that holds
        every month (per-model monitoring, Voice-Agent isolation, Gemini key rotation + dual monitoring,
-       retry timeout = the Longest column, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
+       fail over on your own tolerance, not the average recovery, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
        it monthly; that cross-month repetition is exactly what this split fixes. New evergreen pattern? Add it
        to that page, not here — following the MAINTENANCE curation rules at the top of ../resilience/
        (evergreen + high-value only, one pattern per failure-mode, prune stale bullets on edit).
