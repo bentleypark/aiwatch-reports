@@ -1340,10 +1340,10 @@ function fmtMoverLine(m) {
   if (m.emphasize === 'score') s = `**${s}**`
   segs.push(s)
 
-  // MTTR / downtime measured over the months that have data (first-present → last-present):
-  //  • never recorded   → "—"
-  //  • one month of data → single value (no redundant arrow)
-  //  • ≥2 months        → "X → Y (Δ)"
+  // MTTR / downtime measured from the first month with data to the window's last month:
+  //  • no value in the window's last month → "—"
+  //  • a value in that month only          → single value (no redundant arrow)
+  //  • an earlier value too                → "X → Y (Δ)"
   // Assumes a zero-incident month is null (not 0) in the archive — per toMonthEntry, MTTR/downtime
   // are read only when typeof === 'number', and the archive emits null (not 0) for no incidents. If
   // a future archive ever emits a literal 0, fmtDurationMin maps it to "—" too, so it still reads as

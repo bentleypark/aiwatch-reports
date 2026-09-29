@@ -646,12 +646,12 @@ function medianOf(values) {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
-// Delta of a sparse metric over the months that actually have data: first-present →
-// last-present. { first, last, delta } where delta is null for <2 present points (a value,
-// not a trend) and { null, null, null } when the metric is never present.
+// Delta of a sparse metric from the first month that has data to the window's last month.
+// { first, last, delta } where delta is null for <2 present points (a value, not a trend), and
+// { null, null, null } when the metric is never present or absent in the window's last month.
 function presentDelta(points, field) {
   const present = points.filter(p => p[field] !== null && p[field] !== undefined)
-  if (present.length === 0) return { first: null, last: null, delta: null }
+  if (present[present.length - 1] !== points[points.length - 1]) return { first: null, last: null, delta: null }
   const first = present[0][field]
   const last = present[present.length - 1][field]
   return { first, last, delta: present.length >= 2 ? last - first : null }
@@ -757,9 +757,9 @@ function computeNotableMovers(trend, opts = {}) {
     if (!f || !l || f.score === null || l.score === null) continue
 
     // MTTR / downtime are sparse (null in a zero-incident month — common in a partial month like a
-    // mid-month-onboarded March), so measure their delta over the months that HAVE data
-    // (first-present → last-present), not the strict window endpoints. A single present point →
-    // delta null (a value, not a trend). Score always uses the window endpoints.
+    // mid-month-onboarded March), so their delta starts at the first month that HAS data and ends
+    // at the window's last month. A single present point → delta null (a value, not a trend).
+    // Score always uses the window endpoints.
     candidates.push({ id, f, l, pts, scoreDelta: l.score - f.score, mttr: presentDelta(pts, 'mttr'), downtime: presentDelta(pts, 'downtime') })
   }
 

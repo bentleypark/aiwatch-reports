@@ -11,8 +11,8 @@ Files are named `{YYYY-MM}.json` (e.g., `2026-03.json`).
 **trailing months** here to render the report's *3-Month Trend* + *Notable Movers* (aiwatch-reports#41).
 The drift caveats below are handled, not ignored:
 - **Partial month** (e.g. `2026-03`, 12-day window): flagged on the trend's x-axis (`Mar*`) + a footnote;
-  MTTR / downtime are measured over the months that actually have incident data (first-present → last-present),
-  so a sparse partial month doesn't zero out the trend.
+  MTTR / downtime are measured from the first month that has incident data to the window's last month,
+  so a sparse partial month doesn't zero out the trend; an axis with no value in the last month has no delta.
 - **Roster drift** (a service added mid-window appears with no score in earlier months): excluded from
   *movers* — a service needs a Score at BOTH window ends to qualify, so a mid-window add never reads as a fake change.
 - **Excluded services**: no-incident-feed (`bedrock`, `azureopenai`) and stale-source services are kept out

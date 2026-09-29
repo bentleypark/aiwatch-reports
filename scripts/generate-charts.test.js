@@ -593,6 +593,33 @@ test('falls back to Score-only notability when MTTR/downtime are absent', () => 
   eq(n[0].downtime.delta, null)
 })
 
+test('an axis with no value in the report month has no delta (aiwatch-reports#127 — Helicone 2026-08)', () => {
+  const mk = (sc, mt, dt) => ({ score: sc, grade: 'Fair', mttr: mt, downtime: dt })
+  const trend = [
+    { month: '2026-06', daysInMonth: 30, daysCollected: 30, services: { helicone: mk(58, 346, 1384), p1: mk(80, 30, 200), p2: mk(70, 40, 300) } },
+    { month: '2026-07', daysInMonth: 31, daysCollected: 31, services: { helicone: mk(39, 2435, 4870), p1: mk(78, 33, 210), p2: mk(68, 44, 315) } },
+    { month: '2026-08', daysInMonth: 31, daysCollected: 31, services: { helicone: mk(57, null, 4286), p1: mk(76, 36, 220), p2: mk(66, 48, 330) } },
+  ]
+  const m = computeNotableMovers(buildTrendSeries(trend)).find(r => r.id === 'helicone')
+  eq(m.mttr.delta, null)
+  eq(m.mttr.last, null)
+  eq(m.downtime.delta, 4286 - 1384)
+  assert.notEqual(m.emphasize, 'mttr')
+})
+
+test('an axis with no value in the window\'s first month starts at its first month with data', () => {
+  const mk = (sc, mt, dt) => ({ score: sc, grade: 'Good', mttr: mt, downtime: dt })
+  const trend = [
+    { month: '2026-06', daysInMonth: 30, daysCollected: 30, services: { tgt: mk(80, null, null), p1: mk(80, 30, 200) } },
+    { month: '2026-07', daysInMonth: 31, daysCollected: 31, services: { tgt: mk(78, 60, 120), p1: mk(78, 33, 210) } },
+    { month: '2026-08', daysInMonth: 31, daysCollected: 31, services: { tgt: mk(70, 600, 1200), p1: mk(76, 36, 220) } },
+  ]
+  const m = computeNotableMovers(buildTrendSeries(trend)).find(r => r.id === 'tgt')
+  eq(m.mttr.first, 60)
+  eq(m.mttr.delta, 540)
+  eq(m.downtime.delta, 1080)
+})
+
 test('honors nameFor + respects the limit', () => {
   const n = computeNotableMovers(buildTrendSeries(NOTABLE_ENTRIES), { limit: 1, nameFor: id => id.toUpperCase() })
   eq(n.length, 1)
