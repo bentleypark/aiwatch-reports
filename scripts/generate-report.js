@@ -299,6 +299,13 @@ function competitionRank(items, valueFn) {
   }))
 }
 
+function avgOverDivisor(data) {
+  const { incidents, countedIncidents, avgResolutionMin } = data
+  const avg = fmtDurationMin(avgResolutionMin)
+  if (avg === '—' || typeof countedIncidents !== 'number' || countedIncidents === incidents) return avg
+  return `${avg} over ${countedIncidents}`
+}
+
 // ── "Why" text generation for Score Ranking ──────────────────────────
 // Formulaic — intentional. Human editors refine as needed.
 function buildWhy(svc, id) {
@@ -326,10 +333,10 @@ function buildWhy(svc, id) {
     if (avgResolutionMin) pieces.push(fmtDurationMin(avgResolutionMin))
   } else if (avgResolutionMin !== null && avgResolutionMin < 30) {
     pieces.push(`${incidents} incidents`)
-    pieces.push(`fast recovery (avg ${fmtDurationMin(avgResolutionMin)})`)
+    pieces.push(`fast recovery (avg ${avgOverDivisor(svc.data)})`)
   } else {
     pieces.push(`${incidents} incidents`)
-    if (avgResolutionMin) pieces.push(`avg ${fmtDurationMin(avgResolutionMin)}`)
+    if (avgResolutionMin) pieces.push(`avg ${avgOverDivisor(svc.data)}`)
   }
   return pieces.join(', ')
 }
@@ -594,7 +601,7 @@ function buildIncidentTable(services, meta) {
 
   const rows = withIncidents.map(s => {
     const inc = s.data.incidents
-    const avg = fmtDurationMin(s.data.avgResolutionMin)
+    const avg = avgOverDivisor(s.data)
     const total = fmtDurationMin(s.data.totalDowntimeMin ?? null)
     const longest = fmtDurationMin(s.data.longestIncidentMin ?? null)
     const totalWithLongest = total === '—' ? '—' : `${total}${longest !== '—' ? ` (${longest})` : ''}`
