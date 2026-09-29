@@ -1079,7 +1079,7 @@ function buildDetectionSection(archive, meta) {
     parts.push(
       '### RTT Degradation Detection',
       '',
-      `AIWatch's direct RTT probes flagged **${deg.total}** latency degradations this month, of which **${deg.noStatusTotal ?? 0}** were **not reflected on the providers' official status pages** — slowdowns status pages typically don't report, only hard outages.`,
+      `AIWatch's direct RTT probes flagged **${deg.total}** RTT degradations this month, of which **${deg.noStatusTotal ?? 0}** were **not reflected on the providers' official status pages at the time of detection**.`,
       '',
     )
     // Only emit the table when there's a per-service breakdown — a total>0 with an empty
@@ -1093,7 +1093,7 @@ function buildDetectionSection(archive, meta) {
       )
     }
     parts.push(
-      "> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages (which report hard-down, not slowness) often omit entirely.",
+      "> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages often omit.",
       '',
     )
   }
