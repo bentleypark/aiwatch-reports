@@ -406,7 +406,11 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 
 > **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7"), and Together AI's status page tracks each model as its own component — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability; adjust for granularity before comparing across providers. A Platform-source service can also carry **reconstructed** entries, counted one per (component, downtime day) instead of one per event. They count toward Inc and Downtime, but carry no recovery time, so they are left out of the Longest and Avg Resolution columns. A month mixing the two is not continuous with earlier months. Where Avg Resolution reads "… over N", the average is taken over N of the service's entries, not all of them. Full rules: [How AIWatch Works → Incident counting](https://ai-watch.dev/methodology#incidents).
 >
+> **Downtime** is a sum of record durations, not the time a service was impaired: where a provider's records for one event overlap, those minutes can be counted more than once.
+>
 > **OpenAI API** — one of its two entries, "Elevated latency in the Responses API", began 2026-08-31 22:27 UTC and was still open when the month closed; the provider resolved it 2026-09-01 19:05 UTC. It is counted here, but its duration is in neither the downtime nor the recovery figures, which is why its average reads "over 1".
+>
+> **Twelve Labs** — its three entries carry a title AIWatch registers as an automated-monitor title, and entries with a registered title are left out of downtime, recovery and the Score's incident and recovery components, which is why the row shows no downtime. Kimi (Moonshot AI)'s re-published entries this month carry a title that is not registered, so they are counted, with repeats of one event merged — the two rows are not on the same basis.
 
 <table>
 <thead>
