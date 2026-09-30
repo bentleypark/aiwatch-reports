@@ -8,6 +8,7 @@ Monthly AI service incident reports covering the AI services monitored by [AIWat
 
 ## Reports
 
+- [**August 2026**](2026-08/) — 45 services, 31-day monitoring period (Aug 1–31)
 - [**July 2026**](2026-07/) — 45 services, 31-day monitoring period (Jul 1–31)
 - [**June 2026**](2026-06/) — 41 services, 30-day monitoring period (Jun 1–30)
 - [**May 2026**](2026-05/) — 33 services, 31-day monitoring period (May 1–31)
