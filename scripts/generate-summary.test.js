@@ -344,6 +344,15 @@ test('most reliable shows perfect services', () => {
   assert(text.includes('ServiceA (100'), 'should show perfect score service')
 })
 
+test('does not pair a Score with total downtime in an auto-draft bullet (#119)', () => {
+  const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
+  const lines = generateTldr(a, MOCK_INCIDENTS).split('\n')
+  eq(lines.find(line => line.includes('Best balance')), '- **Best balance (stability + ecosystem)**: ServiceB (93)')
+  eq(lines.find(line => line.includes('Riskiest this month')), '- **Riskiest this month**: ServiceD (52)')
+  assert.ok(lines.find(line => line.includes('Most incidents')).includes('20h 0m downtime'),
+    'incident-only framing retains its downtime evidence')
+})
+
 test('MoM-frames the Most-incidents bullet when a prior count is provided (aiwatch-reports#54)', () => {
   const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
   const curr = parseInt(a.mostIncidents.Incidents, 10)

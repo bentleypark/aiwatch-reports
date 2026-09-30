@@ -168,15 +168,12 @@ function generateTldr(a, incidents, momByService = {}) {
 
   // Best balance
   if (a.balanceSvc) {
-    const incRow = incidents.find(r => r.Service === a.balanceSvc.Service)
-    const downtime = incRow ? incRow['Total Downtime'] : '—'
-    lines.push(`- **Best balance (stability + ecosystem)**: ${a.balanceSvc.Service} (${a.balanceSvc.Score}, only ${downtime} downtime)`)
+    lines.push(`- **Best balance (stability + ecosystem)**: ${a.balanceSvc.Service} (${a.balanceSvc.Score})`)
   }
 
   // Riskiest
   if (a.bottom[0]) {
-    const riskRow = incidents.find(r => r.Service === a.bottom[0].Service)
-    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score}${riskRow ? `, ${riskRow['Total Downtime']} total downtime` : ''})`)
+    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score})`)
   }
 
   // Most incidents (MoM-framed when a prior-month count is available — #54 bonus)
