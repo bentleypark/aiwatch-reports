@@ -106,21 +106,6 @@ function analyze(scores, incidents) {
   // "Most reliable" — an ordered pick, so rankable-only.
   const perfectServices = rankable.filter(r => parseInt(r.Score) === 100)
 
-  // Best balance: score > 90, has incidents, lowest downtime
-  const balanceCandidates = rankable
-    .filter(r => {
-      const score = parseInt(r.Score)
-      const incRow = incidents.find(i => i.Service === r.Service)
-      const hasInc = incRow && parseInt(incRow.Incidents) > 0
-      return score > 90 && score < 100 && r.Confidence === 'High' && hasInc
-    })
-    .sort((a, b) => {
-      const aDown = toMinutes(incidents.find(i => i.Service === a.Service)?.['Total Downtime'] ?? '—')
-      const bDown = toMinutes(incidents.find(i => i.Service === b.Service)?.['Total Downtime'] ?? '—')
-      return aDown - bDown
-    })
-  const balanceSvc = balanceCandidates[0] ?? rankable.find(r => parseInt(r.Score) >= 80 && parseInt(r.Score) < 100 && r.Confidence === 'High')
-
   return {
     ranked, rankable, unranked, top, bottom,
     excellent, good, fair, degrading,
@@ -129,7 +114,6 @@ function analyze(scores, incidents) {
     fastestRecovery: byRecovery[0] ?? null,
     slowestRecovery: byRecovery[byRecovery.length - 1] ?? null,
     perfectServices,
-    balanceSvc: balanceSvc ?? null,
     isVolatile: totalDowntimeMins > 60 || degrading.length >= 2,
     isStable: totalDowntimeMins < 30 && degrading.length === 0,
     totalServices: incidents.length,
@@ -166,17 +150,9 @@ function generateTldr(a, incidents, momByService = {}) {
     lines.push(`- **Most reliable**: ${a.top[0]?.Service} (${a.top[0]?.Score})`)
   }
 
-  // Best balance
-  if (a.balanceSvc) {
-    const incRow = incidents.find(r => r.Service === a.balanceSvc.Service)
-    const downtime = incRow ? incRow['Total Downtime'] : '—'
-    lines.push(`- **Best balance (stability + ecosystem)**: ${a.balanceSvc.Service} (${a.balanceSvc.Score}, only ${downtime} downtime)`)
-  }
-
   // Riskiest
   if (a.bottom[0]) {
-    const riskRow = incidents.find(r => r.Service === a.bottom[0].Service)
-    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score}${riskRow ? `, ${riskRow['Total Downtime']} total downtime` : ''})`)
+    lines.push(`- **Riskiest this month**: ${a.bottom[0].Service} (${a.bottom[0].Score})`)
   }
 
   // Most incidents (MoM-framed when a prior-month count is available — #54 bonus)

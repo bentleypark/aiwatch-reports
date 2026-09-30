@@ -183,20 +183,17 @@ test('counts grade distribution', () => {
 // it is the candidate every Score-ordered pick would otherwise choose. One test per consumer: each
 // of these reverting to `ranked` is a separate one-word mutation, and before this test only `bottom`
 // would have caught any of them.
-// THREE held-out rows, one per band, because each consumer filters on a different range and a row
-// outside a consumer's band cannot exercise it: 100 for `perfectServices`, 96 for `balanceCandidates`
-// (> 90 && < 100, with the lowest downtime of any candidate so it would win), 88 for `fallback`
-// (>= 80 && < 95) and `balanceSvc`'s `??` arm (>= 80 && < 100).
-const HELD_OUT_NAMES = ['NoUptimeSvc', 'NoUptimeBal', 'NoUptimeMid']
+// TWO held-out rows, one per band, because each consumer filters on a different range and a row
+// outside a consumer's band cannot exercise it: 100 for `perfectServices`, 88 for `fallback`
+// (>= 80 && < 95).
+const HELD_OUT_NAMES = ['NoUptimeSvc', 'NoUptimeMid']
 const HELD_OUT_FIRST = [
   { Rank: '1', Service: 'NoUptimeSvc', Score: '100', Grade: 'Excellent', Confidence: 'High', Rankable: false, Why: '' },
-  { Rank: '2', Service: 'NoUptimeBal', Score: '96', Grade: 'Excellent', Confidence: 'High', Rankable: false, Why: '' },
-  { Rank: '3', Service: 'NoUptimeMid', Score: '88', Grade: 'Excellent', Confidence: 'High', Rankable: false, Why: '' },
+  { Rank: '2', Service: 'NoUptimeMid', Score: '88', Grade: 'Excellent', Confidence: 'High', Rankable: false, Why: '' },
   ...MOCK_SCORES,
 ]
 const HELD_OUT_INCIDENTS = [
   { Service: 'NoUptimeSvc', Incidents: '1', 'Total Downtime': '5m', 'Longest Incident': '5m', 'Avg Resolution': '~5m' },
-  { Service: 'NoUptimeBal', Incidents: '1', 'Total Downtime': '1m', 'Longest Incident': '1m', 'Avg Resolution': '~1m' },
   { Service: 'NoUptimeMid', Incidents: '1', 'Total Downtime': '10m', 'Longest Incident': '10m', 'Avg Resolution': '~10m' },
   ...MOCK_INCIDENTS,
 ]
@@ -206,7 +203,6 @@ test('a Rankable:false service leads no Score-ordered pick', () => {
   eq(a.top[0].Service, 'ServiceA', 'top — feeds "X led the rankings"')
   for (const n of HELD_OUT_NAMES) {
     eq(a.perfectServices.some(r => r.Service === n), false, `perfectServices — feeds "Most reliable" (${n})`)
-    eq(a.balanceSvc?.Service === n, false, `balanceSvc — feeds "Best balance" (${n})`)
     assert.ok(!a.bottom.some(r => r.Service === n), `bottom — feeds "Riskiest" (${n})`)
     assert.ok(!a.top.some(r => r.Service === n), `top (${n})`)
   }
@@ -214,24 +210,16 @@ test('a Rankable:false service leads no Score-ordered pick', () => {
 
 test('…but it is still counted in every census figure', () => {
   const a = analyze(HELD_OUT_FIRST, HELD_OUT_INCIDENTS)
-  eq(a.ranked.length, 7, 'the month had 7 scored services and the census must say so')
-  eq(a.excellent.length, 5, 'a 100 is an Excellent month whether or not it can be ranked')
+  eq(a.ranked.length, 6, 'the month had 6 scored services and the census must say so')
+  eq(a.excellent.length, 4, 'a 100 is an Excellent month whether or not it can be ranked')
   eq(a.rankable.length, 4)
-})
-
-test('balanceSvc\'s fallback arm skips a held-out service too', () => {
-  // `balanceCandidates` is empty when no service scores >90 AND has an incident, so the `??` arm
-  // runs — a separate reversion site from the primary list, and previously unreachable in any test.
-  const noBalanceCandidate = HELD_OUT_FIRST.map(r => (['ServiceA', 'ServiceB'].includes(r.Service) ? { ...r, Score: '84' } : r))
-  const a = analyze(noBalanceCandidate, HELD_OUT_INCIDENTS)
-  eq(a.balanceSvc?.Service, 'ServiceA', `the ?? arm must pick a rankable service, got ${a.balanceSvc?.Service}`)
 })
 
 test('the TL;DR recommends nobody on an incomparable Score', () => {
   const a = analyze(HELD_OUT_FIRST, HELD_OUT_INCIDENTS)
   const lines = generateTldr(a, HELD_OUT_INCIDENTS).split('\n')
-  const scoreOrdered = lines.filter(l => /Most reliable|Best balance|Riskiest|Primary|Fallback/.test(l))
-  eq(scoreOrdered.length, 5, 'all five Score-ordered lines are present to be checked')
+  const scoreOrdered = lines.filter(l => /Most reliable|Riskiest|Primary|Fallback/.test(l))
+  eq(scoreOrdered.length, 4, 'all four Score-ordered lines are present to be checked')
   for (const l of scoreOrdered) for (const n of HELD_OUT_NAMES) assert.ok(!l.includes(n), `${n} in: ${l}`)
 })
 
@@ -271,11 +259,6 @@ test('identifies perfect score services', () => {
   const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
   eq(a.perfectServices.length, 1)
   eq(a.perfectServices[0].Service, 'ServiceA')
-})
-
-test('selects best balance (score > 90, has incidents, lowest downtime)', () => {
-  const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
-  eq(a.balanceSvc.Service, 'ServiceB')
 })
 
 test('detects volatile month', () => {
@@ -331,7 +314,6 @@ test('includes all required sections', () => {
   const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
   const text = generateTldr(a, MOCK_INCIDENTS)
   assert(text.includes('Most reliable'), 'should have most reliable')
-  assert(text.includes('Best balance'), 'should have best balance')
   assert(text.includes('Riskiest'), 'should have riskiest')
   assert(text.includes('Most incidents'), 'should have most incidents')
   assert(text.includes('Recommendations'), 'should have recommendations')
@@ -342,6 +324,15 @@ test('most reliable shows perfect services', () => {
   const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
   const text = generateTldr(a, MOCK_INCIDENTS)
   assert(text.includes('ServiceA (100'), 'should show perfect score service')
+})
+
+test('does not pair a Score with total downtime in an auto-draft bullet (#119)', () => {
+  const a = analyze(MOCK_SCORES, MOCK_INCIDENTS)
+  const lines = generateTldr(a, MOCK_INCIDENTS).split('\n')
+  eq(lines.some(line => line.includes('Best balance')), false)
+  eq(lines.find(line => line.includes('Riskiest this month')), '- **Riskiest this month**: ServiceD (52)')
+  assert.ok(lines.find(line => line.includes('Most incidents')).includes('20h 0m downtime'),
+    'incident-only framing retains its downtime evidence')
 })
 
 test('MoM-frames the Most-incidents bullet when a prior count is provided (aiwatch-reports#54)', () => {
