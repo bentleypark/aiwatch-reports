@@ -5,6 +5,7 @@ const {
   parseFrontmatter,
   isPublished,
   findLeakedFences,
+  findEmptySections,
   lintReport,
   priorReportPath,
 } = require('./lint-recurrence')
@@ -259,6 +260,36 @@ test('an unreadable file → exit 1 (surfaced, not silently skipped)', () => {
   const r = runCli([pathC.join(osC.tmpdir(), 'does-not-exist-2099-01', 'index.md')])
   eq(r.code, 1)
   assert.ok(r.out.includes('::error'), 'read failure is an annotation')
+})
+
+// ── empty sections ───────────────────────────────────────────────────
+const fs = require('fs')
+const path = require('path')
+const tpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf8')
+const statusBlock = tpl.slice(tpl.indexOf('<!-- BEGIN AUTO-DRAFT (Status Page Changes)'), tpl.indexOf('## Incident Summary'))
+
+test('a section left with only its comment and rule is an error once published', () => {
+  const unfilled = statusBlock.split('\n').filter((l) => !/AUTO-DRAFT/.test(l)).join('\n')
+  const md = report({ extra: unfilled + '\n## Incident Summary\n\nrows\n' })
+  const r = lintReport({ md })
+  eq(r.errors.filter((e) => /Status Page Changes/.test(e.message)).length, 1)
+})
+
+test('the same section with a sentence in it passes', () => {
+  const filled = statusBlock.split('\n').filter((l) => !/AUTO-DRAFT/.test(l)).join('\n').replace('---', 'Mistral moved to Rootly.\n\n---')
+  eq(findEmptySections(report({ extra: filled })).length, 0)
+})
+
+test('the template block, fences kept, fails on both fences', () => {
+  const r = lintReport({ md: report({ extra: statusBlock }) })
+  eq(r.errors.filter((e) => /fence/.test(e.message)).length, 2)
+})
+
+test('every published report has no empty section', () => {
+  for (const m of fs.readdirSync(path.join(__dirname, '..')).filter((d) => /^\d{4}-\d{2}$/.test(d))) {
+    const md = fs.readFileSync(path.join(__dirname, '..', m, 'index.md'), 'utf8')
+    if (isPublished(md)) eq(findEmptySections(md).length, 0, `${m} has an empty section`)
+  }
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

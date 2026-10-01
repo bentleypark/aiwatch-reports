@@ -3,7 +3,8 @@ name: Recurrence Lint
 # Pre-publish backstop (aiwatch-reports#55) for narrative recurrence, the second layer
 # behind the generate-time RECURRENCE CHECK block (#54). Runs on any PR that touches a
 # report's index.md and lints ONLY the changed report(s):
-#   • FAIL — a leaked AUTO-DRAFT / RECURRENCE CHECK fence in a `published: true` report.
+#   • FAIL — a leaked AUTO-DRAFT / RECURRENCE CHECK fence, or a `## ` section with no content, in a
+#     `published: true` report.
 #   • WARN — a service named in the same narrative slot as the immediately prior month.
 # A `published: false` draft is exempt (the fences are expected there).
 
