@@ -33,17 +33,17 @@ published: false
 
 > Every score in this report is the **AIWatch Score** (0–100): one number combining uptime, incident load, recovery speed and responsiveness. Higher is better. [How it's built →](#aiwatch-score--september-2026-reliability-rankings)
 
-- **Most reliable**: Windsurf (Devin Desktop) at 100 for a fourth straight month, though September's uptime is read from a new status page ([Status page changes](#status-page-changes)); Junie (96) and Modal (90) are the only other Excellent grades.
+- **Most reliable**: Windsurf (Devin Desktop) at 100 for a fourth straight month, though September's uptime is read from a new status page ([Status source changes](#status-source-changes)); Junie (96) and Modal (90) are the only other Excellent grades.
 - **Riskiest this month**: Luma (Dream Machine), Good 85 → Degrading 50, the lowest in the main ranking — see [Notable Incidents](#notable-incidents).
-- **Status page changes**: Mistral, Replicate, Perplexity and OpenRouter moved their status pages, and Replicate now ranks in the separate No Official Uptime table — see [Status page changes](#status-page-changes).
+- **Status source changes**: Four providers moved their status pages and AIWatch switched Windsurf to the Devin status page; Replicate now ranks in the separate No Official Uptime table — see [Status source changes](#status-source-changes).
 - **Watch out**: Mistral API rose from Degrading 42 to Fair 73, the largest rise of any ranked service, but part of its downtime drop is September's new counting — see [Incident Summary](#incident-summary).
 
 <details>
 <summary><strong>Summary in Korean</strong></summary>
 <ul>
-<li><strong>가장 안정적</strong>: Windsurf (Devin Desktop)가 넉 달 연속 100점입니다. 다만 9월 업타임은 새 상태 페이지에서 읽은 값입니다(<a href="#status-page-changes">Status page changes</a> 참고). 이 밖에 Excellent 등급은 Junie(96점)와 Modal(90점)뿐입니다.</li>
+<li><strong>가장 안정적</strong>: Windsurf (Devin Desktop)가 넉 달 연속 100점입니다. 다만 9월 업타임은 새 상태 페이지에서 읽은 값입니다(<a href="#status-source-changes">Status source changes</a> 참고). 이 밖에 Excellent 등급은 Junie(96점)와 Modal(90점)뿐입니다.</li>
 <li><strong>이번 달 가장 위험</strong>: Luma (Dream Machine)가 Good 85점에서 Degrading 50점으로 떨어져 메인 순위표 최하위입니다(<a href="#notable-incidents">Notable Incidents</a> 참고).</li>
-<li><strong>상태 페이지 변경</strong>: Mistral, Replicate, Perplexity, OpenRouter가 상태 페이지를 옮겼고, Replicate는 이제 별도의 No Official Uptime 표에서 순위가 매겨집니다(<a href="#status-page-changes">Status page changes</a> 참고).</li>
+<li><strong>상태 출처 변경</strong>: 업체 네 곳이 상태 페이지를 옮겼고 AIWatch는 Windsurf의 출처를 Devin 상태 페이지로 바꿨습니다. Replicate는 이제 별도의 No Official Uptime 표에서 순위가 매겨집니다(<a href="#status-source-changes">Status source changes</a> 참고).</li>
 <li><strong>주의 필요</strong>: Mistral API는 Degrading 42점에서 Fair 73점으로 올라 상승 폭이 가장 크지만, 다운타임 감소의 일부는 9월부터 바뀐 집계 방식 때문입니다(<a href="#incident-summary">Incident Summary</a> 참고).</li>
 </ul>
 </details>
@@ -410,9 +410,9 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 ---
 
 
-## Status Page Changes
+## Status Source Changes
 
-Four providers moved their status pages in September: Mistral (Instatus → Rootly), Replicate (incident.io → Cloudflare Status), Perplexity (Instatus → incident.io) and OpenRouter (OnlineOrNot → Datadog Status Page). Separately, after Windsurf became Devin Desktop, AIWatch switched its card from the Windsurf status page to the Desktop Agent and Desktop Tab components on the Devin status page in September; Windsurf's September uptime (100.00%) is read from those components, not the ones behind its June–August figures.
+In September the status page AIWatch reads changed for five services. Four providers moved their pages: Mistral (Instatus → Rootly), Replicate (incident.io → Cloudflare Status), Perplexity (Instatus → incident.io) and OpenRouter (OnlineOrNot → Datadog Status Page). The fifth was AIWatch's own switch: after Windsurf became Devin Desktop, its card moved from the Windsurf status page to the Desktop Agent and Desktop Tab components on the Devin status page; Windsurf's September uptime (100.00%) is read from those components, not the ones behind its June–August figures.
 
 Replicate's new page publishes no uptime figure AIWatch can collect, so its September Score is built from Incidents, Recovery and Responsiveness only and it is ranked in the No Official Uptime table under the [rankings](#aiwatch-score--september-2026-reliability-rankings). Scored the same way, August would read 67, so the like-for-like fall is 67 → 47:
 
