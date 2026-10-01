@@ -266,13 +266,13 @@ test('an unreadable file → exit 1 (surfaced, not silently skipped)', () => {
 const fs = require('fs')
 const path = require('path')
 const tpl = fs.readFileSync(path.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf8')
-const statusBlock = tpl.slice(tpl.indexOf('<!-- BEGIN AUTO-DRAFT (Status Page Changes)'), tpl.indexOf('## Incident Summary'))
+const statusBlock = tpl.slice(tpl.indexOf('<!-- BEGIN AUTO-DRAFT (Status Source Changes)'), tpl.indexOf('## Incident Summary'))
 
 test('a section left with only its comment and rule is an error once published', () => {
   const unfilled = statusBlock.split('\n').filter((l) => !/AUTO-DRAFT/.test(l)).join('\n')
   const md = report({ extra: unfilled + '\n## Incident Summary\n\nrows\n' })
   const r = lintReport({ md })
-  eq(r.errors.filter((e) => /Status Page Changes/.test(e.message)).length, 1)
+  eq(r.errors.filter((e) => /Status Source Changes/.test(e.message)).length, 1)
 })
 
 test('the same section with a sentence in it passes', () => {
