@@ -171,6 +171,14 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      "## AI Prediction Accuracy" section ending in its own `---`, and is omitted entirely when the
      month has no usable aggregate (the case for any month ≤ 2026-06). Do not hand-author. -->
 
+<!-- BEGIN AUTO-DRAFT (Status Page Changes) — hand-filled from write-monthly-report step 1.5. Fill it and delete both fences, or delete this whole block (heading and rule included) when no status page changed this month. -->
+## Status Page Changes
+
+<!-- Name each provider-side move (from → to), checked against the service's own pre-move config, not the issue title, and any switch AIWatch made to the page it reads for a service. For each move that changed a figure in this report — lost official uptime, a different ranking table, a gap in incident coverage — say what changed and link that table. A Score that changed scale gets its component breakdown. -->
+
+---
+<!-- END AUTO-DRAFT (Status Page Changes) -->
+
 ## Incident Summary
 
 > **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7"), and Together AI's status page tracks each model as its own component — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability; adjust for granularity before comparing across providers. A Platform-source service can also carry **reconstructed** entries, counted one per (component, downtime day) instead of one per event. They count toward Inc and Downtime, but carry no recovery time, so they are left out of the Longest and Avg Resolution columns. A month mixing the two is not continuous with earlier months. Entries that overlap in time form one impact window, and Longest is the longest window. Where Avg Resolution reads "… over N", the average is taken over N impact windows, not over every entry. Full rules: [How AIWatch Works → Incident counting](https://ai-watch.dev/methodology#incidents).
