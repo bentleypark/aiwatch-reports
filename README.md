@@ -76,6 +76,8 @@ After generation, fill in the narrative sections (`Summary`, `Recommendations`, 
 
 **Korean copy drift check** (aiwatch-reports#115): `node scripts/lint-korean-drift.js NNNN-NN/index.md`, run from the checkout holding the draft. It prints each KO `<details>` slot beside the same slot from the prior three months, so the author can see how those months phrased it before phrasing it again. Advisory — it asserts nothing and exits 0; a month whose KO bullets are markdown rather than `<li><strong>` (2026-03) is reported as skipped rather than silently compared. Nothing else checks the report's Korean wording: `lint-recurrence.js` reads narrative structure, and aiwatch's `lint:korean` scans a fixed list of surfaces in that repo.
 
+**Repeated-figure check** (aiwatch-reports#122): `node scripts/lint-narrative-repeats.js NNNN-NN/index.md`. It lists every figure that appears in three or more of the four narrative sections (Summary, Key Insight, Notable Incidents, Observations), skipping the Korean mirrors. Advisory — it exits 0. It sees only four figure shapes (a duration, a percentage, `N → M`, `N of M`), so a story retold through a bare Score, a latency or no figure at all is invisible to it, and it cannot tell a deliberate contrast from a duplication.
+
 ---
 
 ## About AIWatch
