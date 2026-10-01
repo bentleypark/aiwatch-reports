@@ -171,13 +171,13 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      "## AI Prediction Accuracy" section ending in its own `---`, and is omitted entirely when the
      month has no usable aggregate (the case for any month ≤ 2026-06). Do not hand-author. -->
 
-<!-- BEGIN AUTO-DRAFT (Status Page Changes) — hand-filled from write-monthly-report step 1.5. Fill it and delete both fences, or delete this whole block (heading and rule included) when no status page changed this month. -->
-## Status Page Changes
+<!-- BEGIN AUTO-DRAFT (Status Source Changes) — hand-filled from write-monthly-report step 1.5. Fill it and delete both fences, or delete this whole block (heading and rule included) when no status source changed this month. -->
+## Status Source Changes
 
 <!-- Name each provider-side move (from → to), checked against the service's own pre-move config, not the issue title, and any switch AIWatch made to the page it reads for a service. For each move that changed a figure in this report — lost official uptime, a different ranking table, a gap in incident coverage — say what changed and link that table. A Score that changed scale gets its component breakdown. -->
 
 ---
-<!-- END AUTO-DRAFT (Status Page Changes) -->
+<!-- END AUTO-DRAFT (Status Source Changes) -->
 
 ## Incident Summary
 
