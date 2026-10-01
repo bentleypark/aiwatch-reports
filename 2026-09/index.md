@@ -29,45 +29,22 @@ published: false
         notice as downtime it inflates the Score drop (a worker-side classification bug, cf. aiwatch#707);
         flag it. A long duration alone does not make an availability incident. -->
 
-<!-- BEGIN RECURRENCE CHECK — review, reframe around the change, then DELETE this entire block before merge -->
-_Narrative repeated vs prior months — lead with the month-over-month change or a fresh lens, then delete this block._
-
-- ⚠️ **Together AI** — led a Key Insight pattern in 2 of the last 3 published months (2026-06, 2026-08) + this month (2026-09). (last month 64 → this month 49) → Reframe around the change or pick a fresh lens.
-
-<!-- END RECURRENCE CHECK -->
-
 ## Summary
-<!-- BEGIN AUTO-DRAFT — review, then DELETE this entire block before merge -->
-_Auto-generated narrative draft — English only; translate for the KO `<details>` block below._
-
-- **Most reliable**: Windsurf (Devin Desktop) (100 — zero incidents, perfect uptime)
-- **Riskiest this month**: Luma (Dream Machine) (50)
-- **Most incidents**: Mistral API (75 incidents, 35h 17m downtime — 63 last month (+12))
-
-**Recommendations**
-- **Primary**: Windsurf (Devin Desktop) or Junie
-- **Fallback**: Modal (1h 11m avg resolution) or Groq Cloud
-
-**Recovery performance**: Fastest — Windsurf (Devin Desktop) (1m avg). Slowest — Gemini API (45h 11m avg).
-
-> _Ranking language above excludes Gemini API, xAI API, Deepgram, Replicate — no official uptime, so their Score is not on the same scale and they are ranked in their own table (aiwatch-reports#106). Services excluded from the ranking entirely are named in the note above the Score table. Name any of them by hand if the month warrants it._
-
-<!-- END AUTO-DRAFT -->
 
 > Every score in this report is the **AIWatch Score** (0–100): one number combining uptime, incident load, recovery speed and responsiveness. Higher is better. [How it's built →](#aiwatch-score--september-2026-reliability-rankings)
 
-- **Most reliable**:
-- **Riskiest this month**:
-- **High incident count, fast recovery**:
-- **Watch out**:
+- **Most reliable**: Windsurf (Devin Desktop) at 100 for a fourth straight month, though September's uptime is read from a new status page ([Status page changes](#status-page-changes)); Junie (96) and Modal (90) are the only other Excellent grades.
+- **Riskiest this month**: Luma (Dream Machine), Good 85 → Degrading 50, the lowest in the main ranking — see [Notable Incidents](#notable-incidents).
+- **Status page changes**: Mistral, Replicate, Perplexity and OpenRouter moved their status pages, and Replicate now ranks in the separate No Official Uptime table — see [Status page changes](#status-page-changes).
+- **Watch out**: Mistral API rose from Degrading 42 to Fair 73, the largest rise of any ranked service, but part of its downtime drop is September's new counting — see [Incident Summary](#incident-summary).
 
 <details>
 <summary><strong>Summary in Korean</strong></summary>
 <ul>
-<li><strong>가장 안정적</strong>: </li>
-<li><strong>이번 달 가장 위험</strong>: </li>
-<li><strong>잦은 장애, 빠른 복구</strong>: </li>
-<li><strong>주의 필요</strong>: </li>
+<li><strong>가장 안정적</strong>: Windsurf (Devin Desktop)가 넉 달 연속 100점입니다. 다만 9월 업타임은 새 상태 페이지에서 읽은 값입니다(<a href="#status-page-changes">Status page changes</a> 참고). 이 밖에 Excellent 등급은 Junie(96점)와 Modal(90점)뿐입니다.</li>
+<li><strong>이번 달 가장 위험</strong>: Luma (Dream Machine)가 Good 85점에서 Degrading 50점으로 떨어져 메인 순위표 최하위입니다(<a href="#notable-incidents">Notable Incidents</a> 참고).</li>
+<li><strong>상태 페이지 변경</strong>: Mistral, Replicate, Perplexity, OpenRouter가 상태 페이지를 옮겼고, Replicate는 이제 별도의 No Official Uptime 표에서 순위가 매겨집니다(<a href="#status-page-changes">Status page changes</a> 참고).</li>
+<li><strong>주의 필요</strong>: Mistral API는 Degrading 42점에서 Fair 73점으로 올라 상승 폭이 가장 크지만, 다운타임 감소의 일부는 9월부터 바뀐 집계 방식 때문입니다(<a href="#incident-summary">Incident Summary</a> 참고).</li>
 </ul>
 </details>
 
@@ -80,11 +57,15 @@ _Auto-generated narrative draft — English only; translate for the KO `<details
 <tr><th>Use Case</th><th>Recommended</th><th>Why</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Production-critical</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Low latency / cost</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Coding Agents</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>Voice / audio</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
-<tr><td><strong>General purpose</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
+<tr><td><strong>Production-critical</strong></td><td>Groq Cloud</td><td>89 on 100.00% uptime with no incidents at all; every point it gives up is on Responsiveness (251 ms p50, CV 0.51). Modal is the alternative at 90, but its uptime is Platform-sourced</td></tr>
+<tr><td><strong>Low latency / cost</strong></td><td>Cohere API</td><td>81, the lowest p50 (227 ms) of any service graded Good or better, with one 4h 23m incident. Gemini API is quicker at 120 ms but publishes no uptime to score against, so it is ranked separately</td></tr>
+<tr><td><strong>General purpose</strong></td><td>Fireworks AI</td><td>82 on 99.97% uptime; 36 incidents, but 21h 4m of downtime in total and the longest 5h 38m</td></tr>
+<tr><td><strong>Coding Agents</strong></td><td>Windsurf (Devin Desktop)</td><td>100 — one 1m incident and 100.00% uptime, the top Score in the report for a fourth straight month. Junie is next at 96</td></tr>
+<tr><td><strong>Inference / infra</strong></td><td>Modal</td><td>90 — eight incidents, 5h 53m in total, longest 2h 8m. fal.ai is the Official-source alternative at 85 with no incidents</td></tr>
+<tr><td><strong>Voice / audio</strong></td><td>AssemblyAI</td><td>78 on 99.96% uptime, three incidents totalling 1h 46m. ElevenLabs fell to 63; Deepgram publishes no official uptime and is ranked separately at 59</td></tr>
+<tr><td><strong>Observability</strong></td><td>Helicone</td><td>85 with no incidents and 99.99% uptime (Platform-sourced), up from 57 in August. LangSmith (74) and Langfuse (73) follow</td></tr>
+<tr><td><strong>Video</strong></td><td>Runway</td><td>79 — one 2h 22m incident and 100.00% uptime. Luma (Dream Machine), last month's pick, fell to 50</td></tr>
+<tr><td><strong>Image</strong></td><td>Stability AI</td><td>76 — one 4h 8m incident and 99.94% uptime. Black Forest Labs (FLUX) holds at 70</td></tr>
 </tbody>
 </table>
 
@@ -92,19 +73,19 @@ _Auto-generated narrative draft — English only; translate for the KO `<details
 
 ## Key Insight
 
-September 2026 showed a clear divide: Windsurf (Devin Desktop), Junie, and Modal remained highly stable, while Luma (Dream Machine) (50) experienced the most challenges. 40 out of 46 services recorded at least one incident, with a combined downtime of 808h 23m.
+September's middle tier slid: in the main ranking table Good fell from 24 services to 18 and Fair rose from 9 to 15. 40 of 46 services recorded at least one incident, for a combined 765h 31m of downtime.
 
-- **Pattern 1**:
-- **Pattern 2**:
-- **Pattern 3**:
+- **Pattern 1 — three of the steepest falls each had a longest event confined to one feature or region.** Gemini API (88 → 56), Hugging Face (87 → 56) and ElevenLabs (83 → 63) each lost 20 points or more. Their longest events were Batch jobs missing the 24-hour deadline at Gemini, slow downloads in the Asia-Pacific region at Hugging Face, and the Claude MCP integration at ElevenLabs. Durations are in [Notable Incidents](#notable-incidents).
+- **Pattern 2 — Together AI went from 40 published incidents in August to none.** All 49 of its September rows are reconstructed from the status page's daily availability record, against 24 of 64 in August, so this is the first month its record rests entirely on reconstruction. Its Score barely moved, 71 → 73.
+- **Pattern 3 — AIWatch's probes caught degradations the status pages weren't showing at the time.** Direct RTT probes flagged 230 RTT degradations this month, 208 of them not reflected on the providers' own status pages at the time of detection. Gemini API logged 64 flagged, 49 of them not on its status page, in a month that page carried a single incident. Deepgram led the count at 94, 93 of them not on its status page. Per-service breakdown in [RTT Degradation Detection](#rtt-degradation-detection).
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p><!-- Opening narrative in Korean --></p>
+<p>9월에는 Good 등급이 줄고 Fair 등급이 늘었습니다. 메인 순위표에서 Good은 24곳에서 18곳으로, Fair는 9곳에서 15곳으로 바뀌었습니다. 46곳 중 40곳에서 장애가 1건 이상 있었고, 다운타임은 모두 합쳐 765시간 31분입니다.</p>
 <ul>
-<li><strong>패턴 1</strong>: </li>
-<li><strong>패턴 2</strong>: </li>
-<li><strong>패턴 3</strong>: </li>
+<li><strong>패턴 1 — 점수가 크게 떨어진 서비스 가운데 세 곳은 가장 긴 장애가 일부 기능이나 지역에만 국한됐습니다.</strong> Gemini API(88 → 56), Hugging Face(87 → 56), ElevenLabs(83 → 63)가 각각 20점 이상 떨어졌습니다. 가장 긴 장애를 보면 Gemini는 배치 작업이 24시간 기한을 넘긴 문제, Hugging Face는 아시아·태평양 지역의 다운로드 속도 저하, ElevenLabs는 Claude MCP 연동 문제였습니다. 지속 시간은 <a href="#notable-incidents">Notable Incidents</a>에 정리했습니다.</li>
+<li><strong>패턴 2 — Together AI가 공식 게시한 장애는 8월 40건에서 9월에는 0건으로 줄었습니다.</strong> 9월에 기록된 49건은 모두 상태 페이지의 일별 가용성 데이터를 바탕으로 재구성한 것입니다(8월에는 64건 중 24건을 재구성). Together AI로서는 공식 게시된 장애가 한 건도 없이 재구성한 기록만으로 채워진 첫 달입니다. 점수는 71점에서 73점으로 거의 변하지 않았습니다.</li>
+<li><strong>패턴 3 — 상태 페이지에 나타나지 않았던 성능 저하를 AIWatch 프로브가 잡아냈습니다.</strong> 이달 AIWatch가 RTT를 직접 측정해 감지한 성능 저하는 230건이며, 그중 208건은 감지 당시 해당 업체의 상태 페이지에 표시되지 않았습니다. Gemini API의 상태 페이지에는 이달 장애가 단 1건만 올라왔지만, 프로브는 성능 저하 64건을 감지했고 그중 49건은 상태 페이지에 없었습니다. 감지 건수는 Deepgram이 94건으로 가장 많았고, 그중 93건이 상태 페이지에 없었습니다. 서비스별 내역은 <a href="#rtt-degradation-detection">RTT Degradation Detection</a> 섹션에서 확인할 수 있습니다.</li>
 </ul>
 </details>
 
@@ -122,11 +103,11 @@ AIWatch Score direction over the last 3 months (2026-07 → 2026-09). The lines 
 
 *The 5 services whose **Score, recovery time (MTTR), or total downtime** changed most over the window (ranked by the largest single change, not a fixed threshold). The metric in **bold** is the change that ranked each service here; 🔺 / 🔻 mark whether that headline metric improved or worsened — so a service can show a small Score gain yet land here, and read 🔻, because its downtime regressed.*
 
-- 🔻 **Hugging Face** — Score 80 → 56 (−24) · **MTTR 39m → 43h 56m (+43h 17m)** · downtime 4h 36m → 165h 3m (+160h 27m)
+- 🔻 **Hugging Face** — Score 80 → 56 (−24) · **MTTR 39m → 71h 54m (+71h 15m)** · downtime 4h 36m → 149h 6m (+144h 30m)
 - 🔺 **Claude API** — Score 61 → 72 (+11) · MTTR 2h 42m → 1h 16m (−1h 26m) · **downtime 121h 51m → 11h 27m (−110h 24m)**
-- 🔺 **Mistral API** — Score 81 → 73 (−8) · MTTR 4h 37m → 38m (−3h 59m) · **downtime 129h 28m → 35h 17m (−94h 11m)**
+- 🔺 **Mistral API** — Score 81 → 73 (−8) · MTTR 4h 37m → 41m (−3h 56m) · **downtime 129h 28m → 24h 49m (−104h 39m)**
 - 🔺 **Claude Code** — Score 60 → 72 (+12) · MTTR 2h 6m → 1h 19m (−47m) · **downtime 98h 39m → 9h 13m (−89h 26m)**
-- 🔺 **ChatGPT** — Score 57 → 66 (+9) · MTTR 6h 5m → 3h 6m (−2h 59m) · **downtime 157h 57m → 77h 35m (−80h 22m)**
+- 🔺 **ChatGPT** — Score 57 → 67 (+10) · MTTR 6h 5m → 3h 2m (−3h 3m) · **downtime 157h 57m → 72h 58m (−84h 59m)**
 
 ---
 
@@ -151,13 +132,13 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 6= | fal.ai | 85 | Good | Official | Zero incidents, 99.89% uptime |
 | 6= | Helicone | 85 | Good | Platform | Zero incidents, 99.99% uptime |
 | 8 | Twelve Labs | 84 | Good | Official | 11 incidents |
-| 9= | Fireworks AI | 82 | Good | Official | 36 incidents, avg 37m |
+| 9= | Fireworks AI | 82 | Good | Official | 36 incidents, avg 40m over 32 |
 | 9= | GitHub Copilot | 82 | Good | Official | 6 incidents, avg 3h 4m |
 | 11 | Cohere API | 81 | Good | Official | 1 incident, 4h 23m |
 | 12= | Cerebras Inference | 79 | Good | Official | 1 incident, 4h 59m |
 | 12= | turbopuffer | 79 | Good | Official | 2 incidents, fast recovery (avg 20m) |
 | 12= | Runway | 79 | Good | Official | 1 incident, 2h 22m |
-| 15= | Perplexity | 78 | Good | Official | 4 incidents, avg 2h 20m over 2 |
+| 15= | Perplexity | 78 | Good | Official | 4 incidents, avg 3h 19m over 1 |
 | 15= | OpenRouter | 78 | Good | Official | 3 incidents, avg 1h 37m |
 | 15= | AssemblyAI | 78 | Good | Official | 3 incidents, avg 53m over 2 |
 | 15= | Voyage AI | 78 | Good | Official | 4 incidents, fast recovery (avg 22m) |
@@ -166,7 +147,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 20= | Stability AI | 76 | Good | Official | 1 incident, 4h 8m |
 | 22= | LangChain (LangSmith) | 74 | Fair | Official | 3 incidents, avg 1h 57m |
 | 22= | Codex | 74 | Fair | Official | 6 incidents, avg 2h 17m |
-| 24= | Mistral API | 73 | Fair | Official | 75 incidents, avg 38m over 55 |
+| 24= | Mistral API | 73 | Fair | Official | 75 incidents, avg 41m over 36 |
 | 24= | Together AI | 73 | Fair | Platform | 49 incidents |
 | 24= | Langfuse | 73 | Fair | Official | 6 incidents, avg 2h 15m |
 | 27= | Claude API | 72 | Fair | Official | 9 incidents, avg 1h 16m |
@@ -174,11 +155,11 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 27= | Claude Code | 72 | Fair | Official | 7 incidents, avg 1h 19m |
 | 30 | Black Forest Labs (FLUX) | 70 | Fair | Official | 2 incidents, avg 13h 23m |
 | 31 | Pinecone | 68 | Fair | Official | 4 incidents, avg 4h 14m |
-| 32 | ChatGPT | 66 | Fair | Official | 26 incidents, avg 3h 6m over 25 |
+| 32 | ChatGPT | 67 | Fair | Official | 26 incidents, avg 3h 2m over 24 |
 | 33 | OpenAI API | 65 | Fair | Official | 8 incidents, avg 2h 51m over 7 |
-| 34 | ElevenLabs | 63 | Fair | Official | 10 incidents, avg 5h 46m |
-| 35 | Cursor | 60 | Fair | Official | 32 incidents, avg 1h 42m over 31 |
-| 36 | Hugging Face | 56 | Fair | Platform | 7 incidents, avg 43h 56m over 2 |
+| 34 | ElevenLabs | 63 | Fair | Official | 10 incidents, avg 5h 49m over 9 |
+| 35 | Cursor | 60 | Fair | Official | 32 incidents, avg 1h 44m over 28 |
+| 36 | Hugging Face | 56 | Fair | Platform | 7 incidents, avg 71h 54m over 1 |
 | 37 | Luma (Dream Machine) | 50 | Degrading | Platform | 13 incidents, avg 8h over 3 |
 
 **No Official Uptime**
@@ -429,39 +410,56 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 ---
 
 
+## Status Page Changes
+
+Four providers moved their status pages in September: Mistral (Instatus → Rootly), Replicate (incident.io → Cloudflare Status), Perplexity (Instatus → incident.io) and OpenRouter (OnlineOrNot → Datadog Status Page). Separately, after Windsurf became Devin Desktop, AIWatch switched its card from the Windsurf status page to the Desktop Agent and Desktop Tab components on the Devin status page in September; Windsurf's September uptime (100.00%) is read from those components, not the ones behind its June–August figures.
+
+Replicate's new page publishes no uptime figure AIWatch can collect, so its September Score is built from Incidents, Recovery and Responsiveness only and it is ranked in the No Official Uptime table under the [rankings](#aiwatch-score--september-2026-reliability-rankings). Scored the same way, August would read 67, so the like-for-like fall is 67 → 47:
+
+| Component | August | September |
+|---|---|---|
+| Uptime (of 40) | 38.8 | — |
+| Incidents (of 25) | 22 | 22 |
+| Recovery (of 15) | 10.4 | 0.3 |
+| Responsiveness (of 20) | 7.6 | 5.8 |
+
+Recovery fell on two long incidents (20h 43m and 15h 41m); Responsiveness on a slower probe (p50 245 → 501 ms). The rest of the gap to August's published 79 is that month's uptime points.
+
+---
+
 ## Incident Summary
 
-> **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7"), and Together AI's status page tracks each model as its own component — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability; adjust for granularity before comparing across providers. A Platform-source service can also carry **reconstructed** entries, counted one per (component, downtime day) instead of one per event. They count toward Inc and Downtime, but carry no recovery time, so they are left out of the Longest and Avg Resolution columns. A month mixing the two is not continuous with earlier months. Where Avg Resolution reads "… over N", the average is taken over N of the service's entries, not all of them. Full rules: [How AIWatch Works → Incident counting](https://ai-watch.dev/methodology#incidents).
+> **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7"), and Together AI's status page tracks each model as its own component — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability; adjust for granularity before comparing across providers. A Platform-source service can also carry **reconstructed** entries, counted one per (component, downtime day) instead of one per event. They count toward Inc and Downtime, but carry no recovery time, so they are left out of the Longest and Avg Resolution columns. A month mixing the two is not continuous with earlier months. Entries that overlap in time form one impact window, and Longest is the longest window. Where Avg Resolution reads "… over N", the average is taken over N impact windows, not over every entry. Full rules: [How AIWatch Works → Incident counting](https://ai-watch.dev/methodology#incidents).
 >
-> <!-- Cycle-specific data notes (excluded incidents, anomalies) go here. -->
+> **September is the first month counted by impact window.** Mistral API's entries, for example, sum to 39h 7m, against 24h 49m counted as windows.
 
 <table>
 <thead>
 <tr><th>Service</th><th>Inc</th><th>Downtime (longest)</th><th class="hide-mobile">Longest</th><th class="hide-mobile">Avg Resolution</th></tr>
 </thead>
 <tbody>
-<tr><td>Mistral API</td><td>75</td><td>35h 17m (7h 49m)</td><td class="hide-mobile">7h 49m</td><td class="hide-mobile">38m over 55</td></tr>
+<tr><td>Mistral API</td><td>75</td><td>24h 49m (7h 49m)</td><td class="hide-mobile">7h 49m</td><td class="hide-mobile">41m over 36</td></tr>
 <tr><td>Together AI</td><td>49</td><td>32h 30m</td><td class="hide-mobile">—</td><td class="hide-mobile">—</td></tr>
-<tr><td>Fireworks AI</td><td>36</td><td>22h 13m (5h 38m)</td><td class="hide-mobile">5h 38m</td><td class="hide-mobile">37m</td></tr>
-<tr><td>Cursor</td><td>32</td><td>52h 33m (6h 30m)</td><td class="hide-mobile">6h 30m</td><td class="hide-mobile">1h 42m over 31</td></tr>
-<tr><td>ChatGPT</td><td>26</td><td>77h 35m (12h 7m)</td><td class="hide-mobile">12h 7m</td><td class="hide-mobile">3h 6m over 25</td></tr>
+<tr><td>Fireworks AI</td><td>36</td><td>21h 4m (5h 38m)</td><td class="hide-mobile">5h 38m</td><td class="hide-mobile">40m over 32</td></tr>
+<tr><td>Cursor</td><td>32</td><td>48h 28m (6h 30m)</td><td class="hide-mobile">6h 30m</td><td class="hide-mobile">1h 44m over 28</td></tr>
+<tr><td>ChatGPT</td><td>26</td><td>72h 58m (12h 7m)</td><td class="hide-mobile">12h 7m</td><td class="hide-mobile">3h 2m over 24</td></tr>
 <tr><td>Kimi (Moonshot AI)</td><td>13</td><td>1h 30m (27m)</td><td class="hide-mobile">27m</td><td class="hide-mobile">7m</td></tr>
 <tr><td>Luma (Dream Machine)</td><td>13</td><td>72h (13h)</td><td class="hide-mobile">13h</td><td class="hide-mobile">8h over 3</td></tr>
 <tr><td>Twelve Labs</td><td>11</td><td>—</td><td class="hide-mobile">—</td><td class="hide-mobile">—</td></tr>
-<tr><td>ElevenLabs</td><td>10</td><td>57h 35m (26h 18m)</td><td class="hide-mobile">26h 18m</td><td class="hide-mobile">5h 46m</td></tr>
+<tr><td>ElevenLabs</td><td>10</td><td>52h 20m (32h 3m)</td><td class="hide-mobile">32h 3m</td><td class="hide-mobile">5h 49m over 9</td></tr>
 <tr><td>Claude API</td><td>9</td><td>11h 27m (2h 58m)</td><td class="hide-mobile">2h 58m</td><td class="hide-mobile">1h 16m</td></tr>
 <tr><td>DeepSeek API</td><td>9</td><td>5h 40m (3h)</td><td class="hide-mobile">3h</td><td class="hide-mobile">38m</td></tr>
 <tr><td>claude.ai</td><td>9</td><td>10h 35m (2h 58m)</td><td class="hide-mobile">2h 58m</td><td class="hide-mobile">1h 11m</td></tr>
 <tr><td>OpenAI API</td><td>8</td><td>19h 55m (7h 27m)</td><td class="hide-mobile">7h 27m</td><td class="hide-mobile">2h 51m over 7</td></tr>
 <tr><td>Modal</td><td>8</td><td>5h 53m (2h 8m)</td><td class="hide-mobile">2h 8m</td><td class="hide-mobile">1h 11m over 2</td></tr>
 <tr><td>DeepSeek App</td><td>8</td><td>5h 6m (3h)</td><td class="hide-mobile">3h</td><td class="hide-mobile">38m</td></tr>
-<tr><td>Hugging Face</td><td>7</td><td>165h 3m (71h 54m)</td><td class="hide-mobile">71h 54m</td><td class="hide-mobile">43h 56m over 2</td></tr>
+<tr><td>Hugging Face</td><td>7</td><td>149h 6m (71h 54m)</td><td class="hide-mobile">71h 54m</td><td class="hide-mobile">71h 54m over 1</td></tr>
 <tr><td>Claude Code</td><td>7</td><td>9h 13m (2h 58m)</td><td class="hide-mobile">2h 58m</td><td class="hide-mobile">1h 19m</td></tr>
 <tr><td>Deepgram</td><td>6</td><td>8h 3m (4h)</td><td class="hide-mobile">4h</td><td class="hide-mobile">1h 37m over 5</td></tr>
 <tr><td>Langfuse</td><td>6</td><td>13h 28m (6h 21m)</td><td class="hide-mobile">6h 21m</td><td class="hide-mobile">2h 15m</td></tr>
 <tr><td>Codex</td><td>6</td><td>13h 42m (5h 22m)</td><td class="hide-mobile">5h 22m</td><td class="hide-mobile">2h 17m</td></tr>
 <tr><td>GitHub Copilot</td><td>6</td><td>18h 24m (10h 28m)</td><td class="hide-mobile">10h 28m</td><td class="hide-mobile">3h 4m</td></tr>
-<tr><td>Perplexity</td><td>4</td><td>4h 40m (2h 20m)</td><td class="hide-mobile">2h 20m</td><td class="hide-mobile">2h 20m over 2</td></tr>
+<tr><td>Perplexity</td><td>4</td><td>3h 19m (3h 19m)</td><td class="hide-mobile">3h 19m</td><td class="hide-mobile">3h 19m over 1</td></tr>
 <tr><td>Replicate</td><td>4</td><td>38h 37m (20h 43m)</td><td class="hide-mobile">20h 43m</td><td class="hide-mobile">9h 39m</td></tr>
 <tr><td>Pinecone</td><td>4</td><td>16h 57m (11h 8m)</td><td class="hide-mobile">11h 8m</td><td class="hide-mobile">4h 14m</td></tr>
 <tr><td>Voyage AI</td><td>4</td><td>1h 26m (29m)</td><td class="hide-mobile">29m</td><td class="hide-mobile">22m</td></tr>
@@ -491,103 +489,49 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 
 ## Notable Incidents
 
-<!-- BEGIN AUTO-DRAFT (Notable Incidents) — review, adapt into the entries below, then DELETE this entire block before merge -->
-_Auto-generated retrospective draft (gemma) — review for accuracy, adapt, then delete this block._
+### 1. Slower downloads in the Asia-Pacific region
+**Affected**: Hugging Face — downloads, Asia-Pacific
+**Duration**: 71h 54m
 
-### 1. Intermittent request failures and increased latency across Azure OpenAI, Azure AI Foundry, and Cognitive Services
-**Affected**: Azure OpenAI, Azure AI Foundry, and Cognitive Services
-**Duration**: ongoing
+The month's longest impact window, filed at minor impact, from 22 to 25 September. Almost all of Hugging Face's other recorded downtime falls in the same three days: reconstructed AWS CDN, Jobs and Spaces Proxy days, and a 15h 57m event in which *"Some GPU Jobs and Spaces failing to start"*. Its uptime is Platform-sourced.
 
-Users experienced widespread request failures and latency spikes across several interconnected services. The issue remains under investigation.
+### 2. Gemini API Batch requests not finishing in 24 hours
+**Affected**: Gemini API — Batch
+**Duration**: 45h 11m
 
-### 2. Slower downloads in the Asia-Pacific region — down
-**Affected**: Hugging Face Asia-Pacific
-**Duration**: 2d 24h
+Gemini's only incident of the month, filed at minor impact. The title describes batch jobs missing their 24-hour completion window, not interactive requests failing. With no official uptime, Gemini is ranked in the separate table.
 
-Download speeds were significantly degraded for users in the Asia-Pacific region. The service was later restored to normal operation.
+### 3. Claude MCP connection not working
+**Affected**: ElevenLabs — Claude MCP integration
+**Duration**: 26h 18m
 
-### 3. Gemini API Batch requests not finishing in 24 hours
-**Affected**: Gemini API
-**Duration**: 1d 21h
+An integration surface rather than speech generation itself. It overlapped an 11h EU-residency fault (*"Conversation history not showing for recent calls"*), and together the two form one 32h 3m impact window, ElevenLabs' longest.
 
-Batch processing requests failed to complete within the expected 24-hour window. The issue was successfully resolved.
+### 4. EU cluster increased latencies
+**Affected**: Black Forest Labs (FLUX) — EU cluster
+**Duration**: 20h 15m
 
-### 4. Claude MCP connection not working
-**Affected**: ElevenLabs
-**Duration**: 1d 2h
+Filed at major impact, yet FLUX's 30-Day Uptime still reads 100.00% — the uptime figure and the incident record do not cover the same scope (see [About This Report](#about-this-report)). On the separate [Component Reliability](#component-reliability) measure, its API EU component reads 91.44%, the weakest component of any service in that table. The US region also logged a 6h 31m latency entry.
 
-Connections via Claude MCP were non-functional for a period of over 24 hours. Service was restored following remediation.
+### 5. Ray2 increased queue times
+**Affected**: Luma (Dream Machine) — Ray2
+**Duration**: 13h
 
-### 5. Elevated errors in ChatGPT Space Pages
-**Affected**: ChatGPT
-**Duration**: ongoing
+The longest of three Ray2 events this month, on 16 September; *"Ray2 Flash service degraded"* ran 9h on 2 September and 2h on 15–16 September. Luma recorded no incidents in August.
 
-Increased error rates were observed specifically within ChatGPT Space Pages. The incident is currently in the monitoring phase.
+### 6. Serverless read errors in us-west-2
+**Affected**: Pinecone — Serverless, AWS us-west-2
+**Duration**: 11h 8m
 
-### 6. Some GPU Jobs and Spaces failing to start — down
-**Affected**: Hugging Face
-**Duration**: 15h 57m
-
-A subset of GPU-based jobs and Spaces failed to initialize. The service recovered after approximately 16 hours.
-
-<!-- END AUTO-DRAFT (Notable Incidents) -->
-
-<!-- Top 5-6 notable incidents — the report's main narrative content. Place this
-     section in the narrative cluster (Incident Summary → Notable Incidents →
-     Observations) that follows the metrics cluster (Score → 30-Day Uptime →
-     API Response Time → Detection & RTT Degradation). Each entry: title with key duration,
-     affected component(s), and a short prose paragraph that explains scope +
-     remediation/mitigation.
-     Each entry must describe the ACTUAL EVENT — pull the real title / root cause from the archive's
-     incidentList (what broke, which component, the provider's own wording), NOT just "downtime was N
-     hours". And verify it is a genuine availability incident (see AUTHORING SELF-CHECK #3): if the
-     longest "incident" is a usage-limits / policy advisory, say so and do not frame it as an outage. -->
-
-### 1. [Title]
-**Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
-**Duration**:
-
-<!-- Description -->
+Filed as *"[Serverless][AWS][us-west-2] 5xx errors on the readpath"* at major impact, the longest of Pinecone's four incidents (three of them major). Pinecone fell from Good 83 to Fair 68.
 
 ---
 
 ## Observations
 
-<!-- BEGIN AUTO-DRAFT (Observations) — review, adapt into the bullets below, then DELETE this entire block before merge -->
-_Auto-generated retrospective draft (gemma) — review, adapt into prescriptive bullets, then delete this block._
-
-- Treat Luma (Dream Machine) as a high-risk service for time-sensitive tasks due to its degrading score and extremely long recovery times.
-- Exercise caution with Hugging Face for production workloads given its high average recovery duration and significant regional outages.
-- Limit reliance on ChatGPT for mission-critical workflows until the frequency of elevated error incidents decreases.
-- Prefer Modal or Twelve Labs for high-reliability requirements as they demonstrate superior stability scores and more consistent performance.
-
-<!-- END AUTO-DRAFT (Observations) -->
-
 **This month's** per-service resilience deltas — what each service's data *newly* argues for. The evergreen, month-to-month-stable patterns (per-model monitoring, Voice-Agent isolation, key rotation, retry-timeout tuning, failover mechanics) live once in **[Resilience Patterns](../resilience/)** — link there, don't re-explain them. Each bullet ties THIS month's failure mode to the relevant pattern and adds only what's new.
 
-<!-- ROLE BOUNDARY — this section vs its neighbours (they blur; keep each to its ONE job):
-     • Recommendations   = the PICKS TABLE — WHO to use per use case. Only place for picks.
-     • Notable Incidents = the EVENT — what happened + why it mattered. DESCRIBE; do not prescribe.
-     • Incident Summary note = how to READ the counts (granularity; count ≠ reliability). Only home for that.
-     • ../resilience/ (Resilience Patterns) = the EVERGREEN, structural how-to-build guidance that holds
-       every month (per-model monitoring, Voice-Agent isolation, Gemini key rotation + dual monitoring,
-       fail over on your own tolerance, not the average recovery, coding-agent auto-failover). Stated ONCE there — do NOT re-lecture
-       it monthly; that cross-month repetition is exactly what this split fixes. New evergreen pattern? Add it
-       to that page, not here — following the MAINTENANCE curation rules at the top of ../resilience/
-       (evergreen + high-value only, one pattern per failure-mode, prune stale bullets on edit).
-     • Observations (here) = THIS MONTH'S DELTA only — the specific failure mode the month surfaced, tied to
-       the relevant Resilience pattern with a link. The only home for the month's actionable advice, so Notable
-       Incidents stays descriptive (don't end an incident with "keep a fallback" — put the delta here + link).
-     THE TEST for a bullet: would it read identically next month? If yes, it's evergreen — move it to
-     ../resilience/ and link. Every bullet must carry a DATE-TIED fact (this month X's worst was a 27h Y; a
-     single 72h Z) and point at the pattern, not restate the architecture. A partial-month / withheld-Score
-     CAVEAT (e.g. Character.AI) is a legitimate month-specific bullet too. -->
-
-
-- **[Service]**: <!-- THIS month's date-tied failure fact (e.g. "its worst incident was a 27h streaming-STT degradation; p75 the highest probed"), DEEP-linked to the relevant Resilience pattern ([Resilience → Deepgram](../resilience/#deepgram)). Do NOT re-explain the evergreen pattern — link it. -->
-- **[Service]**: <!-- 2-4 bullets total; only services whose THIS-MONTH data yields a new lesson. If a service's story is unchanged from a prior report, omit it (the pattern already lives in ../resilience/). -->
-<!-- A partial-month / withheld-Score CAVEAT bullet (e.g. Character.AI: why its Score is absent + how to read
-     its half-month counts) belongs here too — it's month-specific and not an evergreen pattern. -->
+- **If a pipeline of yours depends on Gemini Batch finishing within its 24-hour window, give it a synchronous fallback.** September's Gemini incident ([Notable Incidents](#notable-incidents) #2) is that case; [Resilience → Gemini](../resilience/#gemini) covers designing for long, rare incidents.
 
 ---
 
