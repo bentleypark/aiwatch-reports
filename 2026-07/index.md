@@ -393,6 +393,8 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 > **Reading the count column**: The count is how many incidents a provider published for that service. Granularity differs — Anthropic posts a separate incident per model ("Elevated errors for Claude Opus 4.7", "Degraded performance for Claude Sonnet 4.6"), and Together AI's status page tracks each model as its own resource — so both show higher totals than providers that post one incident per event. Higher count ≠ lower reliability — adjust for granularity before comparing across providers. Full provider-by-provider rules: [About This Report → Incident Counting](#about-this-report).
 >
 > **Kimi (Moonshot AI)** — 35 of its 40 entries are a single provider event re-published once an hour, which is why the row shows 40 incidents against 47m of downtime. Details in [Observations](#observations).
+>
+> **Twelve Labs** — 4 of its 12 entries carry a title AIWatch registers as an automated-monitor title, and entries with a registered title are left out of downtime, recovery and the Score's incident and recovery components, which is why the row's 2h 13m covers the other 8.
 
 <table>
 <thead>
