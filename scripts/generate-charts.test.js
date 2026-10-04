@@ -4,7 +4,7 @@ const {
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
-  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS,
+  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, ID_TO_NAME, nameForMonth, nameToId,
 } = require('./generate-charts')
 const assert = require('assert')
 const { spawnSync } = require('child_process')
@@ -34,6 +34,18 @@ function eq(actual, expected, msg) {
 // ── scoreColorByGrade ────────────────────────────────────
 
 console.log('\nscoreColorByGrade')
+
+test('a month before the SpaceXAI rename keeps the label its published charts carry', () => {
+  eq(nameForMonth('xai', '2026-08'), 'xAI (Grok)')
+  eq(nameForMonth('xai', '2026-09'), 'SpaceXAI API')
+  eq(nameForMonth('xai', '2026-10'), 'SpaceXAI API')
+  eq(nameForMonth('claude', '2026-08'), ID_TO_NAME.claude)
+})
+
+test('both xai labels map back to the xai id, so a pre-rename heatmap row still finds its data', () => {
+  eq(nameToId('xAI (Grok)'), 'xai')
+  eq(nameToId('SpaceXAI API'), 'xai')
+})
 
 test('Excellent → green', () => {
   eq(scoreColorByGrade('Excellent'), '#22c55e')
@@ -1282,6 +1294,35 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
     assert.ok(trend.includes('Gemini API'), 'and so is the medium tier — it has its own past to plot')
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('the CLI heatmap labels xai by the name its month was published with', () => {
+  // aiwatch#1586 — re-running charts for an already-published month must not write the post-rename
+  // name into it. Runs the real CLI with fetch and the clock stubbed so it stays offline and stable.
+  for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI (Grok)'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXAI API']]) {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'charts-heatmap-'))
+    try {
+      fs.mkdirSync(path.join(tmp, month))
+      fs.mkdirSync(path.join(tmp, '_data'))
+      fs.writeFileSync(path.join(tmp, month, 'index.md'), TWO_TIER_REPORT)
+      fs.writeFileSync(path.join(tmp, '_data', `${month}.json`), JSON.stringify({
+        month, daysInMonth: 31, daysCollected: 31, services: { xai: { score: 70, grade: 'fair' } },
+      }))
+      fs.writeFileSync(path.join(tmp, 'stub.js'), `
+        const fixed = Date.parse(${JSON.stringify(now)})
+        const RealDate = Date
+        global.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : [fixed])) } static now() { return fixed } }
+        const history = {}
+        for (let d = 1; d <= 31; d++) history['${month}-' + String(d).padStart(2, '0')] = { xai: { ok: 100, total: 100 } }
+        global.fetch = async () => ({ ok: true, json: async () => ({ history }) })
+      `)
+      const r = spawnSync(process.execPath, ['-r', path.join(tmp, 'stub.js'), SCRIPT, `${month}/index.md`], { encoding: 'utf8', cwd: tmp })
+      const heatmap = fs.readFileSync(path.join(tmp, 'assets', month, 'uptime-heatmap.svg'), 'utf-8')
+      assert.ok(heatmap.includes(`>${label}<`), `${month}: expected "${label}"\n${r.stdout}${r.stderr}`)
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true })
+    }
   }
 })
 

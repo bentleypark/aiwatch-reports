@@ -6,7 +6,8 @@
 // leaking a draft fence. This lint enforces at the point of no return (the publish PR):
 //
 //   • FAIL  — any AUTO-DRAFT / RECURRENCE CHECK fence survived into a `published: true`
-//             report (unambiguous defect: draft scaffolding must never publish).
+//             report (unambiguous defect: draft scaffolding must never publish), or a `## `
+//             section was left with no content.
 //   • WARN  — a service named in the same slot as the immediately prior month (a genuine
 //             recurring pattern is sometimes legitimately the story, so it warns rather
 //             than fails — but it can never pass SILENTLY).
@@ -80,6 +81,23 @@ function findLeakedFences(md) {
   return out
 }
 
+// PURE. Every `## ` section whose body holds nothing but comments, rules and whitespace — a
+// scaffolded section whose fences were removed without filling it. 1-based heading line.
+function findEmptySections(md) {
+  const text = String(md)
+  const out = []
+  const re = /^## +(.+)$/gm
+  const heads = [...text.matchAll(re)]
+  heads.forEach((h, k) => {
+    const end = k + 1 < heads.length ? heads[k + 1].index : text.length
+    const body = text.slice(h.index + h[0].length, end)
+      .replace(COMMENT_RE, '')
+      .replace(/^\s*---\s*$/gm, '')
+    if (!body.trim()) out.push({ line: text.slice(0, h.index).split('\n').length, heading: h[1].trim() })
+  })
+  return out
+}
+
 // PURE. Decide the lint result for one report against its prior month. Reuses #54's
 // extraction verbatim. A `published: false` draft is exempt (fences are expected there).
 //   { md, priorMd?, month?, priorMonth? } → { published, errors:[{line,message}], warnings:[{message}] }
@@ -91,6 +109,9 @@ function lintReport({ md, priorMd = null, month = '', priorMonth = '' }) {
 
   for (const f of findLeakedFences(md)) {
     errors.push({ line: f.line, message: `Draft scaffolding leaked into a published report — remove this fence before publishing: ${f.snippet}` })
+  }
+  for (const e of findEmptySections(md)) {
+    errors.push({ line: e.line, message: `"## ${e.heading}" has no content — fill it or delete the section before publishing` })
   }
 
   if (priorMd) {
@@ -140,7 +161,7 @@ function lintFile(reportPath) {
   }
   for (const e of errors) console.log(`::error file=${reportPath},line=${e.line}::${e.message}`)
   for (const w of warnings) console.log(`::warning file=${reportPath}::${w.message}`)
-  const verdict = errors.length ? `FAIL (${errors.length} leaked fence${errors.length === 1 ? '' : 's'})` : warnings.length ? `pass with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}` : 'clean'
+  const verdict = errors.length ? `FAIL (${errors.length} error${errors.length === 1 ? '' : 's'})` : warnings.length ? `pass with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}` : 'clean'
   console.log(`[lint-recurrence] ${reportPath}: ${verdict}.`)
   return errors.length ? 1 : 0
 }
@@ -160,6 +181,7 @@ module.exports = {
   parseFrontmatter,
   isPublished,
   findLeakedFences,
+  findEmptySections,
   lintReport,
   priorReportPath,
   KNOWN_FENCE_MARKERS,
