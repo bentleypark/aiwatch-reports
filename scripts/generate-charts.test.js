@@ -4,7 +4,7 @@ const {
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
-  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS,
+  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, ID_TO_NAME,
 } = require('./generate-charts')
 const assert = require('assert')
 const { spawnSync } = require('child_process')
@@ -34,6 +34,10 @@ function eq(actual, expected, msg) {
 // ── scoreColorByGrade ────────────────────────────────────
 
 console.log('\nscoreColorByGrade')
+
+test('uses the current SpaceXAI API display name for the xai archive id', () => {
+  eq(ID_TO_NAME.xai, 'SpaceXAI API')
+})
 
 test('Excellent → green', () => {
   eq(scoreColorByGrade('Excellent'), '#22c55e')

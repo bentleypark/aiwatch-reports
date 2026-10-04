@@ -49,7 +49,7 @@ const ID_TO_NAME = {
   mistral: 'Mistral API', cohere: 'Cohere API', groq: 'Groq Cloud',
   together: 'Together AI', fireworks: 'Fireworks AI', cerebras: 'Cerebras Inference',
   perplexity: 'Perplexity', huggingface: 'Hugging Face',
-  replicate: 'Replicate', fal: 'fal.ai', elevenlabs: 'ElevenLabs', xai: 'xAI (Grok)',
+  replicate: 'Replicate', fal: 'fal.ai', elevenlabs: 'ElevenLabs', xai: 'SpaceXAI API',
   deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
   azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', turbopuffer: 'turbopuffer', stability: 'Stability AI', bfl: 'Black Forest Labs (FLUX)',
   voyageai: 'Voyage AI', modal: 'Modal', twelvelabs: 'Twelve Labs', langsmith: 'LangChain (LangSmith)', helicone: 'Helicone', langfuse: 'Langfuse', runway: 'Runway', luma: 'Luma (Dream Machine)',

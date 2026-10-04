@@ -438,10 +438,10 @@ test('ties inside the second tier get "=" labels and skip ranks, like any other 
     { id: 'xai', data: { score: 74, grade: 'fair', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 1, avgResolutionMin: 10 } },
     { id: 'deepgram', data: { score: 48, grade: 'degrading', officialUptime: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium', incidents: 2, avgResolutionMin: 30 } },
   ]
-  const meta = { gemini: { name: 'Gemini API' }, xai: { name: 'xAI API' }, deepgram: { name: 'Deepgram' } }
+  const meta = { gemini: { name: 'Gemini API' }, xai: { name: 'SpaceXAI API' }, deepgram: { name: 'Deepgram' } }
   const { medium } = scoreTableParts(buildScoreTable([...TIER_SERVICES.slice(0, 2), ...tied], { ...TIER_META, ...meta }, '2026-07'))
   assert.match(medium, /\| 1= \| Gemini API \| 74 \|/)
-  assert.match(medium, /\| 1= \| xAI API \| 74 \|/)
+  assert.match(medium, /\| 1= \| SpaceXAI API \| 74 \|/)
   assert.match(medium, /\| 3 \| Deepgram \| 48 \|/, 'the tie skips rank 2, same competition rule as the main table')
 })
 
@@ -3599,7 +3599,7 @@ test('a consistent high-confidence row is untouched', () => {
 // The caption under the Official Uptime table used to hardcode the NO_PUBLIC_UPTIME names in prose —
 // a third copy of the taxonomy. It said "Mistral … excluded from this table" while Mistral sat IN it.
 console.log('\nbuildUptimeExclusionNote is rendered from the same gate as the table (aiwatch#951)')
-const NOTE_META = { bedrock: { name: 'Amazon Bedrock' }, xai: { name: 'xAI' }, openrouter: { name: 'OpenRouter' }, groq: { name: 'Groq Cloud' }, mistral: { name: 'Mistral API' } }
+const NOTE_META = { bedrock: { name: 'Amazon Bedrock' }, xai: { name: 'SpaceXAI' }, openrouter: { name: 'OpenRouter' }, groq: { name: 'Groq Cloud' }, mistral: { name: 'Mistral API' } }
 test('names exactly the services the table omits, alphabetically', () => {
   const svcs = [
     { id: 'groq', data: { officialUptime: 100 } },
@@ -3632,10 +3632,10 @@ test('never contradicts buildUptimeTable — a service is never in both', () => 
     assert.ok(inTable || inNote, `${name}: this fixture has no withheld rows, so it must appear somewhere`)
   }
 })
-test('keeps the xAI explainer only when xAI is actually excluded', () => {
+test('keeps the SpaceXAI explainer only when SpaceXAI is actually excluded', () => {
   const withXai = buildUptimeExclusionNote([{ id: 'xai', data: { officialUptime: null } }], NOTE_META)
   assert.ok(withXai.includes('status.x.ai'), withXai)
-  assert.ok(/xAI does not publish .* on its status page — it's excluded/.test(withXai), `singular grammar: ${withXai}`)
+  assert.ok(/SpaceXAI does not publish .* on its status page — it's excluded/.test(withXai), `singular grammar: ${withXai}`)
   const withoutXai = buildUptimeExclusionNote([{ id: 'openrouter', data: { officialUptime: null } }], NOTE_META)
   assert.ok(!withoutXai.includes('status.x.ai'), withoutXai)
 })
@@ -3760,7 +3760,7 @@ const RETIRED_CLAIMS = [
   [/single-component figures/i,           'parseIncidentIoUptime is worst-of a component LIST; BetterStack averages resources'],
   [/scored — and ranked — on what can actually be measured/i, 'a low-confidence service is withheld, not ranked'],
   [/Score reflect/i,                      'removed overclaim'],
-  [/still has a probe \(Gemini, xAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
+  [/still has a probe \(Gemini, SpaceXAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
   [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
   [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],
