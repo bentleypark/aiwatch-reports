@@ -3636,6 +3636,8 @@ test('keeps the SpaceXAI explainer only when SpaceXAI is actually excluded', () 
   const withXai = buildUptimeExclusionNote([{ id: 'xai', data: { officialUptime: null } }], NOTE_META)
   assert.ok(withXai.includes('status.x.ai'), withXai)
   assert.ok(/SpaceXAI does not publish .* on its status page — it's excluded/.test(withXai), `singular grammar: ${withXai}`)
+  const staleWorker = buildUptimeExclusionNote([{ id: 'xai', data: { officialUptime: null } }], { xai: { name: 'xAI API' } })
+  assert.ok(staleWorker.includes("xAI API does not publish") && staleWorker.includes("(xAI API's [status page]"), `one name per note: ${staleWorker}`)
   const withoutXai = buildUptimeExclusionNote([{ id: 'openrouter', data: { officialUptime: null } }], NOTE_META)
   assert.ok(!withoutXai.includes('status.x.ai'), withoutXai)
 })
@@ -3760,7 +3762,7 @@ const RETIRED_CLAIMS = [
   [/single-component figures/i,           'parseIncidentIoUptime is worst-of a component LIST; BetterStack averages resources'],
   [/scored — and ranked — on what can actually be measured/i, 'a low-confidence service is withheld, not ranked'],
   [/Score reflect/i,                      'removed overclaim'],
-  [/still has a probe \(Gemini, SpaceXAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
+  [/still has a probe \(Gemini, xAI, OpenRouter\)/, 'the medium-confidence set was 7 services in June 2026, not 3'],
   [/neither uptime nor a probe \(Amazon Bedrock, Azure OpenAI\)/, 'characterai joined that set in June 2026'],
   [/without probe coverage \([^)]*\) are excluded from rankings/, 'no probe alone never unranks a service — Modal ranked #2 in June 2026 without one'],
   [/Partial \(Nd\)/,                     'uptimeSourceLabel emits Official / Platform / No uptime; #45 excludes short-window services instead'],

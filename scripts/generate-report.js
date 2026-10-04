@@ -848,9 +848,9 @@ function buildUptimeExclusionNote(services, meta) {
     ? `does not publish a comparable uptime percentage on its status page — it's excluded`
     : `do not publish a comparable uptime percentage on their status pages — they're excluded`
   let note = `*${list} ${clause} from this table for that reason.`
-  // SpaceXAI is the one worth explaining: its page shows numbers, they just aren't comparable.
+  // xai is the one worth explaining: its page shows numbers, they just aren't comparable.
   if (services.some(s => s.id === 'xai' && publishesNoOfficialUptime(s))) {
-    note += ` (SpaceXAI's [status page](https://status.x.ai) does expose per-endpoint live success rates measured since its monitoring system's last restart, but those numbers are not directly comparable to the figures above.)`
+    note += ` (${serviceName('xai', meta)}'s [status page](https://status.x.ai) does expose per-endpoint live success rates measured since its monitoring system's last restart, but those numbers are not directly comparable to the figures above.)`
   }
   return `${note}*`
 }

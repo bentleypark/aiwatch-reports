@@ -73,9 +73,21 @@ const CATEGORY_ORDER = [
   'claudecode', 'codex', 'cursor', 'copilot', 'windsurf', 'junie',
 ]
 
+const NAME_BEFORE = {
+  xai: { until: '2026-09', name: 'xAI (Grok)' },
+}
+
+function nameForMonth(id, monthKey) {
+  const prior = NAME_BEFORE[id]
+  return prior && monthKey < prior.until ? prior.name : ID_TO_NAME[id]
+}
+
 function nameToId(name) {
   for (const [id, n] of Object.entries(ID_TO_NAME)) {
     if (n === name) return id
+  }
+  for (const [id, prior] of Object.entries(NAME_BEFORE)) {
+    if (prior.name === name) return id
   }
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
@@ -998,7 +1010,7 @@ module.exports = {
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
-  generateTrendSvg, spreadLabelYs, nameToId, ID_TO_NAME, TREND_MONTHS,
+  generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, ID_TO_NAME, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
   SCORE_WITHHELD, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
   medianOf,
@@ -1084,9 +1096,9 @@ if (require.main === module) {
     // score services). notableMoversForChart reshapes the table rows → the chart's {declining,
     // improving} shape, split by SCORE delta since generateTrendSvg is a Score-axis plot.
     const exclude = buildMoverExclude(monthArchive && monthArchive.services ? monthArchive.services : null, monthKey)
-    const notable = computeNotableMovers(trend, { nameFor: id => ID_TO_NAME[id] || id, exclude })
+    const notable = computeNotableMovers(trend, { nameFor: id => nameForMonth(id, monthKey) || id, exclude })
     const movers = notableMoversForChart(notable)
-    const trendSvg = generateTrendSvg(trend, { nameFor: id => ID_TO_NAME[id] || id, movers })
+    const trendSvg = generateTrendSvg(trend, { nameFor: id => nameForMonth(id, monthKey) || id, movers })
     const trendPath = path.join(outDir, 'trend-chart.svg')
     fs.writeFileSync(trendPath, trendSvg + '\n', 'utf-8')
     console.log(`✓ ${trendPath} (${trendEntries.length} months: ${trend.months.join(', ')})`)
@@ -1166,7 +1178,7 @@ if (require.main === module) {
         CATEGORY_ORDER,
         monthArchive && monthArchive.services ? Object.keys(monthArchive.services) : null,
       )
-      const serviceNames = rosterIds.map(id => ID_TO_NAME[id]).filter(Boolean)
+      const serviceNames = rosterIds.map(id => nameForMonth(id, monthKey)).filter(Boolean)
 
       const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, firstDataDay, lastDataDay)
       const heatmapPath = path.join(outDir, 'uptime-heatmap.svg')
