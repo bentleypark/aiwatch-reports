@@ -15,7 +15,7 @@
 //     columns; until then those cells render "—". The script is intentionally forward-compatible:
 //     no bump required here once the Worker schema extends.
 //
-// Archive is written by the Worker cron at `0 0 1 * *` UTC (1st of following month).
+// Archive is written by the Worker cron at 12:00 UTC on the 1st of the following month (retry 13:00 UTC).
 // The script exits 3 if the archive is not yet ready; fallback to live data is NOT allowed
 // because mixing current + historical values would silently corrupt the published report.
 //
@@ -115,7 +115,7 @@ async function fetchArchive(month) {
   const { status, body } = await fetchJson(url)
   if (status === 404) {
     console.error(`[generate-report] Archive not ready for ${month}.`)
-    console.error('Monthly archive cron runs on the 1st of the following month at 00:00 UTC.')
+    console.error('Monthly archive cron runs on the 1st of the following month at 12:00 UTC (retry 13:00 UTC).')
     console.error('Re-run after that time. No live-data fallback is provided by design — mixing')
     console.error('current + historical data would silently corrupt the report.')
     process.exit(3)

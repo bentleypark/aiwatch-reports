@@ -53,7 +53,7 @@ Monthly archive data is stored in two locations:
 
 ## Generating a Report Draft
 
-New monthly reports are generated from the permanent archive — no live-data fallback, by design. The cron fires on the 1st of the following month at 00:00 UTC; after that the draft can be produced either locally or via GitHub Actions.
+New monthly reports are generated from the permanent archive — no live-data fallback, by design. The cron fires on the 1st of the following month at 12:00 UTC (retry 13:00 UTC); after that the draft can be produced either locally or via GitHub Actions.
 
 **Local:**
 ```bash
