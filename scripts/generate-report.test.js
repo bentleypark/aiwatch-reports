@@ -290,6 +290,10 @@ test('isScoreWithheld reads the same confidence the Score does', () => {
   eq(isScoreWithheld({ id: 'x', data: { score: null, scoreConfidence: 'low', monthlyScoreConfidence: 'low' } }), true)
   eq(isScoreWithheld({ id: 'x', data: { score: 80, scoreConfidence: 'low', monthlyScoreConfidence: 'high' } }), false, 'a scored service is not withheld')
   eq(isScoreWithheld({ id: 'bedrock', data: { score: 90 } }), true, 'the legacy id-set fallback still applies')
+  // #143 — a modern archive is read, not the id-set: aiwatch#1633 probes bedrock, so it can carry a Score.
+  eq(isScoreWithheld({ id: 'bedrock', data: { score: 85, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' } }), false, 'a scored bedrock is ranked')
+  eq(isScoreWithheld({ id: 'bedrock', data: { score: null, scoreConfidence: 'low', monthlyScoreConfidence: 'low' } }), true, 'a low bedrock is still withheld')
+  eq(isScoreWithheld({ id: 'x', data: { score: null, scoreConfidence: 'medium', monthlyScoreConfidence: 'medium' } }), false, 'a null Score above low is not withheld')
 })
 
 test('scoreTier calls a legacy archive (neither field) high, so its report keeps ONE table', () => {
@@ -978,24 +982,18 @@ test('emits only the p75 column — no empty p95/Spikes/vs-Last-Month placeholde
     eq((row.match(/\|/g) || []).length, 4, `row should have 3 columns (4 pipes): ${row}`)
   }
 })
-test('excludes NO_PROBE services', () => {
-  const services = [
-    { id: 'bedrock', data: { score: 90, grade: 'excellent', uptime: null, incidents: 0, avgResolutionMin: null, avgLatencyMs: 999 } },
-  ]
-  const table = buildLatencyTable(services, { bedrock: { name: 'Amazon Bedrock' } })
-  assert.ok(!table.includes('Amazon Bedrock'), 'bedrock should be excluded')
-})
-test('a probed service with a real p75 (e.g. Pinecone) is included; only bedrock/azure are dropped', () => {
-  // Pinecone was previously (wrongly) in NO_PROBE despite the Worker probing it (control-plane RTT)
-  // and archiving a non-null avgLatencyMs — dropping it from the p75 table disagreed with both the
-  // archive and the live dashboard latency ranking. It must now render.
-  const services = [
+test('the p75 table is decided by the archived avgLatencyMs alone (#143)', () => {
+  const meta = { pinecone: { name: 'Pinecone' }, bedrock: { name: 'Amazon Bedrock' }, azureopenai: { name: 'Azure OpenAI' } }
+  const unprobed = buildLatencyTable([
     { id: 'pinecone', data: { avgLatencyMs: 844 } },
-    { id: 'bedrock', data: { avgLatencyMs: 999 } },
-  ]
-  const table = buildLatencyTable(services, { pinecone: { name: 'Pinecone' }, bedrock: { name: 'Amazon Bedrock' } })
-  assert.ok(table.includes('Pinecone'), `pinecone has a probe p75 → must appear: ${table}`)
-  assert.ok(!table.includes('Amazon Bedrock'), 'bedrock (genuinely no probe) still excluded')
+    { id: 'bedrock', data: { avgLatencyMs: null } },
+    { id: 'azureopenai', data: { avgLatencyMs: null } },
+  ], meta)
+  assert.ok(unprobed.includes('Pinecone'), unprobed)
+  assert.ok(!unprobed.includes('Amazon Bedrock') && !unprobed.includes('Azure OpenAI'), unprobed)
+  // From 2026-10 aiwatch#1633 probes bedrock, so its archive carries a p75.
+  const probed = buildLatencyTable([{ id: 'bedrock', data: { avgLatencyMs: 895 } }], meta)
+  assert.ok(probed.includes('Amazon Bedrock'), probed)
 })
 test('uses competition ranking for ties (not sequential)', () => {
   // Two services tied at 230ms must both render with "N=" suffix; third slot skips to 3.
@@ -3672,13 +3670,6 @@ test('anchorForHeading throws rather than emitting a dead link', () => {
   assert.throws(() => anchorForHeading('# nothing here\n', /^## (AIWatch Score .*)$/m), /no heading matched/)
 })
 
-console.log('\nNEVER_PUBLISHES_UPTIME stays in lockstep with SCORE_WITHHELD')
-test('the two sets encode the same providers (incident-feed-only → no uptime to publish)', () => {
-  // They live in different files for different reasons; if a future gcloud-incident-only service is
-  // added to one but not the other, the #29 stray-row / mislabel class of bug comes straight back.
-  const { SCORE_WITHHELD } = require('./generate-charts')
-  assert.deepEqual([...SCORE_WITHHELD].sort(), ['azureopenai', 'bedrock'])
-})
 test('emitUptimeWarnings annotates on stdout in CI, warns on stderr locally', () => {
   // The annotation goes to stdout (matching lint-recurrence.js / @actions/core); the local
   // fallback goes to stderr. Capture both channels separately so a swap can't pass silently.
@@ -3869,8 +3860,6 @@ test('a modern archive (score=null, confidence=low) still explains the exclusion
 })
 
 test('the withheld clause keeps its negation in the PLURAL branch', () => {
-  // SCORE_WITHHELD has two members, so production always renders the plural — the singular guard
-  // never runs on the shipped sentence.
   const note = buildRankingNote([mkSvc('modal', 97, 'high'), mkSvc('bedrock', null, 'low'), mkSvc('azureopenai', null, 'low')], WMETA, '2026-07')
   assert.ok(/are excluded/.test(note), `plural branch not taken: ${note}`)
   assert.ok(!/ publish an official uptime metric/.test(note), `plural negation lost: ${note}`)

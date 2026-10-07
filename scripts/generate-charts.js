@@ -674,11 +674,8 @@ function presentDelta(points, field) {
 // CHART (this file's CLI) must exclude the SAME services, so they live next to
 // computeNotableMovers and generate-report.js imports them from here.
 
-// Services whose Score the WORKER WITHHOLDS: they publish no official uptime and have no latency
-// probe, so only 2 of the Score's 4 components are measurable and `score.ts` emits `null` at
-// `confidence: 'low'` rather than over-state a figure (aiwatch#713). Unrankable, and with no Score
-// there is nothing to trend, so they're dropped from the ranking, the Notable Movers table and the
-// trend chart alike.
+// The legacy fallback of `isScoreWithheld` (aiwatch-reports#143): read only for an archive that
+// records no Score confidence (≤2026-05), which still carries an invented estimate for these.
 //
 // It was called NO_INCIDENT_FEED and justified as "no reliable incident feed (RSS only) — a blank
 // incident count is monitoring coverage, not a verified zero". That is false: `worker/src/services.ts`
@@ -686,6 +683,16 @@ function presentDelta(points, field) {
 // and end timestamps) and azureopenai an Azure RSS feed; both are read and archived, and bedrock's
 // June 2026 archive carries a genuine incident. Their incidents are tracked. Their *uptime* is not.
 const SCORE_WITHHELD = new Set(['bedrock', 'azureopenai'])
+
+// A service whose Score the worker withholds: a null printed Score at the printed confidence `low`
+// (aiwatch#713 — no official uptime and no probe). Printed = monthly when present (aiwatch-reports#106).
+// Unrankable, and with no Score there is nothing to trend, so it is dropped from the ranking, the
+// Notable Movers table and the trend chart alike.
+function isScoreWithheld(s) {
+  const confidence = s.data.monthlyScoreConfidence ?? s.data.scoreConfidence
+  if (confidence == null) return SCORE_WITHHELD.has(s.id)
+  return resolveMonthlyScore(s.data).score === null && confidence === 'low'
+}
 
 // Services whose status feed is FROZEN at the last reachable fetch: the incident count and uptime
 // stop at that cutoff rather than covering the full month. The flag is cause-agnostic (DeepSeek's
@@ -726,7 +733,7 @@ function isRecentlyAdded(s, period) {
 }
 
 // PURE. Build the set of service ids the Notable Movers table / trend chart must exclude
-// (services the Score ranking itself drops: SCORE_WITHHELD + stale source + mid-month-added).
+// (services the Score ranking itself drops: isScoreWithheld + stale source + mid-month-added).
 // Keyed off `month`'s archive services. Fail-open: a null archive → empty set (the
 // computeNotableMovers "score at both ends" guard still filters mid-month / null-score services).
 function buildMoverExclude(archiveServices, month) {
@@ -734,7 +741,7 @@ function buildMoverExclude(archiveServices, month) {
   return new Set(
     Object.entries(archiveServices)
       .map(([id, data]) => ({ id, data }))
-      .filter(s => SCORE_WITHHELD.has(s.id) || isStaleSource(s) || isRecentlyAdded(s, month)) // reports#45 — partial-month delta is not a real mover
+      .filter(s => isScoreWithheld(s) || isStaleSource(s) || isRecentlyAdded(s, month)) // reports#45 — partial-month delta is not a real mover
       .map(s => s.id),
   )
 }
@@ -1012,7 +1019,7 @@ module.exports = {
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
   generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, ID_TO_NAME, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
-  SCORE_WITHHELD, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
+  isScoreWithheld, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
   medianOf,
 }
 
