@@ -144,7 +144,7 @@ Uptime computed by AIWatch — never a copy of the percentage a provider display
 These p75 figures are a network-latency reference: direct API-endpoint round-trip time, probed from the Cloudflare Workers edge every 5 minutes — not inference latency. Lower is better. **This table does not feed the Score** — the Score's Responsiveness component reads the *median* (p50) RTT and its stability instead, shown above under [Responsiveness Inputs](#responsiveness-inputs-score-component). So this table ranks *which service is fastest on the network*, while [AIWatch Score](#[SCORE_ANCHOR]) ranks *which is safest to rely on*. A service AIWatch does not probe has no row here; that alone does not drop it from the Score ranking.
 
 <!-- Data source: curl https://api.ai-watch.dev/api/probe/history?days=30 -->
-<!-- 32 probe targets: 30 API services (incl. twelvelabs) + cursor (coding agent) + characterai (app, detail-card only, aiwatch#921). A service AIWatch does not probe simply has no row here (13 of 41 in June 2026, ten of them ranked); that alone does not affect its Score. -->
+<!-- One row per service with an archived avgLatencyMs (the probe set is on /methodology). A service AIWatch does not probe simply has no row here; that alone does not affect its Score. -->
 <!-- p95 + Spikes are present in probe:daily:{date} (CLAUDE.md KV schema) but not yet
      surfaced by /api/report. vs-Last-Month additionally requires reading the previous
      month's archive:monthly:* and computing deltas. Re-add the columns once the

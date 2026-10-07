@@ -844,6 +844,16 @@ test('excludes SCORE_WITHHELD / stale / recently-added, keeps established; null 
   assert.ok(ex.has('fal'), 'recently-added (addedAt in report month) excluded')
   assert.ok(!ex.has('claude'), 'established service kept')
   assert.strictEqual(ex.size, 3)
+  // #143 — a modern archive decides by its own monthly Score + confidence, not the id-set.
+  const modern = buildMoverExclude({
+    bedrock: { score: null, scoreConfidence: 'medium', monthlyScore: 85, monthlyScoreConfidence: 'medium' },
+    azureopenai: { score: null, scoreConfidence: 'low', monthlyScore: null, monthlyScoreConfidence: 'low' },
+  }, '2026-10')
+  assert.ok(!modern.has('bedrock'), 'a scored bedrock is a mover candidate')
+  assert.ok(modern.has('azureopenai'), 'a withheld service is still excluded')
+  // A raw archive entry's `score` is the build-day snapshot; the monthly value is what the report prints.
+  const snapshotScored = buildMoverExclude({ svc: { score: 70, scoreConfidence: 'medium', monthlyScore: null, monthlyScoreConfidence: 'low' } }, '2026-10')
+  assert.ok(snapshotScored.has('svc'), 'withheld by its monthly Score, not the build-day snapshot')
 })
 
 test('a service added in a PRIOR month is NOT excluded', () => {

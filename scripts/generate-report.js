@@ -31,7 +31,7 @@ const charts = require('./generate-charts')  // trend core (aiwatch-reports#41)
 // Mover-exclusion predicates now live in generate-charts.js (single source of truth) so the
 // Notable Movers TABLE (here) and the trend CHART (charts.js CLI) exclude the SAME services
 // (aiwatch-reports#67). Imported here; re-exported below so existing report.test.js callers work.
-const { SCORE_WITHHELD, isStaleSource, isRecentlyAdded } = charts
+const { isScoreWithheld, isStaleSource, isRecentlyAdded } = charts
 
 const API_BASE = process.env.AIWATCH_API_BASE || 'https://aiwatch-worker.p2c2kbf.workers.dev'
 const TEMPLATE_PATH = path.join(__dirname, '..', '_templates', 'monthly-report.md')
@@ -62,14 +62,8 @@ const NO_PUBLIC_UPTIME = new Set([
 // stray "100.00%" row). Deliberately narrow: it must NOT grow back into the drifted taxonomy above.
 const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 
-// (SCORE_WITHHELD / STALE_SOURCE / isStaleSource / isRecentlyAdded moved to generate-charts.js
-// as the mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
-
-// Services with no direct probe (excluded from the API Response Time ranking); archive.avgLatencyMs
-// is null for these. Pinecone is NOT here: the Worker DOES probe it (control-plane RTT) and the live
-// dashboard ranks it, so dropping it from the report's p75 table alone was a stale inconsistency with
-// its non-null archive.avgLatencyMs and the dashboard's latency ranking.
-const NO_PROBE = new Set(['bedrock', 'azureopenai'])
+// (isScoreWithheld / isStaleSource / isRecentlyAdded live in generate-charts.js as the
+// mover-exclusion single source of truth — aiwatch-reports#67; imported above.)
 
 // TWO scoring changes land on the 2026-06 boundary, so a trend window whose earliest month is before
 // it splices both (#69):
@@ -394,28 +388,13 @@ function uptimeSourceLabel(svc, id = svc?.id) {
   return svc?.data?.uptimeSource === 'platform_avg' ? 'Platform' : 'Official'
 }
 
-// Ranking-exclusion note (#29). SCORE_WITHHELD services publish no official uptime and have no
+// Ranking-exclusion note (#29). Withheld services (isScoreWithheld) publish no official uptime and have no
 // latency probe, so the worker withholds their Score entirely; they're dropped from the ranking and
 // called out above the table. Returns '' when none are excluded (the marker then collapses).
 // Joins display names with " and " for two, commas otherwise.
 function joinNames(svcs, meta) {
   const names = svcs.map(s => serviceName(s.id, meta))
   return names.length === 2 ? names.join(' and ') : names.join(', ')
-}
-
-/**
- * A service whose Score the worker withholds. aiwatch#713 withholds by emitting `score: null` at
- * `scoreConfidence: 'low'` — so a modern archive marks these by DATA, and reading them off the
- * hardcoded id-set alone both goes stale on a new low-confidence service AND (worse) finds nothing
- * once a `score !== null` filter has already dropped them. Legacy archives predate `scoreConfidence`
- * and still carry the invented estimate (bedrock score=90), so the id-set remains the fallback.
- */
-function isScoreWithheld(s) {
-  // aiwatch-reports#106 — the printed score's confidence, for the same reason `scoreTier` uses it:
-  // `s.data.score` is already normalized to the monthly value, so pairing it with the build-day
-  // confidence could leave a null-scored service matching neither this clause nor any other exclusion
-  // — which `buildRankingNote` reports as an unexplained omission.
-  return SCORE_WITHHELD.has(s.id) || (s.data.score === null && printedScoreConfidence(s) === 'low')
 }
 
 /**
@@ -540,7 +519,7 @@ const MEDIUM_TIER_CAPTION = [
 ].join('\n')
 
 function buildScoreTable(services, meta, period) {
-  // Drop SCORE_WITHHELD services (no uptime metric + no reliable incidents), STALE_SOURCE services
+  // Drop withheld services (isScoreWithheld — no uptime metric + no probe), STALE_SOURCE services
   // (#591 — frozen feed inflates the Score from an empty window), and recently-added services
   // (reports#45 — partial-month coverage would rank off insufficient data) from the ranking; all are
   // surfaced in the ranking-exclusion note + the Incident Summary ("No incident feed" / "Stale source").
@@ -1279,10 +1258,9 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   if (entries.length < 2) return ''
 
   const trend = charts.buildTrendSeries(entries)
-  // Exclude the services the Score ranking itself excludes (SCORE_WITHHELD + stale source,
+  // Exclude the services the Score ranking itself excludes (isScoreWithheld + stale source,
   // per buildScoreTable / the #29 note) so a trend mover never contradicts a report that
-  // elsewhere states it does not rank that service. Estimate-only bedrock/azureopenai scores
-  // CAN move month-to-month, so this isn't hypothetical. Keyed off the CURRENT month's archive.
+  // elsewhere states it does not rank that service. Keyed off the CURRENT month's archive.
   const exclude = charts.buildMoverExclude(archive.services, month)
 
   const movers = charts.computeScoreMovers(trend, { nameFor: id => serviceName(id, meta), exclude })
@@ -1372,7 +1350,7 @@ function fmtMoverLine(m) {
 }
 
 function buildLatencyTable(services, meta) {
-  const withLatency = services.filter(s => s.data.avgLatencyMs !== null && !NO_PROBE.has(s.id))
+  const withLatency = services.filter(s => s.data.avgLatencyMs !== null)
   // Competition rank with ascending sort: negate avgLatencyMs so competitionRank's
   // descending comparator yields "faster = higher rank" and ties get "N=" suffix.
   const ranked = competitionRank(withLatency, s => -s.data.avgLatencyMs)
