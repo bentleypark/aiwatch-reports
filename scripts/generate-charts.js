@@ -55,7 +55,7 @@ const ID_TO_NAME = {
   voyageai: 'Voyage AI', modal: 'Modal', twelvelabs: 'Twelve Labs', langsmith: 'LangChain (LangSmith)', helicone: 'Helicone', langfuse: 'Langfuse', runway: 'Runway', luma: 'Luma (Dream Machine)',
   claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI', deepseekapp: 'DeepSeek App',
   claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
-  copilot: 'GitHub Copilot', windsurf: 'Windsurf', junie: 'Junie',
+  copilot: 'GitHub Copilot', windsurf: 'Windsurf (Devin Desktop)', junie: 'Junie',
   assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
 }
 

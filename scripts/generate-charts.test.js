@@ -1300,7 +1300,7 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
     }
     spawnSync(process.execPath, [SCRIPT, '2026-07/index.md'], { encoding: 'utf8', cwd: tmp })
     const trend = fs.readFileSync(path.join(tmp, 'assets', '2026-07', 'trend-chart.svg'), 'utf-8')
-    assert.ok(trend.includes('Windsurf'), 'main tier is trended')
+    assert.ok(trend.includes('Windsurf (Devin Desktop)'), 'main tier is trended with the current display name')
     assert.ok(trend.includes('Gemini API'), 'and so is the medium tier — it has its own past to plot')
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
