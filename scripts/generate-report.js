@@ -130,18 +130,7 @@ async function fetchServiceMeta() {
   return projectServiceMeta(body.services)
 }
 
-// Extracted + exported ONLY so `group` is pinned by a test (aiwatch-reports#98). It is one field in an
-// unremarkable projection, its producer (`group`, aiwatch#1068) lives in a DIFFERENT repo this repo's CI
-// cannot see, and every breakdown unit test hands `meta` in directly — so dropping it here was a
-// one-line silent kill of the whole feature that left the suite green and every report reading
-// "44 — 44 other".
-function projectServiceMeta(services) {
-  const byId = {}
-  for (const s of services) {
-    byId[s.id] = { name: s.name, category: s.category, group: s.group, provider: s.provider }
-  }
-  return byId
-}
+const { projectServiceMeta } = charts
 
 // ── Formatting helpers ───────────────────────────────────────────────
 function fmtPercent(n) {
@@ -2357,7 +2346,7 @@ function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
   for (const r of incidents) {
     const curr = parseInt(r.Incidents, 10)
     if (Number.isNaN(curr)) continue
-    const id = charts.nameToId(r.Service)
+    const id = charts.nameToId(r.Service, meta)
     const p = prev.services[id]?.incidents
     if (typeof p !== 'number') continue
     map[r.Service] = { curr, prev: p }

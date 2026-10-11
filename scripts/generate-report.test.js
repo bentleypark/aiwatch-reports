@@ -2867,7 +2867,6 @@ const {
   RECURRENCE_CLOSE_MARKER,
 } = require('./generate-report')
 const osR = require('os')
-const chartsR = require('./generate-charts')
 const { computeCurrentSubjects } = require('./generate-report')
 
 // A minimal published-report fixture: a Score table (the self-contained lexicon) plus
@@ -3209,7 +3208,7 @@ console.log('\nbuildMomIncidentDeltas + loadPriorNarrative (aiwatch-reports#54)'
 test('buildMomIncidentDeltas pairs this-month vs last-month incident counts', () => {
   const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'mom-'))
   try {
-    const togetherId = chartsR.nameToId('Together AI')
+    const togetherId = 'together'
     // prev month for '2026-06' is '2026-05'
     fsT.writeFileSync(pathT.join(dir, '2026-05.json'), JSON.stringify({
       archive: { services: { [togetherId]: { incidents: 133 } } },
@@ -3219,6 +3218,18 @@ test('buildMomIncidentDeltas pairs this-month vs last-month incident counts', ()
     const map = buildMomIncidentDeltas(archive, meta, '2026-06', { dataDir: dir })
     eq(map['Together AI'].curr, 85)
     eq(map['Together AI'].prev, 133)
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('buildMomIncidentDeltas pairs a service whose display name is not its id (aiwatch-reports#146)', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'mom-kimi-'))
+  try {
+    fsT.writeFileSync(pathT.join(dir, '2026-08.json'), JSON.stringify({ archive: { services: { kimi: { incidents: 44 } } } }))
+    const archive = { services: { kimi: { score: 72, grade: 'fair', incidents: 13, totalDowntimeMin: 60, avgResolutionMin: 7 } } }
+    const map = buildMomIncidentDeltas(archive, { kimi: { name: 'Kimi (Moonshot AI)' } }, '2026-09', { dataDir: dir })
+    eq(map['Kimi (Moonshot AI)'].prev, 44)
   } finally {
     fsT.rmSync(dir, { recursive: true, force: true })
   }
@@ -3237,8 +3248,8 @@ test('buildMomIncidentDeltas returns {} when the prior _data archive is absent (
 test('computeCurrentSubjects derives slots from archive data (top-incident → summary)', () => {
   const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'cur-'))
   try {
-    const mid = chartsR.nameToId('Mistral API')
-    const tid = chartsR.nameToId('Together AI')
+    const mid = 'mistral'
+    const tid = 'together'
     const archive = { services: {
       [mid]: { score: 78, grade: 'good', incidents: 155, totalDowntimeMin: 60, avgResolutionMin: 19 },
       [tid]: { score: 84, grade: 'good', incidents: 133, totalDowntimeMin: 90, avgResolutionMin: 43 },

@@ -1,10 +1,10 @@
 const {
   generateScoreBarSvg, scoreTiersFromReport, trendRowsFromTiers, chartWarn, generateUptimeHeatmapSvg, scoreColorByGrade,
   monthsBefore, buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta,
-  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, rosterForMonth, spreadLabelYs,
+  generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, heatmapRows, spreadLabelYs,
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
-  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, ID_TO_NAME, nameForMonth, nameToId,
+  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, nameForMonth, nameToId, projectServiceMeta,
 } = require('./generate-charts')
 const assert = require('assert')
 const { spawnSync } = require('child_process')
@@ -31,20 +31,42 @@ function eq(actual, expected, msg) {
   assert.strictEqual(actual, expected, msg || `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
 }
 
+// A slice of /api/v1/status, in its order and shape.
+const STATUS_SERVICES = [
+  { id: 'claude', name: 'Claude API', category: 'api', group: 'llm' },
+  { id: 'openai', name: 'OpenAI API', category: 'api', group: 'llm' },
+  { id: 'gemini', name: 'Gemini API', category: 'api', group: 'llm' },
+  { id: 'xai', name: 'SpaceXAI API', category: 'api', group: 'llm' },
+  { id: 'kimi', name: 'Kimi (Moonshot AI)', category: 'api', group: 'llm' },
+  { id: 'fishaudio', name: 'Fish Audio', category: 'api', group: 'voice' },
+  { id: 'voyageai', name: 'Voyage AI', category: 'api', group: 'inference' },
+  { id: 'langsmith', name: 'LangChain (LangSmith)', category: 'api', group: 'observability' },
+  { id: 'runway', name: 'Runway', category: 'api', group: 'video' },
+  { id: 'stability', name: 'Stability AI', category: 'api', group: 'image' },
+  { id: 'claudeai', name: 'claude.ai', category: 'app', group: 'apps' },
+  { id: 'grok', name: 'Grok', category: 'app', group: 'apps' },
+  { id: 'claudecode', name: 'Claude Code', category: 'agent', group: 'agents' },
+  { id: 'windsurf', name: 'Windsurf (Devin Desktop)', category: 'agent', group: 'agents' },
+]
+const META = projectServiceMeta(STATUS_SERVICES)
+const rowsOf = (...ids) => ids.map(id => ({ id, name: META[id].name }))
+
 // ── scoreColorByGrade ────────────────────────────────────
 
 console.log('\nscoreColorByGrade')
 
-test('a month before the SpaceXAI rename keeps the label its published charts carry', () => {
-  eq(nameForMonth('xai', '2026-08'), 'xAI (Grok)')
-  eq(nameForMonth('xai', '2026-09'), 'SpaceXAI API')
-  eq(nameForMonth('xai', '2026-10'), 'SpaceXAI API')
-  eq(nameForMonth('claude', '2026-08'), ID_TO_NAME.claude)
+test('nameForMonth switches a renamed service label at its rename month', () => {
+  eq(nameForMonth('xai', '2026-08', META), 'xAI (Grok)')
+  eq(nameForMonth('xai', '2026-09', META), 'SpaceXAI API')
+  eq(nameForMonth('xai', '2026-10', META), 'SpaceXAI API')
+  eq(nameForMonth('claude', '2026-08', META), 'Claude API')
+  eq(nameForMonth('windsurf', '2026-07', META), 'Windsurf')
+  eq(nameForMonth('windsurf', '2026-08', META), 'Windsurf (Devin Desktop)')
 })
 
-test('both xai labels map back to the xai id, so a pre-rename heatmap row still finds its data', () => {
-  eq(nameToId('xAI (Grok)'), 'xai')
-  eq(nameToId('SpaceXAI API'), 'xai')
+test('both xai labels map back to the xai id', () => {
+  eq(nameToId('xAI (Grok)', META), 'xai')
+  eq(nameToId('SpaceXAI API', META), 'xai')
 })
 
 test('Excellent → green', () => {
@@ -372,13 +394,13 @@ const MOCK_HISTORY = {
 }
 
 test('returns valid SVG string', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API', 'OpenAI API'], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude', 'openai'), MOCK_HISTORY, 31, '2026-03', 20, 22)
   assert.ok(svg.startsWith('<svg'), 'should start with <svg')
   assert.ok(svg.endsWith('</svg>'), 'should end with </svg>')
 })
 
 test('renders only visible days (startDay to endDay)', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 22)
   // Should show days 20, 21, 22 (3 cells per service)
   assert.ok(svg.includes('>20<'), 'should show day 20')
   assert.ok(svg.includes('>22<'), 'should show day 22')
@@ -387,7 +409,7 @@ test('renders only visible days (startDay to endDay)', () => {
 })
 
 test('colors by ok/total ratio', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 21)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 21)
   // Day 20: claude ok=248/total=248 (100%) → green (#3fb950)
   // Day 21: claude ok=12/total=57 (21%) → red (#ef4444)
   assert.ok(svg.includes('#3fb950'), 'should have green for 100% day')
@@ -395,18 +417,18 @@ test('colors by ok/total ratio', () => {
 })
 
 test('shows dynamic month name in subtitle', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 22)
   assert.ok(svg.includes('March'), 'should show March in subtitle')
 })
 
 test('shows full-month subtitle when startDay is 1', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 1, 31)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 1, 31)
   assert.ok(svg.includes('March 1–31'), 'should show full month range')
   assert.ok(svg.includes('AIWatch polling'), 'should mention data source')
 })
 
 test('includes legend items', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 22)
   assert.ok(svg.includes('Operational'), 'should have Operational legend')
   assert.ok(svg.includes('Degraded'), 'should have Degraded legend')
   assert.ok(svg.includes('Down'), 'should have Down legend')
@@ -414,19 +436,57 @@ test('includes legend items', () => {
 
 test('no data cells for missing service IDs', () => {
   // 'unknown' service has no data in MOCK_HISTORY
-  const svg = generateUptimeHeatmapSvg(['Unknown Svc'], MOCK_HISTORY, 31, '2026-03', 20, 20)
+  const svg = generateUptimeHeatmapSvg([{ id: 'unknownsvc', name: 'Unknown Svc' }], MOCK_HISTORY, 31, '2026-03', 20, 20)
   // Should render noData color (#21262d)
   assert.ok(svg.includes('#21262d'), 'should have noData color for unknown service')
 })
 
 test('dark background, no light mode', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 22)
   assert.ok(svg.includes('fill="#0d1117"'), 'should have dark bg')
   assert.ok(!svg.includes('prefers-color-scheme'), 'should not have media query')
 })
 
+// Left edge of a right-aligned label, at a monospace glyph advance of 0.6em.
+const labelLeftEdge = (svg, name) => {
+  const m = svg.match(new RegExp(`<text x="([\\d.]+)"[^>]*font-size="(\\d+)"[^>]*text-anchor="end">${name.replace(/[()]/g, '\\$&')}<`))
+  assert.ok(m, `no label for ${name}`)
+  return Number(m[1]) - name.length * Number(m[2]) * 0.6
+}
+
+test('the longest heatmap label fits inside the chart', () => {
+  const name = 'Black Forest Labs (FLUX)'
+  const svg = generateUptimeHeatmapSvg([{ id: 'bfl', name }, ...rowsOf('claude')], MOCK_HISTORY, 31, '2026-03', 20, 22)
+  assert.ok(labelLeftEdge(svg, name) >= 0, `label starts at ${labelLeftEdge(svg, name)}px`)
+})
+
+test('the longest score-chart label in either tier fits inside the chart', () => {
+  for (const [scores, medium, name] of [
+    [[{ Service: 'Windsurf (Devin Desktop)', Score: '100', Grade: 'Excellent' }], [{ Service: 'Deepgram', Score: '59', Grade: 'Fair' }], 'Windsurf (Devin Desktop)'],
+    [[{ Service: 'Junie', Score: '96', Grade: 'Excellent' }], [{ Service: 'Black Forest Labs (FLUX)', Score: '59', Grade: 'Fair' }], 'Black Forest Labs (FLUX)'],
+  ]) {
+    const svg = generateScoreBarSvg(scores, medium)
+    assert.ok(labelLeftEdge(svg, name) >= 0, `${name} starts at ${labelLeftEdge(svg, name)}px`)
+  }
+})
+
+test('the longest trend-chart end label fits inside the chart', () => {
+  const name = 'Black Forest Labs (FLUX)'
+  const trend = buildTrendSeries([
+    { month: '2026-07', daysInMonth: 31, daysCollected: 31, services: { bfl: { score: 90 } } },
+    { month: '2026-08', daysInMonth: 31, daysCollected: 31, services: { bfl: { score: 80 } } },
+    { month: '2026-09', daysInMonth: 30, daysCollected: 30, services: { bfl: { score: 60 } } },
+  ])
+  const svg = generateTrendSvg(trend, { nameFor: () => name })
+  const width = Number(svg.match(/<svg[^>]* width="(\d+)"/)[1])
+  const m = svg.match(new RegExp(`<text x="([\\d.]+)"[^>]*font-size="(\\d+)"[^>]*>(${name.replace(/[()]/g, '\\$&')}[^<]*)<`))
+  assert.ok(m, 'no end label')
+  const rightEdge = Number(m[1]) + m[3].length * Number(m[2]) * 0.6
+  assert.ok(rightEdge <= width, `label ends at ${rightEdge}px in a ${width}px chart`)
+})
+
 test('heatmap cells use rx=2', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude API'], MOCK_HISTORY, 31, '2026-03', 20, 20)
+  const svg = generateUptimeHeatmapSvg(rowsOf('claude'), MOCK_HISTORY, 31, '2026-03', 20, 20)
   assert.ok(svg.includes('rx="2"'), 'should use rx=2 for cells')
 })
 
@@ -746,44 +806,59 @@ test('toMonthEntry returns null when services are missing', () => {
 })
 
 test('monthEntryFromScoreRows maps a parsed Score table to a current-month entry', () => {
-  const e = monthEntryFromScoreRows('2026-05', [{ Service: 'Claude API', Score: '63', Grade: 'Fair' }])
+  const e = monthEntryFromScoreRows('2026-05', [{ Service: 'Claude API', Score: '63', Grade: 'Fair' }], META)
   eq(e.services.claude.score, 63)
   eq(e.services.claude.grade, 'Fair')
   eq(e.daysCollected, e.daysInMonth) // current month treated as full
 })
 
 test('monthEntryFromScoreRows tolerates N/A scores', () => {
-  const e = monthEntryFromScoreRows('2026-05', [{ Service: 'Voyage AI', Score: 'N/A', Grade: '' }])
+  const e = monthEntryFromScoreRows('2026-05', [{ Service: 'Voyage AI', Score: 'N/A', Grade: '' }], META)
   eq(e.services.voyageai.score, null)
 })
 
-// ── rosterForMonth (heatmap month-roster filter, aiwatch-reports#63) ──
-const CAT = ['claude', 'openai', 'bedrock', 'characterai', 'langfuse', 'turbopuffer', 'twelvelabs']
+// ── heatmapRows (heatmap month roster, aiwatch-reports#63 / #146) ──
 
-test('rosterForMonth drops ids absent from the month archive (added after the month)', () => {
-  // archive = existed-in-month set (excludes July-added turbopuffer/twelvelabs)
-  const out = rosterForMonth(CAT, ['claude', 'openai', 'bedrock', 'characterai', 'langfuse'])
-  assert.deepStrictEqual(out, ['claude', 'openai', 'bedrock', 'characterai', 'langfuse'])
-  assert.ok(!out.includes('turbopuffer') && !out.includes('twelvelabs'))
+test('heatmapRows gives every archived service a row, including ones no hand-kept list named (aiwatch-reports#146)', () => {
+  // kimi, grok and fishaudio were missing from the old hard-coded list, so the 2026-09 heatmap dropped them.
+  const ids = heatmapRows(['claude', 'kimi', 'grok', 'fishaudio', 'claudecode'], META, '2026-09').map(r => r.id)
+  assert.deepStrictEqual([...ids].sort(), ['claude', 'claudecode', 'fishaudio', 'grok', 'kimi'])
 })
 
-test('rosterForMonth KEEPS score-excluded-but-existed services (bedrock/azure/characterai + mid-month)', () => {
-  // bedrock/characterai are score-withheld; langfuse is mid-month-added — all existed, all kept
-  const out = rosterForMonth(CAT, ['claude', 'bedrock', 'characterai', 'langfuse'])
-  assert.ok(out.includes('bedrock') && out.includes('characterai') && out.includes('langfuse'))
+test('heatmapRows leaves out services added after the month (aiwatch-reports#63)', () => {
+  const ids = heatmapRows(['claude', 'openai'], META, '2026-06').map(r => r.id)
+  assert.deepStrictEqual(ids, ['claude', 'openai'])
 })
 
-test('rosterForMonth preserves category order', () => {
-  const out = rosterForMonth(['a', 'b', 'c', 'd'], ['d', 'b', 'a'])
-  assert.deepStrictEqual(out, ['a', 'b', 'd']) // input order, filtered — not roster order
+test('heatmapRows orders rows by the dashboard sections, each in /api/v1/status order', () => {
+  const ids = heatmapRows(['grok', 'stability', 'runway', 'langsmith', 'voyageai', 'fishaudio', 'windsurf', 'kimi', 'claude', 'claudecode', 'claudeai'], META, '2026-09').map(r => r.id)
+  assert.deepStrictEqual(ids, ['claude', 'kimi', 'claudecode', 'windsurf', 'fishaudio', 'voyageai', 'langsmith', 'runway', 'stability', 'claudeai', 'grok'])
 })
 
-test('rosterForMonth fail-opens on null roster (missing/corrupt snapshot)', () => {
-  assert.deepStrictEqual(rosterForMonth(CAT, null), CAT)
+test('heatmapRows puts a service in a section the dashboard does not have after every known section', () => {
+  const meta = { ...META, newsvc: { name: 'New Service', category: 'api', group: 'robotics' } }
+  const ids = heatmapRows(['newsvc', 'grok', 'claude'], meta, '2026-09').map(r => r.id)
+  assert.deepStrictEqual(ids, ['claude', 'grok', 'newsvc'])
 })
 
-test('rosterForMonth fail-opens on empty roster', () => {
-  assert.deepStrictEqual(rosterForMonth(CAT, []), CAT)
+test('heatmapRows labels each row with the name its month was published with', () => {
+  const rows = heatmapRows(['xai', 'windsurf', 'kimi'], META, '2026-07')
+  assert.deepStrictEqual(rows.map(r => r.name), ['xAI (Grok)', 'Kimi (Moonshot AI)', 'Windsurf'])
+})
+
+test('heatmapRows falls back to every live service when the archive roster is missing or empty', () => {
+  for (const roster of [null, []]) {
+    eq(heatmapRows(roster, META, '2026-09').length, STATUS_SERVICES.length)
+  }
+})
+
+test('heatmapRows throws on an archived service /api/v1/status does not list, instead of dropping it', () => {
+  assert.throws(() => heatmapRows(['claude', 'jina'], META, '2026-09'), /jina/)
+})
+
+test('monthEntryFromScoreRows maps a report-table name to its archive id, not a normalised name (aiwatch-reports#146)', () => {
+  const e = monthEntryFromScoreRows('2026-09', [{ Service: 'Kimi (Moonshot AI)', Score: '72', Grade: 'Fair' }], META)
+  assert.deepStrictEqual(Object.keys(e.services), ['kimi'])
 })
 
 // ── spreadLabelYs (trend end-label de-collision, aiwatch-reports#65) ──
@@ -930,7 +1005,7 @@ test('generateTrendSvg emphasizes the Notable Movers, not computeScoreMovers', (
 test('computeNotableMovers surfaces an MTTR-driven mover ONLY when the current entry carries MTTR (#67)', () => {
   const prior = toMonthEntry('2026-05', { services: { gemini: { score: 64, grade: 'Fair', avgResolutionMin: 120, totalDowntimeMin: 240 } } })
   const archiveCurrent = toMonthEntry('2026-06', { services: { gemini: { score: 64, grade: 'Fair', avgResolutionMin: 1320, totalDowntimeMin: 2640 } } })
-  const rowsCurrent = monthEntryFromScoreRows('2026-06', [{ Service: 'Gemini API', Score: '64', Grade: 'Fair' }])
+  const rowsCurrent = monthEntryFromScoreRows('2026-06', [{ Service: 'Gemini API', Score: '64', Grade: 'Fair' }], META)
   // archive-based current entry (the fixed CLI path) → gemini's MTTR spike is visible → mover
   const withArchive = computeNotableMovers(buildTrendSeries([prior, archiveCurrent]))
   assert.ok(withArchive.some(m => m.id === 'gemini'), 'gemini surfaces when current entry carries MTTR')
@@ -1039,7 +1114,7 @@ test('missingMonthDays: future days of an in-progress month are not missing', ()
 // ── subtitle honesty ─────────────────────────────────────────────
 
 test('heatmap subtitle states the span actually rendered, not the whole month', () => {
-  const names = ['Claude']
+  const names = [{ id: 'claude', name: 'Claude' }]
   // Starts on the 1st but ends on the 20th (in-progress month rendered with --allow-partial).
   const svg = generateUptimeHeatmapSvg(names, fullJune, 30, '2026-06', 1, 20)
   assert.ok(svg.includes('June 1–20'), 'must say 1–20')
@@ -1047,7 +1122,7 @@ test('heatmap subtitle states the span actually rendered, not the whole month', 
 })
 
 test('heatmap subtitle covers the full month when data does', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 1, 30)
+  const svg = generateUptimeHeatmapSvg([{ id: 'claude', name: 'Claude' }], fullJune, 30, '2026-06', 1, 30)
   assert.ok(svg.includes('June 1–30'))
 })
 
@@ -1137,7 +1212,7 @@ test('an uncomputable uptime ratio renders gray, never red', () => {
   // Key on the cell's semantic signature (cellSize=16), NOT its x-position: an x-anchored regex
   // silently latches onto a legend swatch when padding or labelWidth changes.
   const cellColor = dayValue => {
-    const svg = generateUptimeHeatmapSvg(['Claude'], { '2026-06-01': dayValue }, 1, '2026-06', 1, 1)
+    const svg = generateUptimeHeatmapSvg([{ id: 'claude', name: 'Claude' }], { '2026-06-01': dayValue }, 1, '2026-06', 1, 1)
     const cells = [...svg.matchAll(/<rect [^>]*width="16"[^>]*fill="(#[0-9a-f]{6})"/g)]
     assert.strictEqual(cells.length, 1, 'exactly one data cell for a 1-service 1-day heatmap')
     return cells[0][1]
@@ -1234,7 +1309,7 @@ test('elapsedMonthDays on the 1st of the month is 1', () => {
 // ── subtitle: the late-START half of the contract ────────────────────────────
 
 test('heatmap subtitle states a LATE start span', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 12, 30)
+  const svg = generateUptimeHeatmapSvg([{ id: 'claude', name: 'Claude' }], fullJune, 30, '2026-06', 12, 30)
   assert.ok(svg.includes('June 12–30'), 'a --allow-partial chart must name its true start')
   assert.ok(!svg.includes('June 1–30'))
 })
@@ -1245,6 +1320,15 @@ test('heatmap subtitle states a LATE start span', () => {
 // gate itself is covered by heatmapGate's unit tests above — the CLI only prints its verdict.
 
 const SCRIPT = path.join(__dirname, 'generate-charts.js')
+// Preloaded with `-r` so the CLI runs offline: /api/v1/status answers STATUS_SERVICES, any other URL `history`.
+const writeFetchStub = (file, history, now) => fs.writeFileSync(file, `
+  ${now ? `const fixed = Date.parse(${JSON.stringify(now)})
+  const RealDate = Date
+  global.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : [fixed])) } static now() { return fixed } }` : ''}
+  const services = ${JSON.stringify(STATUS_SERVICES)}
+  const history = ${JSON.stringify(history)}
+  global.fetch = async url => ({ ok: true, json: async () => (String(url).includes('/api/v1/status') ? { services } : { history }) })
+`)
 const runCli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd: path.dirname(__dirname) })
 
 test('CLI rejects an unknown flag with exit 1', () => {
@@ -1298,7 +1382,8 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
         services: { windsurf: { score: 90, grade: 'excellent' }, gemini: { score: 70, grade: 'fair' } },
       }))
     }
-    spawnSync(process.execPath, [SCRIPT, '2026-07/index.md'], { encoding: 'utf8', cwd: tmp })
+    writeFetchStub(path.join(tmp, 'stub.js'), {})
+    spawnSync(process.execPath, ['-r', path.join(tmp, 'stub.js'), SCRIPT, '2026-07/index.md'], { encoding: 'utf8', cwd: tmp })
     const trend = fs.readFileSync(path.join(tmp, 'assets', '2026-07', 'trend-chart.svg'), 'utf-8')
     assert.ok(trend.includes('Windsurf'), 'main tier is trended')
     assert.ok(trend.includes('Gemini API'), 'and so is the medium tier — it has its own past to plot')
@@ -1307,7 +1392,7 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
   }
 })
 
-test('the CLI heatmap labels xai by the name its month was published with', () => {
+test('the CLI heatmap draws only the month archive\'s services, xai under the name its month was published with', () => {
   // aiwatch#1586 — re-running charts for an already-published month must not write the post-rename
   // name into it. Runs the real CLI with fetch and the clock stubbed so it stays offline and stable.
   for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI (Grok)'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXAI API']]) {
@@ -1319,17 +1404,13 @@ test('the CLI heatmap labels xai by the name its month was published with', () =
       fs.writeFileSync(path.join(tmp, '_data', `${month}.json`), JSON.stringify({
         month, daysInMonth: 31, daysCollected: 31, services: { xai: { score: 70, grade: 'fair' } },
       }))
-      fs.writeFileSync(path.join(tmp, 'stub.js'), `
-        const fixed = Date.parse(${JSON.stringify(now)})
-        const RealDate = Date
-        global.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : [fixed])) } static now() { return fixed } }
-        const history = {}
-        for (let d = 1; d <= 31; d++) history['${month}-' + String(d).padStart(2, '0')] = { xai: { ok: 100, total: 100 } }
-        global.fetch = async () => ({ ok: true, json: async () => ({ history }) })
-      `)
+      const history = {}
+      for (let d = 1; d <= 31; d++) history[`${month}-${String(d).padStart(2, '0')}`] = { xai: { ok: 100, total: 100 } }
+      writeFetchStub(path.join(tmp, 'stub.js'), history, now)
       const r = spawnSync(process.execPath, ['-r', path.join(tmp, 'stub.js'), SCRIPT, `${month}/index.md`], { encoding: 'utf8', cwd: tmp })
       const heatmap = fs.readFileSync(path.join(tmp, 'assets', month, 'uptime-heatmap.svg'), 'utf-8')
       assert.ok(heatmap.includes(`>${label}<`), `${month}: expected "${label}"\n${r.stdout}${r.stderr}`)
+      assert.ok(!heatmap.includes('>Claude API<'), `${month}: a live service absent from the month's archive gets no row`)
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true })
     }
@@ -1347,7 +1428,7 @@ test('CLI accepts the flag in either position', () => {
 })
 
 test('the gray legend names the color by what it means, not one of its causes', () => {
-  const svg = generateUptimeHeatmapSvg(['Claude'], fullJune, 30, '2026-06', 1, 30)
+  const svg = generateUptimeHeatmapSvg([{ id: 'claude', name: 'Claude' }], fullJune, 30, '2026-06', 1, 30)
   assert.ok(svg.includes('No data'), 'gray covers mid-month onboarding AND unmeasured days')
   assert.ok(!svg.includes('Added Later'), 'the old label named only the onboarding case')
 })
