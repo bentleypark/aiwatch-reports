@@ -43,7 +43,7 @@
   <polyline points="40.0,233.0 220.0,179.0 400.0,95.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,107.0 220.0,122.0 400.0,131.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,116.0 220.0,110.0 400.0,113.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
-  <polyline points="40.0,116.0 220.0,95.0 400.0,200.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,116.0 220.0,95.0 400.0,164.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,164.0 220.0,125.0 400.0,116.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,125.0 220.0,122.0 400.0,125.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,98.0 220.0,89.0 400.0,89.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
@@ -53,10 +53,10 @@
   <polyline points="40.0,50.0 220.0,50.0 400.0,50.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,65.0 220.0,62.0 400.0,62.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,113.0 220.0,116.0 400.0,113.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
-  <polyline points="40.0,113.0 220.0,92.0 400.0,98.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
+  <polyline points="40.0,113.0 220.0,92.0 400.0,119.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
   <polyline points="40.0,110.0 220.0,119.0 400.0,134.0" fill="none" stroke="#8b949e" stroke-width="1" opacity="0.18"/>
-  <polyline points="40.0,110.0 220.0,89.0 400.0,182.0" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.95"/>
-  <text x="408.0" y="186.0" fill="#ef4444" font-size="11" font-family="ui-monospace,monospace">Hugging Face −24</text>
+  <polyline points="40.0,110.0 220.0,89.0 400.0,152.0" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.95"/>
+  <text x="408.0" y="183.0" fill="#ef4444" font-size="11" font-family="ui-monospace,monospace">Hugging Face −14</text>
   <polyline points="40.0,107.0 220.0,224.0 400.0,131.0" fill="none" stroke="#ef4444" stroke-width="2.5" opacity="0.95"/>
   <text x="408.0" y="135.0" fill="#ef4444" font-size="11" font-family="ui-monospace,monospace">Mistral API −8</text>
   <polyline points="40.0,167.0 220.0,137.0 400.0,134.0" fill="none" stroke="#3fb950" stroke-width="2.5" opacity="0.95"/>
