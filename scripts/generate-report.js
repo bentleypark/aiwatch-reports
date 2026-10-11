@@ -354,8 +354,8 @@ function confidence(svc) {
 //                publishes on its own status page.
 //   'Platform' — a DIFFERENT computation: the records come from the status-page platform's own
 //                monitors (Better Stack) rather than the provider declaring an incident. Neither the
-//                window nor the weighting matches 'Official' (#1110) — Platform applies no severity
-//                weighting (every measured downtime second counts equally) and each RESOURCE is measured
+//                window nor the weighting matches 'Official' (#1110) — Platform weights each day's downtime
+//                by that day's status (aiwatch#1580), and each RESOURCE is measured
 //                over its own monitored-day count before resources are averaged as equals — so one
 //                service's figure can blend a 7-day monitor with 30-day ones, not a fixed 30-day window
 //                per service. Never describe this as

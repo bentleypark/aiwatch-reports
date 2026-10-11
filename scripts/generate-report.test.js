@@ -172,10 +172,9 @@ test('No uptime when the archive carries no figure to show', () => {
   eq(uptimeSourceLabel({ id: 'openrouter', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
   eq(uptimeSourceLabel({ id: 'gemini', data: { officialUptime: null, uptime: 100 } }), 'No uptime')
 })
-// aiwatch#1006 — Better Stack pages are computed on the SAME 30-day window with the SAME weights, but
-// their records are the platform's own monitoring, not incidents the provider declared. Same number
-// shape, different evidence — so the label stays distinct and now comes from the archived provenance
-// rather than a hand-maintained id list (which is exactly what drifted in aiwatch#951).
+// aiwatch#1006 — Better Stack records are the platform's own monitoring, not incidents the provider
+// declared, so the label stays distinct and now comes from the archived provenance rather than a
+// hand-maintained id list (which is exactly what drifted in aiwatch#951).
 test('aiwatch#1006: Platform when the records come from the status-page platform monitors', () => {
   eq(uptimeSourceLabel({ id: 'together', data: { officialUptime: 99.81, uptimeSource: 'platform_avg' } }), 'Platform')
   eq(uptimeSourceLabel({ id: 'luma', data: { officialUptime: 99.3, uptimeSource: 'platform_avg' } }), 'Platform')
