@@ -44,52 +44,50 @@ function escapeXml(s) {
 }
 
 // ── Service ID ↔ Name mapping ────────────────────────────
-const ID_TO_NAME = {
-  claude: 'Claude API', openai: 'OpenAI API', gemini: 'Gemini API',
-  mistral: 'Mistral API', cohere: 'Cohere API', groq: 'Groq Cloud',
-  together: 'Together AI', fireworks: 'Fireworks AI', cerebras: 'Cerebras Inference',
-  perplexity: 'Perplexity', huggingface: 'Hugging Face',
-  replicate: 'Replicate', fal: 'fal.ai', elevenlabs: 'ElevenLabs', xai: 'SpaceXAI API',
-  deepseek: 'DeepSeek API', openrouter: 'OpenRouter', bedrock: 'Amazon Bedrock',
-  azureopenai: 'Azure OpenAI', pinecone: 'Pinecone', turbopuffer: 'turbopuffer', stability: 'Stability AI', bfl: 'Black Forest Labs (FLUX)',
-  voyageai: 'Voyage AI', modal: 'Modal', twelvelabs: 'Twelve Labs', langsmith: 'LangChain (LangSmith)', helicone: 'Helicone', langfuse: 'Langfuse', runway: 'Runway', luma: 'Luma (Dream Machine)',
-  claudeai: 'claude.ai', chatgpt: 'ChatGPT', characterai: 'Character.AI', deepseekapp: 'DeepSeek App',
-  claudecode: 'Claude Code', codex: 'Codex', cursor: 'Cursor',
-  copilot: 'GitHub Copilot', windsurf: 'Windsurf', junie: 'Junie',
-  assemblyai: 'AssemblyAI', deepgram: 'Deepgram',
+// `meta` is the id → { name, category, group, provider } projection of /api/v1/status, in the
+// order that endpoint lists services (aiwatch-reports#146).
+function projectServiceMeta(services) {
+  const byId = {}
+  for (const s of services) {
+    byId[s.id] = { name: s.name, category: s.category, group: s.group, provider: s.provider }
+  }
+  return byId
 }
-
-// Category-based display order (matches dashboard)
-const CATEGORY_ORDER = [
-  // AI Apps
-  'claudeai', 'chatgpt', 'characterai', 'deepseekapp',
-  // LLM API
-  'claude', 'openai', 'gemini', 'bedrock', 'azureopenai', 'mistral', 'cohere', 'groq',
-  'together', 'fireworks', 'cerebras', 'perplexity', 'xai', 'deepseek', 'openrouter',
-  // Voice & Inference (incl. observability — langsmith/helicone/langfuse — and video; coarse grouping)
-  'elevenlabs', 'assemblyai', 'deepgram', 'huggingface', 'replicate', 'fal', 'pinecone', 'turbopuffer',
-  'stability', 'bfl', 'voyageai', 'modal', 'twelvelabs', 'langsmith', 'helicone', 'langfuse', 'runway', 'luma',
-  // Coding Agents
-  'claudecode', 'codex', 'cursor', 'copilot', 'windsurf', 'junie',
-]
 
 const NAME_BEFORE = {
   xai: { until: '2026-09', name: 'xAI (Grok)' },
+  windsurf: { until: '2026-08', name: 'Windsurf' },
 }
 
-function nameForMonth(id, monthKey) {
+function nameForMonth(id, monthKey, meta) {
   const prior = NAME_BEFORE[id]
-  return prior && monthKey < prior.until ? prior.name : ID_TO_NAME[id]
+  return prior && monthKey < prior.until ? prior.name : meta[id]?.name
 }
 
-function nameToId(name) {
-  for (const [id, n] of Object.entries(ID_TO_NAME)) {
-    if (n === name) return id
+function nameToId(name, meta) {
+  for (const [id, m] of Object.entries(meta)) {
+    if (m.name === name) return id
   }
   for (const [id, prior] of Object.entries(NAME_BEFORE)) {
     if (prior.name === name) return id
   }
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+// The dashboard's section order (aiwatch src/pages/Overview.jsx SECTION_KEYS).
+const GROUP_ORDER = ['llm', 'agents', 'voice', 'inference', 'observability', 'video', 'image', 'apps']
+
+// PURE. Heatmap rows for the report month: every id in that month's archive, grouped in the
+// dashboard's section order, each group in /api/v1/status order. A null/empty archive roster falls
+// back to every live service. An id the live metadata cannot name throws instead of being dropped.
+function heatmapRows(archiveServiceIds, meta, monthKey) {
+  const ids = archiveServiceIds && archiveServiceIds.length ? archiveServiceIds : Object.keys(meta)
+  const unnamed = ids.filter(id => !meta[id])
+  if (unnamed.length) throw new Error(`no /api/v1/status entry for ${unnamed.join(', ')}`)
+  const order = Object.keys(meta)
+  const groupRank = id => (GROUP_ORDER.includes(meta[id].group) ? GROUP_ORDER.indexOf(meta[id].group) : GROUP_ORDER.length)
+  const rank = id => groupRank(id) * order.length + order.indexOf(id)
+  return [...ids].sort((a, b) => rank(a) - rank(b)).map(id => ({ id, name: nameForMonth(id, monthKey, meta) }))
 }
 
 // ── Score tiers, read back out of the report ─────────────
@@ -145,6 +143,12 @@ function scoreTiersFromReport(md, warn = chartWarn) {
   return { scores, mediumScores }
 }
 
+// Room for the longest of `names` in a monospace font plus an 8px gap, never under 130px.
+function labelWidthFor(names, fontSize) {
+  const longest = Math.max(0, ...names.map(n => n.length))
+  return Math.max(130, Math.ceil(longest * fontSize * 0.62) + 8)
+}
+
 // aiwatch-reports#106 — `mediumScores` is the report's SECOND ranking table (services with no
 // official uptime, whose Score omits the uptime component). They are drawn below a labelled divider
 // instead of being sorted into the bars above: merging the two into one descending chart is the same
@@ -161,7 +165,7 @@ function generateScoreBarSvg(scores, mediumScores = []) {
   const ranked = toBars(scores)
   const rankedMedium = toBars(mediumScores)
 
-  const labelWidth = 130
+  const labelWidth = labelWidthFor([...ranked, ...rankedMedium].map(r => r.name), 12)
   const barMaxWidth = 320
   const rowHeight = 28
   const dividerHeight = rankedMedium.length > 0 ? 30 : 0
@@ -213,7 +217,7 @@ ${naText}
 }
 
 // ── Uptime Heatmap (real data) ───────────────────────────
-function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, monthKey, firstDataDay, lastDataDay) {
+function generateUptimeHeatmapSvg(rows, uptimeHistory, daysInMonth, monthKey, firstDataDay, lastDataDay) {
   // Render the span the caller vouched for. The caller asserts month coverage before getting here
   // (aiwatch-reports#77), so a late START means a deliberate --allow-partial run, not an unnoticed
   // short fetch. An early END is still normal: an in-progress month legitimately stops at today.
@@ -222,12 +226,12 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
 
   const cellSize = 16
   const cellGap = 3
-  const labelWidth = 130
+  const labelWidth = labelWidthFor(rows.map(r => r.name), 11)
   const padding = { top: 68, right: 16, bottom: 44, left: 16 }
   const gridWidth = visibleDays * (cellSize + cellGap)
   const minLegendWidth = 480
   const width = Math.max(padding.left + labelWidth + gridWidth + padding.right, minLegendWidth)
-  const height = padding.top + serviceNames.length * (cellSize + cellGap) + padding.bottom + 16
+  const height = padding.top + rows.length * (cellSize + cellGap) + padding.bottom + 16
 
   // Day number headers — only visible days
   const dayHeaders = Array.from({ length: visibleDays }, (_, i) => {
@@ -238,18 +242,9 @@ function generateUptimeHeatmapSvg(serviceNames, uptimeHistory, daysInMonth, mont
     return show ? `  <text x="${x + cellSize / 2}" y="${padding.top - 8}" fill="${COLORS.textMuted}" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle">${dayNum}</text>` : ''
   }).filter(Boolean).join('\n')
 
-  // Sort services by category order (matches dashboard layout)
-  const sortedNames = [...serviceNames].sort((a, b) => {
-    const aIdx = CATEGORY_ORDER.indexOf(nameToId(a))
-    const bIdx = CATEGORY_ORDER.indexOf(nameToId(b))
-    // Unknown services go to the end
-    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx)
-  })
-
-  const serviceRows = sortedNames.map((name, si) => {
+  const serviceRows = rows.map(({ id: svcId, name }, si) => {
     const y = padding.top + si * (cellSize + cellGap)
     const label = `  <text x="${padding.left + labelWidth - 8}" y="${y + 12}" fill="${COLORS.text}" font-size="11" font-weight="600" font-family="ui-monospace,monospace" text-anchor="end">${escapeXml(name)}</text>`
-    const svcId = nameToId(name)
 
     const cells = Array.from({ length: visibleDays }, (_, i) => {
       const dayNum = firstDataDay + i
@@ -498,20 +493,6 @@ function readDataArchive(month, dataDir) {
   }
 }
 
-// PURE. Filter the full category-ordered id list down to the roster that EXISTED in the
-// report month — the ids present in that month's `_data/{month}.json` archive (the #909
-// `existedInMonth` set). Drops services added AFTER the month (which would otherwise
-// render as blank gray heatmap rows, aiwatch-reports#63), while KEEPING
-// score-excluded-but-existed services (bedrock/azureopenai/characterai + the mid-month-
-// added ones) — they still have that month's uptime. Criterion is archive membership,
-// NOT "has a score". Fail-open: a null/empty roster (missing or corrupt snapshot) returns
-// the full list unchanged, so the chart never breaks on a bad snapshot.
-function rosterForMonth(categoryOrder, archiveServiceIds) {
-  if (!archiveServiceIds || archiveServiceIds.length === 0) return categoryOrder
-  const roster = new Set(archiveServiceIds)
-  return categoryOrder.filter(id => roster.has(id))
-}
-
 // Normalize an archive-like object into a trend month-entry. `daysCollected`
 // (when present) drives the partial-month flag; absent → assumed full.
 /**
@@ -575,10 +556,10 @@ function toMonthEntry(month, archiveLike) {
 // Build a CURRENT-month entry from a parsed AIWatch Score table (the report MD rows:
 // { Service, Score, Grade }). daysCollected is unknown here → treated as full; the
 // report-side section uses the real archive so its partial-flag is authoritative.
-function monthEntryFromScoreRows(month, rows) {
+function monthEntryFromScoreRows(month, rows, meta) {
   const services = {}
   for (const r of rows || []) {
-    const id = nameToId(r.Service)
+    const id = nameToId(r.Service, meta)
     const score = parseInt(r.Score, 10)
     services[id] = { score: Number.isNaN(score) ? null : score, grade: r.Grade || null }
   }
@@ -922,7 +903,8 @@ function generateTrendSvg(trend, opts = {}) {
   const { nameFor = id => id, movers = computeScoreMovers(trend, { nameFor }) } = opts
   const { months, partialMonths, series } = trend
 
-  const padding = { top: 50, right: 150, bottom: 40, left: 40 }
+  const endLabels = [...movers.declining, ...movers.improving].map(m => `${m.name} ${fmtScoreDelta(m.delta)}`)
+  const padding = { top: 50, right: Math.max(150, labelWidthFor(endLabels, 11) + 8), bottom: 40, left: 40 }
   const plotW = 360
   const plotH = 300
   const width = padding.left + plotW + padding.right
@@ -1013,11 +995,11 @@ ${partialNote}
 module.exports = {
   generateScoreBarSvg, scoreTiersFromReport, trendRowsFromTiers, chartWarn, generateUptimeHeatmapSvg, scoreColorByGrade,
   // trend (aiwatch-reports#41)
-  monthsBefore, daysInMonthOf, readDataArchive, rosterForMonth, toMonthEntry, monthEntryFromScoreRows, resolveMonthlyScore,
+  monthsBefore, daysInMonthOf, readDataArchive, heatmapRows, toMonthEntry, monthEntryFromScoreRows, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
-  generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, ID_TO_NAME, TREND_MONTHS,
+  generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, projectServiceMeta, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
   isScoreWithheld, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
   medianOf,
@@ -1080,7 +1062,7 @@ if (require.main === module) {
   fs.writeFileSync(scorePath, scoreSvg + '\n', 'utf-8')
   console.log(`✓ ${scorePath}`)
 
-  // 3-month trend chart (sync — prior months from committed _data/). The CURRENT month is
+  // 3-month trend chart (prior months from committed _data/, labels from /api/v1/status). The CURRENT month is
   // built from THIS month's archive snapshot (toMonthEntry) so it carries MTTR + downtime —
   // the Notable-Movers ranking axes — exactly like the report table's current entry; it falls
   // back to the parsed Score table (score/grade only) when the snapshot is absent. Building it
@@ -1088,29 +1070,31 @@ if (require.main === module) {
   // with an MTTR spike), diverging from the table (#67). Written only when ≥2 months are
   // available; the report's TREND_SECTION applies the same gate so the ref never dangles.
   const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
-  const currentEntry = monthArchive
-    ? toMonthEntry(monthKey, monthArchive)
-    // aiwatch-reports#106 — see trendRowsFromTiers: both tiers, since nothing here ranks them.
-    : monthEntryFromScoreRows(monthKey, trendRowsFromTiers({ scores, mediumScores }))
-  const trendEntries = loadTrendEntries(monthKey, currentEntry, { dataDir: path.resolve('_data') })
-  if (trendEntries.length >= 2) {
-    const trend = buildTrendSeries(trendEntries)
-    // aiwatch-reports#67 — emphasize the SAME services as the report's Notable Movers TABLE
-    // (Score/MTTR/downtime ranking) rather than a Score-delta-only slope, so the chart and the
-    // table can never highlight different services. Uses the SAME exclude as the table, keyed off
-    // the current month's archive. Fail-open: a missing/corrupt `_data/{month}.json` → empty
-    // exclude (computeNotableMovers' "score at both ends" guard still filters mid-month / null-
-    // score services). notableMoversForChart reshapes the table rows → the chart's {declining,
-    // improving} shape, split by SCORE delta since generateTrendSvg is a Score-axis plot.
-    const exclude = buildMoverExclude(monthArchive && monthArchive.services ? monthArchive.services : null, monthKey)
-    const notable = computeNotableMovers(trend, { nameFor: id => nameForMonth(id, monthKey) || id, exclude })
-    const movers = notableMoversForChart(notable)
-    const trendSvg = generateTrendSvg(trend, { nameFor: id => nameForMonth(id, monthKey) || id, movers })
-    const trendPath = path.join(outDir, 'trend-chart.svg')
-    fs.writeFileSync(trendPath, trendSvg + '\n', 'utf-8')
-    console.log(`✓ ${trendPath} (${trendEntries.length} months: ${trend.months.join(', ')})`)
-  } else {
-    console.log(`• trend-chart.svg skipped — only ${trendEntries.length} month(s) of _data available (need ≥2)`)
+  function writeTrendChart(meta) {
+    const currentEntry = monthArchive
+      ? toMonthEntry(monthKey, monthArchive)
+      // aiwatch-reports#106 — see trendRowsFromTiers: both tiers, since nothing here ranks them.
+      : monthEntryFromScoreRows(monthKey, trendRowsFromTiers({ scores, mediumScores }), meta)
+    const trendEntries = loadTrendEntries(monthKey, currentEntry, { dataDir: path.resolve('_data') })
+    if (trendEntries.length >= 2) {
+      const trend = buildTrendSeries(trendEntries)
+      // aiwatch-reports#67 — emphasize the SAME services as the report's Notable Movers TABLE
+      // (Score/MTTR/downtime ranking) rather than a Score-delta-only slope, so the chart and the
+      // table can never highlight different services. Uses the SAME exclude as the table, keyed off
+      // the current month's archive. Fail-open: a missing/corrupt `_data/{month}.json` → empty
+      // exclude (computeNotableMovers' "score at both ends" guard still filters mid-month / null-
+      // score services). notableMoversForChart reshapes the table rows → the chart's {declining,
+      // improving} shape, split by SCORE delta since generateTrendSvg is a Score-axis plot.
+      const exclude = buildMoverExclude(monthArchive && monthArchive.services ? monthArchive.services : null, monthKey)
+      const notable = computeNotableMovers(trend, { nameFor: id => nameForMonth(id, monthKey, meta) || id, exclude })
+      const movers = notableMoversForChart(notable)
+      const trendSvg = generateTrendSvg(trend, { nameFor: id => nameForMonth(id, monthKey, meta) || id, movers })
+      const trendPath = path.join(outDir, 'trend-chart.svg')
+      fs.writeFileSync(trendPath, trendSvg + '\n', 'utf-8')
+      console.log(`✓ ${trendPath} (${trendEntries.length} months: ${trend.months.join(', ')})`)
+    } else {
+      console.log(`• trend-chart.svg skipped — only ${trendEntries.length} month(s) of _data available (need ≥2)`)
+    }
   }
 
   // Uptime heatmap — fetch real data from API
@@ -1126,13 +1110,20 @@ if (require.main === module) {
     console.error(`✗ Cannot determine the uptime window: ${err.message}`)
     process.exit(1)
   }
-  const API_URL = 'https://aiwatch-worker.p2c2kbf.workers.dev/api/uptime?days=' + lookbackDays
-  console.log(`Fetching uptime data from ${API_URL}...`)
+  const API_BASE = 'https://aiwatch-worker.p2c2kbf.workers.dev'
+  const API_URL = `${API_BASE}/api/uptime?days=${lookbackDays}`
+  const fetchJson = url => fetch(url, { signal: AbortSignal.timeout(30000) }).then(r => {
+    if (!r.ok) throw new Error(`${url} returned HTTP ${r.status} ${r.statusText}`)
+    return r.json()
+  })
+  let meta
 
-  fetch(API_URL, { signal: AbortSignal.timeout(30000) })
-    .then(r => {
-      if (!r.ok) throw new Error(`API returned HTTP ${r.status} ${r.statusText}`)
-      return r.json()
+  fetchJson(`${API_BASE}/api/v1/status`)
+    .then(body => {
+      meta = projectServiceMeta(body.services)
+      writeTrendChart(meta)
+      console.log(`Fetching uptime data from ${API_URL}...`)
+      return fetchJson(API_URL)
     })
     .then(data => {
       const history = data.history
@@ -1175,19 +1166,12 @@ if (require.main === module) {
       }
       const { firstDataDay, lastDataDay } = span
 
-      // Roster = services that EXISTED in the report month (that month's archive keys),
-      // not the current live CATEGORY_ORDER — otherwise services added AFTER the month
-      // (e.g. turbopuffer / Twelve Labs for a June report) render as blank gray
-      // rows (aiwatch-reports#63). Score-excluded-but-existed services stay (the criterion
-      // is archive membership, not "has a score"). Fail-open to the full list if absent.
-      const monthArchive = readDataArchive(monthKey, path.resolve('_data'))
-      const rosterIds = rosterForMonth(
-        CATEGORY_ORDER,
-        monthArchive && monthArchive.services ? Object.keys(monthArchive.services) : null,
-      )
-      const serviceNames = rosterIds.map(id => nameForMonth(id, monthKey)).filter(Boolean)
+      // Roster = services that EXISTED in the report month (that month's archive keys), so a
+      // service added after the month gets no blank gray row (aiwatch-reports#63) and one missing
+      // from any hand-kept list is not dropped (aiwatch-reports#146).
+      const rows = heatmapRows(monthArchive && monthArchive.services ? Object.keys(monthArchive.services) : null, meta, monthKey)
 
-      const heatmapSvg = generateUptimeHeatmapSvg(serviceNames, history, daysInMonth, monthKey, firstDataDay, lastDataDay)
+      const heatmapSvg = generateUptimeHeatmapSvg(rows, history, daysInMonth, monthKey, firstDataDay, lastDataDay)
       const heatmapPath = path.join(outDir, 'uptime-heatmap.svg')
       fs.writeFileSync(heatmapPath, heatmapSvg + '\n', 'utf-8')
       console.log(`✓ ${heatmapPath}`)
@@ -1196,7 +1180,7 @@ if (require.main === module) {
     .catch(err => {
       // This catch spans the whole chain, not just the network call — a write EACCES or a render
       // throw lands here too. Stay neutral rather than sending the reader after the network.
-      console.error('✗ Heatmap generation failed:', err.message)
+      console.error('✗ Chart generation failed:', err.message)
       process.exit(1)
     })
 }
