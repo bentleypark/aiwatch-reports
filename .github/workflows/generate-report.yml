@@ -1,7 +1,7 @@
 name: Generate Monthly Report Draft
 
 # Triggered manually after the AIWatch Worker cron creates archive:monthly:{YYYY-MM}
-# (1st of the following month at 00:00 UTC). The Worker posts a Discord webhook with
+# (1st of the following month at 12:00 UTC, retry 13:00 UTC). The Worker posts a Discord webhook with
 # a link to this workflow's dispatch page; operator clicks "Run workflow" and enters
 # the month to generate a draft PR.
 #
