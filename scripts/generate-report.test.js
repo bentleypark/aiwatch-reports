@@ -19,6 +19,7 @@ const {
   isRecentlyAdded,
   buildScoreTable,
   buildIncidentTable,
+  fmtMoverLine,
   officialUptimeFor,
   findUptimeInconsistencies,
   publishesNoOfficialUptime,
@@ -787,13 +788,35 @@ test('excludes services with zero incidents from the table body', () => {
   assert.ok(zeroIncLine.includes('Cohere API'), 'zero-inc line should list Cohere')
   assert.ok(zeroIncLine.startsWith('**Zero incidents (1 service):**'), `singular agreement: ${zeroIncLine}`)
 })
-test('sorts by incident count desc', () => {
-  const { tableRows } = buildIncidentTable(sampleServices, sampleMeta)
-  const claudeIdx = tableRows.indexOf('Claude API')
-  const openaiIdx = tableRows.indexOf('OpenAI API')
-  assert.ok(claudeIdx > 0 && openaiIdx > 0, 'both should appear')
-  assert.ok(claudeIdx < openaiIdx, 'Claude (9 inc) should appear before OpenAI (1 inc)')
+test('sorts by total downtime, then count; no downtime figure last (aiwatch-reports#152)', () => {
+  const svc = (id, incidents, totalDowntimeMin) => ({ id, data: { score: 70, incidents, uptime: 99, avgResolutionMin: null, totalDowntimeMin, longestIncidentMin: null } })
+  const meta = { many: { name: 'Many' }, long: { name: 'Long' }, tieA: { name: 'TieA' }, tieB: { name: 'TieB' }, none: { name: 'None' } }
+  const { tableRows } = buildIncidentTable([svc('many', 75, 100), svc('none', 49, null), svc('tieA', 2, 50), svc('long', 1, 4000), svc('tieB', 5, 50)], meta)
+  const order = ['Long', 'Many', 'TieB', 'TieA', 'None'].map(n => tableRows.indexOf(`<td>${n}</td>`))
+  assert.ok(order.every(i => i >= 0), `all rows present: ${order}`)
+  assert.deepEqual([...order].sort((a, b) => a - b), order, `order Long, Many, TieB, TieA, None: ${order}`)
 })
+test('the count-column note names the services whose every entry is reconstructed (aiwatch-reports#152)', () => {
+  const row = (id, data) => ({ id, data: { score: 70, uptime: 99, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null, ...data } })
+  const derived = { finalStatus: 'resolved', derived: 'status_history' }
+  const meta = { together: { name: 'Together AI' }, helicone: { name: 'Helicone' }, mixed: { name: 'Mixed' }, plain: { name: 'Plain' } }
+  const rows = [
+    row('together', { incidents: 2, countedIncidents: 0, totalDowntimeMin: 1950, incidentList: [derived, derived] }),
+    row('mixed', { incidents: 2, countedIncidents: 0, incidentList: [derived, { finalStatus: 'investigating' }] }),
+    row('plain', { incidents: 1, countedIncidents: 0 }),
+  ]
+  const one = buildIncidentTable(rows, meta)
+  assert.equal(one.reconstructedNote, '>\n> **Longest and Avg Resolution read "—" for Together AI.** Every entry for this service this month is reconstructed, so none carries a recovery time.\n')
+  assert.ok(one.tableRows.includes('<tr><td>Together AI</td><td>2</td><td>32h 30m</td><td class="hide-mobile">—</td><td class="hide-mobile">—</td></tr>'), one.tableRows)
+
+  const two = buildIncidentTable([...rows, row('helicone', { incidents: 1, countedIncidents: 0, totalDowntimeMin: 60, incidentList: [derived] })], meta)
+  assert.equal(two.reconstructedNote, '>\n> **Longest and Avg Resolution read "—" for Together AI and Helicone.** Every entry for these services this month is reconstructed, so none carries a recovery time.\n')
+
+  assert.equal(buildIncidentTable(rows.slice(1), meta).reconstructedNote, '', 'no all-reconstructed service → no clause')
+  const truncated = row('together', { incidents: 250, countedIncidents: 10, totalDowntimeMin: 9000, longestIncidentMin: 300, avgResolutionMin: 100, incidentList: Array(200).fill(derived) })
+  assert.equal(buildIncidentTable([truncated], meta).reconstructedNote, '', 'a list cut at the archive cap proves nothing about the dropped rows')
+})
+
 test('every zero-incident service with a live feed is a confirmed zero (aiwatch-reports#75)', () => {
   const services = [
     { id: 'cohere', data: { score: 89, incidents: 0, uptime: 100, avgResolutionMin: null, totalDowntimeMin: null, longestIncidentMin: null } },
@@ -4029,6 +4052,48 @@ test('every resolved SCORE_ANCHOR link keeps its leading #', () => {
   const links = [...out.matchAll(/\]\(([^)]*aiwatch-score--[^)]*)\)/g)].map(m => m[1])
   assert.ok(links.length >= 2, `expected several Score links, found ${links.length}`)
   for (const href of links) assert.ok(href.startsWith('#'), `anchor link lost its #: ${href}`)
+})
+
+test('fmtMoverLine prints every month of the window on every axis (aiwatch-reports#152)', () => {
+  const m = {
+    name: 'Mistral API', declining: false, emphasize: 'downtime',
+    score: { first: 81, last: 73, delta: -8, points: [
+      { score: 81, mttr: 277, downtime: 7768 },
+      { score: 42, mttr: 600, downtime: 9000 },
+      { score: 73, mttr: 41, downtime: 1489 },
+    ] },
+    mttr: { first: 277, last: 41, delta: -236 }, downtime: { first: 7768, last: 1489, delta: -6279 },
+  }
+  const line = fmtMoverLine(m)
+  assert.ok(line.includes('Score 81 → 42 → 73 (−8)'), line)
+  assert.ok(line.includes('MTTR 4h 37m → 10h → 41m (−3h 56m)'), line)
+  assert.ok(line.includes('**downtime 129h 28m → 150h → 24h 49m (−104h 39m)**'), line)
+
+  const gap = { ...m, score: { ...m.score, points: [
+    { score: 81, mttr: null, downtime: null },
+    { score: null, mttr: 120, downtime: 120 },
+    { score: 73, mttr: 41, downtime: 1489 },
+  ] }, mttr: { first: 120, last: 41, delta: -79 }, downtime: { first: 120, last: 1489, delta: 1369 } }
+  const gapLine = fmtMoverLine(gap)
+  assert.ok(gapLine.includes('Score 81 → — → 73 (−8)'), gapLine)
+  assert.ok(gapLine.includes('MTTR — → 2h → 41m (−1h 19m)'), gapLine)
+
+  const lastMissing = { ...m, score: { ...m.score, points: [
+    { score: 81, mttr: 300, downtime: 300 }, { score: 42, mttr: 60, downtime: 60 }, { score: 73, mttr: null, downtime: null },
+  ] }, mttr: { first: null, last: null, delta: null }, downtime: { first: null, last: null, delta: null } }
+  assert.ok(fmtMoverLine(lastMissing).includes('MTTR 5h → 1h → — ·'), fmtMoverLine(lastMissing))
+
+  const none = { ...m, score: { ...m.score, points: [{ score: 81, mttr: null, downtime: null }, { score: 42, mttr: null, downtime: null }, { score: 73, mttr: null, downtime: null }] }, mttr: { first: null, last: null, delta: null }, downtime: { first: null, last: null, delta: null } }
+  assert.ok(fmtMoverLine(none).includes('MTTR — → — → — ·'), fmtMoverLine(none))
+})
+
+test('the RECONSTRUCTED_SERVICES placeholder is filled from the month, never left in (aiwatch-reports#152)', () => {
+  const may = fillTemplate(REAL_TEMPLATE, '2026-05', REAL_ARCHIVE, REAL_META)
+  assert.ok(!may.includes('RECONSTRUCTED_SERVICES'), 'placeholder left in the report')
+  assert.ok(may.includes('methodology#incidents).\n>\n> <!-- Cycle-specific'), 'no note in a month without one')
+  const aug = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-08.json'), 'utf-8'))
+  const out = fillTemplate(REAL_TEMPLATE, '2026-08', aug, metaFor(aug))
+  assert.ok(out.includes('methodology#incidents).\n>\n> **Longest and Avg Resolution read "—" for helicone.** Every entry for this service this month is reconstructed, so none carries a recovery time.\n>\n> <!-- Cycle-specific'), 'August names helicone in its own note (metaFor names services by id)')
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
