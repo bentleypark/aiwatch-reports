@@ -565,7 +565,8 @@ function buildStaleSourceCaveat(names) {
 
 function buildIncidentTable(services, meta) {
   const withIncidents = services.filter(s => s.data.incidents > 0)
-  withIncidents.sort((a, b) => b.data.incidents - a.data.incidents)
+  const downtimeOf = s => (typeof s.data.totalDowntimeMin === 'number' ? s.data.totalDowntimeMin : -1)
+  withIncidents.sort((a, b) => downtimeOf(b) - downtimeOf(a) || b.data.incidents - a.data.incidents)
 
   const rows = withIncidents.map(s => {
     const inc = s.data.incidents
@@ -609,9 +610,15 @@ function buildIncidentTable(services, meta) {
   if (staleLine) zeroLines.push(staleLine)
   const zeroIncLine = zeroLines.join('\n\n')
 
+  // aiwatch-reports#152 — name the services whose blank Longest / Avg Resolution come from reconstructed entries.
+  const reconstructed = withIncidents.filter(s => (s.data.incidentList || []).length === s.data.incidents && s.data.incidentList.every(e => e.derived))
+  const reconstructedNote = reconstructed.length === 0 ? ''
+    : `>\n> **Longest and Avg Resolution read "—" for ${joinNames(reconstructed, meta)}.** Every entry for ${reconstructed.length === 1 ? 'this service' : 'these services'} this month is reconstructed, so none carries a recovery time.\n`
+
   return {
     tableRows: rows.join('\n'),
     zeroIncLine,
+    reconstructedNote,
   }
 }
 
@@ -1304,34 +1311,29 @@ function fmtDurationDelta(mins) {
 }
 
 // One Notable-Movers bullet: direction marker + name, then Score · MTTR · Downtime with the
-// axis that moved most bolded. A null endpoint (a zero-incident month has no MTTR/downtime)
-// renders the segment as "—". Uptime is intentionally absent (see computeNotableMovers).
+// axis that moved most bolded. Each axis prints every month of the window; a month with no
+// value renders as "—". Uptime is intentionally absent (see computeNotableMovers).
 function fmtMoverLine(m) {
   const arrow = m.declining ? '🔻' : '🔺'
   const segs = []
 
-  let s = `Score ${m.score.first} → ${m.score.last} (${charts.fmtScoreDelta(m.score.delta)})`
+  const path = m.score.points.map(p => p.score ?? '—').join(' → ')
+  let s = `Score ${path} (${charts.fmtScoreDelta(m.score.delta)})`
   if (m.emphasize === 'score') s = `**${s}**`
   segs.push(s)
 
-  // MTTR / downtime measured from the first month with data to the window's last month:
-  //  • no value in the window's last month → "—"
-  //  • a value in that month only          → single value (no redundant arrow)
-  //  • an earlier value too                → "X → Y (Δ)"
-  // Assumes a zero-incident month is null (not 0) in the archive — per toMonthEntry, MTTR/downtime
-  // are read only when typeof === 'number', and the archive emits null (not 0) for no incidents. If
-  // a future archive ever emits a literal 0, fmtDurationMin maps it to "—" too, so it still reads as
-  // "no incidents" rather than a misleading "0m" — safe either way.
-  const span = (o) => {
-    if (o.first === null && o.last === null) return '—'
-    if (o.delta === null) return fmtDurationMin(o.last)
-    return `${fmtDurationMin(o.first)} → ${fmtDurationMin(o.last)} (${fmtDurationDelta(o.delta)})`
+  // MTTR / downtime: every month of the window, "—" for a month with no value (a zero-incident month is
+  // null in the archive, and fmtDurationMin also renders a literal 0 as "—"). The Δ is computeNotableMovers'
+  // delta — first month WITH data to the window's last month — and is omitted when that delta is null.
+  const span = (field, o) => {
+    const path = m.score.points.map(p => fmtDurationMin(p[field])).join(' → ')
+    return o.delta === null ? path : `${path} (${fmtDurationDelta(o.delta)})`
   }
-  let t = `MTTR ${span(m.mttr)}`
+  let t = `MTTR ${span('mttr', m.mttr)}`
   if (m.emphasize === 'mttr') t = `**${t}**`
   segs.push(t)
 
-  let d = `downtime ${span(m.downtime)}`
+  let d = `downtime ${span('downtime', m.downtime)}`
   if (m.emphasize === 'downtime') d = `**${d}**`
   segs.push(d)
 
@@ -1511,7 +1513,7 @@ function fillTemplate(template, month, archive, meta) {
   // Build tables
   const scoreTable = buildScoreTable(services, meta, month)
   const rankingNote = buildRankingNote(services, meta, month)
-  const { tableRows: incidentRows, zeroIncLine } = buildIncidentTable(services, meta)
+  const { tableRows: incidentRows, zeroIncLine, reconstructedNote } = buildIncidentTable(services, meta)
   const uptimeRows = buildUptimeTable(services, meta)
   const latencyTable = buildLatencyTable(services, meta)
 
@@ -1569,6 +1571,8 @@ function fillTemplate(template, month, archive, meta) {
   } else {
     out = out.replace(/\n*<!-- UPTIME_EXCLUSION_NOTE -->\n*/, '\n\n')
   }
+
+  out = out.replace('<!-- RECONSTRUCTED_SERVICES -->\n', reconstructedNote)
 
   // Zero-incidents line — replace the placeholder comment
   out = out.replace(
@@ -2453,6 +2457,7 @@ module.exports = {
   isStaleSource,
   isRecentlyAdded,
   buildIncidentTable,
+  fmtMoverLine,
   officialUptimeFor,
   publishesNoOfficialUptime,
   findUptimeInconsistencies,
