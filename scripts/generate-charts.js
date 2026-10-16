@@ -59,6 +59,10 @@ const NAME_BEFORE = {
   windsurf: { until: '2026-08', name: 'Windsurf' },
 }
 
+const NAME_ALIASES = {
+  windsurf: ['Windsurf (Devin Desktop)'],
+}
+
 function nameForMonth(id, monthKey, meta) {
   const prior = NAME_BEFORE[id]
   return prior && monthKey < prior.until ? prior.name : meta[id]?.name
@@ -69,7 +73,7 @@ function nameToId(name, meta) {
     if (m.name === name) return id
   }
   for (const [id, prior] of Object.entries(NAME_BEFORE)) {
-    if (prior.name === name) return id
+    if (prior.name === name || NAME_ALIASES[id]?.includes(name)) return id
   }
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
 }

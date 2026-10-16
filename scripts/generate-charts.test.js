@@ -69,6 +69,10 @@ test('both xai labels map back to the xai id', () => {
   eq(nameToId('SpaceXAI API', META), 'xai')
 })
 
+test('Windsurf (Devin Desktop) maps to windsurf without relying on live metadata (#1430)', () => {
+  eq(nameToId('Windsurf (Devin Desktop)', {}), 'windsurf')
+})
+
 test('Excellent → green', () => {
   eq(scoreColorByGrade('Excellent'), '#22c55e')
 })
