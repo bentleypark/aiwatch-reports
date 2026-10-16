@@ -56,7 +56,9 @@ const rowsOf = (...ids) => ids.map(id => ({ id, name: META[id].name }))
 console.log('\nscoreColorByGrade')
 
 test('nameForMonth switches a renamed service label at its rename month', () => {
-  eq(nameForMonth('xai', '2026-08', META), 'xAI (Grok)')
+  eq(nameForMonth('xai', '2026-06', META), 'xAI (Grok)')
+  eq(nameForMonth('xai', '2026-07', META), 'xAI API')
+  eq(nameForMonth('xai', '2026-08', META), 'xAI API')
   eq(nameForMonth('xai', '2026-09', META), 'SpaceXAI API')
   eq(nameForMonth('xai', '2026-10', META), 'SpaceXAI API')
   eq(nameForMonth('claude', '2026-08', META), 'Claude API')
@@ -64,8 +66,9 @@ test('nameForMonth switches a renamed service label at its rename month', () => 
   eq(nameForMonth('windsurf', '2026-08', META), 'Windsurf (Devin Desktop)')
 })
 
-test('both xai labels map back to the xai id', () => {
+test('all xai labels map back to the xai id', () => {
   eq(nameToId('xAI (Grok)', META), 'xai')
+  eq(nameToId('xAI API', META), 'xai')
   eq(nameToId('SpaceXAI API', META), 'xai')
 })
 
@@ -842,8 +845,10 @@ test('heatmapRows puts a service in a section the dashboard does not have after 
 })
 
 test('heatmapRows labels each row with the name its month was published with', () => {
-  const rows = heatmapRows(['xai', 'windsurf', 'kimi'], META, '2026-07')
-  assert.deepStrictEqual(rows.map(r => r.name), ['xAI (Grok)', 'Kimi (Moonshot AI)', 'Windsurf'])
+  const juneRows = heatmapRows(['xai', 'windsurf', 'kimi'], META, '2026-06')
+  assert.deepStrictEqual(juneRows.map(r => r.name), ['xAI (Grok)', 'Kimi (Moonshot AI)', 'Windsurf'])
+  const julyRows = heatmapRows(['xai', 'windsurf', 'kimi'], META, '2026-07')
+  assert.deepStrictEqual(julyRows.map(r => r.name), ['xAI API', 'Kimi (Moonshot AI)', 'Windsurf'])
 })
 
 test('heatmapRows falls back to every live service when the archive roster is missing or empty', () => {
@@ -859,6 +864,16 @@ test('heatmapRows throws on an archived service /api/v1/status does not list, in
 test('monthEntryFromScoreRows maps a report-table name to its archive id, not a normalised name (aiwatch-reports#146)', () => {
   const e = monthEntryFromScoreRows('2026-09', [{ Service: 'Kimi (Moonshot AI)', Score: '72', Grade: 'Fair' }], META)
   assert.deepStrictEqual(Object.keys(e.services), ['kimi'])
+})
+
+test('monthEntryFromScoreRows maps the 2026-07 and 2026-08 xAI API Score-table rows to xai (aiwatch-reports#149)', () => {
+  for (const month of ['2026-07', '2026-08']) {
+    const md = fs.readFileSync(path.join(__dirname, '..', month, 'index.md'), 'utf8')
+    const { scores, mediumScores } = scoreTiersFromReport(md, () => {})
+    const entry = monthEntryFromScoreRows(month, trendRowsFromTiers({ scores, mediumScores }), META)
+    assert.ok(entry.services.xai, `${month} retains the xai series`)
+    assert.ok(!entry.services.xaiapi, `${month} does not create xaiapi`)
+  }
 })
 
 // ── spreadLabelYs (trend end-label de-collision, aiwatch-reports#65) ──
@@ -1395,7 +1410,7 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
 test('the CLI heatmap draws only the month archive\'s services, xai under the name its month was published with', () => {
   // aiwatch#1586 — re-running charts for an already-published month must not write the post-rename
   // name into it. Runs the real CLI with fetch and the clock stubbed so it stays offline and stable.
-  for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI (Grok)'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXAI API']]) {
+  for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI API'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXAI API']]) {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'charts-heatmap-'))
     try {
       fs.mkdirSync(path.join(tmp, month))
