@@ -61,6 +61,10 @@ published: true
 <tr><td><strong>Low latency / cost</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
 <tr><td><strong>Coding Agents</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
 <tr><td><strong>Voice / audio</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
+<!-- General purpose: pick among the major first-party LLM APIs (OpenAI API, Claude API, Gemini API,
+     Mistral API), not open-model inference platforms or routers (Fireworks AI, Together AI, Groq Cloud,
+     OpenRouter). If none of them reaches Good, pick the best of them and say so in Why rather than
+     reaching outside the set. -->
 <tr><td><strong>General purpose</strong></td><td><em>(service)</em></td><td><em>(why)</em></td></tr>
 </tbody>
 </table>
@@ -115,7 +119,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 <!-- Generate with: node scripts/generate-charts.js [YYYY-MM]/index.md -->
 ![AIWatch Score Rankings](../assets/[YYYY-MM]/score-chart.svg)
 
-> **Uptime Source column**: **Official** (AIWatch computes the figure from the incident/outage records the provider publishes) · **Platform** (a different computation, built from the status page platform's own monitors — Better Stack — rather than incidents the provider declared; not on the same basis as Official) · **No uptime** (no uptime figure resolved for this row — usually because the status page publishes none, occasionally a figure AIWatch withheld; it may still publish incident records; the Score is built from the remaining signals). A service tracked for less than the full month is excluded from the ranking, not labelled — see the note above the ranking. Full definitions: [About This Report → Uptime Source](#about-this-report).
+> **Uptime Source column**: Official · Platform · No uptime. Platform figures are not on the same basis as Official — see [About This Report → Uptime Source](#about-this-report).
 > <!-- Keep this caption short — full definitions live in the About This Report methodology section to avoid duplicating them here. -->
 
 ---

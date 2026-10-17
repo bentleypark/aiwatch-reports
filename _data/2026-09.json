@@ -319,11 +319,11 @@
             "monthlyScore": null,
             "monthlyGrade": null,
             "monthlyScoreConfidence": "low",
-            "incidents": 3,
-            "countedIncidents": 0,
-            "avgResolutionMin": null,
-            "totalDowntimeMin": null,
-            "longestIncidentMin": null,
+            "incidents": 1,
+            "countedIncidents": 1,
+            "avgResolutionMin": 355,
+            "totalDowntimeMin": 355,
+            "longestIncidentMin": 355,
             "avgLatencyMs": null,
             "p95LatencyMs": null,
             "latencySpikes": null,
@@ -331,31 +331,13 @@
             "cvCombined": null,
             "incidentList": [
                 {
-                    "id": "azure-openai-and-foundry-agent-service-intermittent-request-failures-and-increased-latency",
-                    "title": "Azure OpenAI and Foundry agent Service intermittent request failures and increased latency",
-                    "startedAt": "2026-09-29T10:00:00.000Z",
-                    "resolvedAt": null,
-                    "durationMin": 0,
-                    "finalStatus": "investigating",
-                    "impact": "major"
-                },
-                {
-                    "id": "intermittent-request-failures-and-increased-latency-across-azure-openai-azure-ai-foundry-and-cognitive-services",
+                    "id": "azure-7QL5-Z50",
                     "title": "Intermittent request failures and increased latency across Azure OpenAI, Azure AI Foundry, and Cognitive Services",
-                    "startedAt": "2026-09-29T10:00:00.000Z",
-                    "resolvedAt": null,
-                    "durationMin": 0,
-                    "finalStatus": "investigating",
-                    "impact": "major"
-                },
-                {
-                    "id": "observing-improvements-intermittent-request-failures-and-increased-latency-across-azure-openai-azure-ai-foundry-and-cognitive-services",
-                    "title": "Observing improvements - Intermittent request failures and increased latency across Azure OpenAI, Azure AI Foundry, and Cognitive Services",
-                    "startedAt": "2026-09-29T10:00:00.000Z",
-                    "resolvedAt": null,
-                    "durationMin": 0,
-                    "finalStatus": "investigating",
-                    "impact": "major"
+                    "startedAt": "2026-09-29T10:03:00.000Z",
+                    "resolvedAt": "2026-09-29T15:58:00.000Z",
+                    "impact": "major",
+                    "durationMin": 355,
+                    "finalStatus": "resolved"
                 }
             ]
         },
