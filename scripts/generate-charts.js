@@ -55,21 +55,24 @@ function projectServiceMeta(services) {
 }
 
 const NAME_BEFORE = {
-  xai: { until: '2026-09', name: 'xAI (Grok)' },
-  windsurf: { until: '2026-08', name: 'Windsurf' },
+  xai: [
+    { until: '2026-07', name: 'xAI (Grok)' },
+    { until: '2026-09', name: 'xAI API' },
+  ],
+  windsurf: [{ until: '2026-08', name: 'Windsurf' }],
 }
 
 function nameForMonth(id, monthKey, meta) {
-  const prior = NAME_BEFORE[id]
-  return prior && monthKey < prior.until ? prior.name : meta[id]?.name
+  const prior = NAME_BEFORE[id]?.find(entry => monthKey < entry.until)
+  return prior?.name || meta[id]?.name
 }
 
 function nameToId(name, meta) {
   for (const [id, m] of Object.entries(meta)) {
     if (m.name === name) return id
   }
-  for (const [id, prior] of Object.entries(NAME_BEFORE)) {
-    if (prior.name === name) return id
+  for (const [id, entries] of Object.entries(NAME_BEFORE)) {
+    if (entries.some(entry => entry.name === name)) return id
   }
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
