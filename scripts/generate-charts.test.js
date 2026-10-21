@@ -38,6 +38,7 @@ const STATUS_SERVICES = [
   { id: 'gemini', name: 'Gemini API', category: 'api', group: 'llm' },
   { id: 'xai', name: 'SpaceXAI API', category: 'api', group: 'llm' },
   { id: 'kimi', name: 'Kimi (Moonshot AI)', category: 'api', group: 'llm' },
+  { id: 'groq', name: 'GroqCloud', category: 'api', group: 'llm' },
   { id: 'fishaudio', name: 'Fish Audio', category: 'api', group: 'voice' },
   { id: 'voyageai', name: 'Voyage AI', category: 'api', group: 'inference' },
   { id: 'langsmith', name: 'LangChain (LangSmith)', category: 'api', group: 'observability' },
@@ -64,6 +65,13 @@ test('nameForMonth switches a renamed service label at its rename month', () => 
   eq(nameForMonth('claude', '2026-08', META), 'Claude API')
   eq(nameForMonth('windsurf', '2026-07', META), 'Windsurf')
   eq(nameForMonth('windsurf', '2026-08', META), 'Windsurf (Devin Desktop)')
+  eq(nameForMonth('groq', '2026-09', META), 'Groq Cloud')
+  eq(nameForMonth('groq', '2026-10', META), 'GroqCloud')
+})
+
+test('both groq labels map back to the groq id', () => {
+  eq(nameToId('Groq Cloud', META), 'groq')
+  eq(nameToId('GroqCloud', META), 'groq')
 })
 
 test('all xai labels map back to the xai id', () => {
