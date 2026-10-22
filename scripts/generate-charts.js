@@ -60,6 +60,7 @@ const NAME_BEFORE = {
     { until: '2026-09', name: 'xAI API' },
   ],
   windsurf: [{ until: '2026-08', name: 'Windsurf' }],
+  groq: [{ until: '2026-10', name: 'Groq Cloud' }],
 }
 
 function nameForMonth(id, monthKey, meta) {
