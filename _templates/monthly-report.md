@@ -217,7 +217,7 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
      longest "incident" is a usage-limits / policy advisory, say so and do not frame it as an outage. -->
 
 ### 1. [Title]
-**Affected**: <!-- Include region if applicable: e.g., "xAI API — EU (eu-west-1)" -->
+**Affected**: <!-- Include region if applicable: e.g., "SpaceXSI API — EU (eu-west-1)" -->
 **Duration**:
 
 <!-- Description -->

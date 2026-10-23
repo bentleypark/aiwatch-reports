@@ -58,6 +58,7 @@ const NAME_BEFORE = {
   xai: [
     { until: '2026-07', name: 'xAI (Grok)' },
     { until: '2026-09', name: 'xAI API' },
+    { until: '2026-10', name: 'SpaceXAI API' },
   ],
   windsurf: [{ until: '2026-08', name: 'Windsurf' }],
   groq: [{ until: '2026-10', name: 'Groq Cloud' }],

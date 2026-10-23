@@ -36,7 +36,7 @@ const STATUS_SERVICES = [
   { id: 'claude', name: 'Claude API', category: 'api', group: 'llm' },
   { id: 'openai', name: 'OpenAI API', category: 'api', group: 'llm' },
   { id: 'gemini', name: 'Gemini API', category: 'api', group: 'llm' },
-  { id: 'xai', name: 'SpaceXAI API', category: 'api', group: 'llm' },
+  { id: 'xai', name: 'SpaceXSI API', category: 'api', group: 'llm' },
   { id: 'kimi', name: 'Kimi (Moonshot AI)', category: 'api', group: 'llm' },
   { id: 'groq', name: 'GroqCloud', category: 'api', group: 'llm' },
   { id: 'fishaudio', name: 'Fish Audio', category: 'api', group: 'voice' },
@@ -61,7 +61,7 @@ test('nameForMonth switches a renamed service label at its rename month', () => 
   eq(nameForMonth('xai', '2026-07', META), 'xAI API')
   eq(nameForMonth('xai', '2026-08', META), 'xAI API')
   eq(nameForMonth('xai', '2026-09', META), 'SpaceXAI API')
-  eq(nameForMonth('xai', '2026-10', META), 'SpaceXAI API')
+  eq(nameForMonth('xai', '2026-10', META), 'SpaceXSI API')
   eq(nameForMonth('claude', '2026-08', META), 'Claude API')
   eq(nameForMonth('windsurf', '2026-07', META), 'Windsurf')
   eq(nameForMonth('windsurf', '2026-08', META), 'Windsurf (Devin Desktop)')
@@ -1418,7 +1418,7 @@ test('the CLI\'s trend fallback carries BOTH tiers into the trend chart', () => 
 test('the CLI heatmap draws only the month archive\'s services, xai under the name its month was published with', () => {
   // aiwatch#1586 — re-running charts for an already-published month must not write the post-rename
   // name into it. Runs the real CLI with fetch and the clock stubbed so it stays offline and stable.
-  for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI API'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXAI API']]) {
+  for (const [month, now, label] of [['2026-08', '2026-09-02T00:00:00Z', 'xAI API'], ['2026-09', '2026-10-02T00:00:00Z', 'SpaceXAI API'], ['2026-10', '2026-11-02T00:00:00Z', 'SpaceXSI API']]) {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'charts-heatmap-'))
     try {
       fs.mkdirSync(path.join(tmp, month))
