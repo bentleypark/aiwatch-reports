@@ -4,7 +4,7 @@ const {
   generateTrendSvg, toMonthEntry, monthEntryFromScoreRows, heatmapRows, spreadLabelYs,
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
-  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, nameForMonth, nameToId, projectServiceMeta,
+  heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, nameForMonth, nameToId, renamedServiceId, nameHistoryDrift, projectServiceMeta,
 } = require('./generate-charts')
 const assert = require('assert')
 const { spawnSync } = require('child_process')
@@ -78,6 +78,23 @@ test('all xai labels map back to the xai id', () => {
   eq(nameToId('xAI (Grok)', META), 'xai')
   eq(nameToId('xAI API', META), 'xai')
   eq(nameToId('SpaceXAI API', META), 'xai')
+})
+
+test('renamedServiceId maps every name a renamed service carried, the current one included, with no metadata', () => {
+  for (const n of ['xAI (Grok)', 'xAI API', 'SpaceXAI API', 'SpaceXSI API', ' spacexsi  api ']) eq(renamedServiceId(n), 'xai')
+  eq(renamedServiceId('Windsurf (Devin Desktop)'), 'windsurf')
+  eq(renamedServiceId('GroqCloud'), 'groq')
+  eq(renamedServiceId('Claude API'), null)
+  eq(nameToId('SpaceXSI API', {}), 'xai')
+})
+
+test('nameHistoryDrift is empty when each recorded current name is the live one', () => {
+  eq(nameHistoryDrift(META).length, 0)
+})
+
+test('nameHistoryDrift names a renamed service whose live name moved on', () => {
+  const drift = nameHistoryDrift({ ...META, xai: { ...META.xai, name: 'Grok API' } })
+  eq(JSON.stringify(drift), JSON.stringify([{ id: 'xai', recorded: 'SpaceXSI API', live: 'Grok API' }]))
 })
 
 test('Excellent → green', () => {

@@ -23,7 +23,7 @@ function eq(actual, expected, msg) {
 
 // A minimal report fixture: frontmatter + Score table (the self-contained lexicon that
 // #54's extractor reads) + the three narrative slots.
-function report({ published = true, highIncident = 'Together AI (85 incidents)', keyInsight = '- x', affected = 'Gemini API', watchOut = '', extra = '' } = {}) {
+function report({ published = true, highIncident = 'Together AI (85 incidents)', keyInsight = '- x', affected = 'Gemini API', watchOut = '', extra = '', scoreRows = [] } = {}) {
   return [
     '---',
     'layout: page',
@@ -51,6 +51,7 @@ function report({ published = true, highIncident = 'Together AI (85 incidents)',
     '| 4 | Claude API | 65 | Fair |',
     '| 5 | claude.ai | 64 | Fair |',
     '| 6 | Claude Code | 63 | Fair |',
+    ...scoreRows,
     '',
     '## Notable Incidents',
     '',
@@ -182,6 +183,14 @@ test('WARNS on a recurring "Watch out" subject, naming the bullet — and never 
   assert.ok(r.warnings.every(w => w.message.includes("Summary 'Watch out' bullet")),
     `warn names the bullet via the imported RECURRENCE_SLOT_LABEL: ${r.warnings.map(w => w.message).join(' | ')}`)
   assert.ok(r.warnings.some(w => w.message.includes('Claude API')), 'names the repeated service')
+})
+
+test('WARNS when a renamed service repeats a slot under its new name (aiwatch-reports#157)', () => {
+  const md = report({ affected: 'SpaceXSI API', scoreRows: ['| 7 | SpaceXSI API | 66 | Fair |'] })
+  const priorMd = report({ highIncident: 'Mistral API (140 incidents)', affected: 'SpaceXAI API', scoreRows: ['| 7 | SpaceXAI API | 69 | Fair |'] })
+  const r = lintReport({ md, priorMd, month: '2026-10', priorMonth: '2026-09' })
+  eq(r.warnings.length, 1)
+  assert.ok(r.warnings[0].message.includes('"SpaceXSI API"'), r.warnings[0].message)
 })
 
 test('does NOT warn when every slot names a different service than the prior month', () => {
