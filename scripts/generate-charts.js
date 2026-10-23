@@ -54,18 +54,20 @@ function projectServiceMeta(services) {
   return byId
 }
 
-const NAME_BEFORE = {
+// Every name a renamed service has carried, oldest first; the last entry is the current name.
+const NAME_HISTORY = {
   xai: [
     { until: '2026-07', name: 'xAI (Grok)' },
     { until: '2026-09', name: 'xAI API' },
     { until: '2026-10', name: 'SpaceXAI API' },
+    { name: 'SpaceXSI API' },
   ],
-  windsurf: [{ until: '2026-08', name: 'Windsurf' }],
-  groq: [{ until: '2026-10', name: 'Groq Cloud' }],
+  windsurf: [{ until: '2026-08', name: 'Windsurf' }, { name: 'Windsurf (Devin Desktop)' }],
+  groq: [{ until: '2026-10', name: 'Groq Cloud' }, { name: 'GroqCloud' }],
 }
 
 function nameForMonth(id, monthKey, meta) {
-  const prior = NAME_BEFORE[id]?.find(entry => monthKey < entry.until)
+  const prior = NAME_HISTORY[id]?.find(entry => monthKey < entry.until)
   return prior?.name || meta[id]?.name
 }
 
@@ -73,10 +75,28 @@ function nameToId(name, meta) {
   for (const [id, m] of Object.entries(meta)) {
     if (m.name === name) return id
   }
-  for (const [id, entries] of Object.entries(NAME_BEFORE)) {
-    if (entries.some(entry => entry.name === name)) return id
+  return renamedServiceId(name) || name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+// Case/spacing-insensitive service-name key.
+function normSubject(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+// The id of a renamed service from any of its names, without live metadata.
+function renamedServiceId(name) {
+  const key = normSubject(name)
+  for (const [id, entries] of Object.entries(NAME_HISTORY)) {
+    if (entries.some(entry => normSubject(entry.name) === key)) return id
   }
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return null
+}
+
+// PURE. Renamed services whose recorded current name is not the live name.
+function nameHistoryDrift(meta) {
+  return Object.entries(NAME_HISTORY)
+    .filter(([id, entries]) => meta[id] && entries[entries.length - 1].name !== meta[id].name)
+    .map(([id, entries]) => ({ id, recorded: entries[entries.length - 1].name, live: meta[id].name }))
 }
 
 // The dashboard's section order (aiwatch src/pages/Overview.jsx SECTION_KEYS).
@@ -1004,7 +1024,7 @@ module.exports = {
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
-  generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, projectServiceMeta, TREND_MONTHS,
+  generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, normSubject, renamedServiceId, nameHistoryDrift, projectServiceMeta, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
   isScoreWithheld, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
   medianOf,
@@ -1126,6 +1146,9 @@ if (require.main === module) {
   fetchJson(`${API_BASE}/api/v1/status`)
     .then(body => {
       meta = projectServiceMeta(body.services)
+      for (const d of nameHistoryDrift(meta)) {
+        chartWarn(`NAME_HISTORY records "${d.recorded}" as the current name of ${d.id}, but /api/v1/status says "${d.live}" — add the new name to NAME_HISTORY`)
+      }
       writeTrendChart(meta)
       console.log(`Fetching uptime data from ${API_URL}...`)
       return fetchJson(API_URL)

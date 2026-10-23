@@ -2090,8 +2090,11 @@ const RECURRENCE_SLOT_LABEL = {
 
 // Case/spacing-insensitive service-name key for cross-month matching. Prior-month
 // names are read from rendered markdown (author-typed) so exact equality is unsafe.
-function normSubject(s) {
-  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase()
+const { normSubject } = charts
+
+// Cross-month recurrence key: a renamed service keys by its id, so its old and new names match.
+function subjectKey(s) {
+  return charts.renamedServiceId(s) || normSubject(s)
 }
 
 // Text of a `## <heading>` section up to (excluding) the next top-level `## ` or EOF.
@@ -2297,11 +2300,11 @@ function detectRecurrence(currentSubjectsBySlot, priorMonths, opts = {}) {
     const current = currentSubjectsBySlot?.[slot] || []
     const emitted = new Set()
     for (const svc of current) {
-      const key = normSubject(svc)
+      const key = subjectKey(svc)
       if (!key || emitted.has(key)) continue
       emitted.add(key)
       const monthsSeen = recent
-        .filter(pm => (pm.subjects?.[slot] || []).some(n => normSubject(n) === key))
+        .filter(pm => (pm.subjects?.[slot] || []).some(n => subjectKey(n) === key))
         .map(pm => pm.month)
       if (monthsSeen.length >= min) flags.push({ service: svc, slot, monthsSeen })
     }

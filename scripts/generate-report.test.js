@@ -3185,6 +3185,33 @@ test('window caps the look-back — a 4th-oldest month is ignored', () => {
   eq(detectRecurrence({ summary: ['Cohere API'], keyInsight: [], notable: [] }, priors).length, 0)
 })
 
+test('flags a renamed service across its rename (aiwatch-reports#157)', () => {
+  const prior = [
+    { month: '2026-09', subjects: { keyInsight: ['xAI API'] } },
+    { month: '2026-08', subjects: { keyInsight: ['xAI API'] } },
+  ]
+  const flags = detectRecurrence({ keyInsight: ['SpaceXAI API'] }, prior)
+  eq(flags.length, 1)
+  eq(flags[0].service, 'SpaceXAI API')
+  eq(flags[0].monthsSeen.join(','), '2026-09,2026-08')
+  eq(detectRecurrence({ keyInsight: ['SpaceXSI API'] }, [
+    { month: '2026-09', subjects: { keyInsight: ['SpaceXAI API'] } },
+    { month: '2026-08', subjects: { keyInsight: ['xAI API'] } },
+  ]).length, 1)
+  eq(detectRecurrence({ notable: ['Windsurf (Devin Desktop)'] }, [
+    { month: '2026-08', subjects: { notable: ['Windsurf'] } },
+    { month: '2026-07', subjects: { notable: ['windsurf'] } },
+  ]).length, 1)
+})
+
+test('a renamed service and its old name count once in the current slot', () => {
+  const flags = detectRecurrence({ keyInsight: ['SpaceXSI API', 'SpaceXAI API'] }, [
+    { month: '2026-09', subjects: { keyInsight: ['SpaceXAI API'] } },
+    { month: '2026-08', subjects: { keyInsight: ['SpaceXAI API'] } },
+  ])
+  eq(flags.length, 1)
+})
+
 test('empty prior history yields no flags', () => {
   eq(detectRecurrence({ summary: ['Together AI'] }, []).length, 0)
 })
