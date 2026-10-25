@@ -1808,43 +1808,124 @@ test('renders the July aggregate', () => {
   assert.ok(out.endsWith('\n\n---\n'), `blank line before the trailing rule: ${JSON.stringify(out.slice(-24))}`)
   assert.ok(out.includes('| Estimates scored | 172 |'), 'sample row')
   assert.ok(out.includes('| Median absolute error | 55m |'), 'error row')
-  assert.ok(out.includes('| Recovered by the estimated time | 121 (70%) |'), `on-time row = accurate + overPredicted: ${out}`)
+  assert.ok(out.includes('| Recovered within ½× to 1× the estimate | 44 (25%) |'), `in-range row = accurate: ${out}`)
+  assert.ok(out.includes('| Recovered in under half the estimate | 77 (45%) |'), `far-faster row = overPredicted: ${out}`)
   assert.ok(out.includes('| Took longer than the estimate | 51 (30%) |'), `late row = underPredicted: ${out}`)
   assert.ok(out.trimEnd().endsWith('---'), 'section ends with its own trailing separator')
 })
-test('the on-time row is the SUM of both inside-the-bound verdicts, not the accurate band alone', () => {
-  // The band that summarizeAccuracy calls `accurate` is [0.5×bound, bound]; `overPredicted`
-  // recovered in under half the bound — also inside the estimate. Publishing the band alone under
-  // an "estimated time" label understates AIWatch's own calibration (44 vs 121 in July).
+test('aiwatch#1777 — the three verdicts are published apart, never folded into one success row', () => {
+  // Folding overPredicted into "recovered by the estimated time" scored an estimate more than twice
+  // the actual recovery as a success, so a wider estimate always read better.
   const out = paSection(julyAccuracy)
-  assert.ok(!out.includes('| Recovered by the estimated time | 44 '), 'must not publish the band as the total')
-  assert.ok(!/\b26%/.test(out), 'the band rate must not appear in any format')
-  assert.ok(!/hit ?rate/i.test(out), 'nor under its own label — pa.hitRate IS that band rate')
-  const swapped = paSection({ ...julyAccuracy, accurate: 77, overPredicted: 44 })
-  assert.ok(swapped.includes('| Recovered by the estimated time | 121 (70%) |'),
-    'the two are summed, so swapping them cannot change the published figure')
+  assert.ok(!out.includes('Recovered by the estimated time'), 'the folded row is gone')
+  assert.ok(!out.includes('121'), 'accurate + overPredicted is not published in any row')
+  const allTooLong = paSection({ ...julyAccuracy, total: 20, accurate: 0, overPredicted: 20, underPredicted: 0 })
+  assert.ok(allTooLong.includes('| Recovered within ½× to 1× the estimate | 0 (0%) |'), `no success from width alone: ${allTooLong}`)
+  assert.ok(allTooLong.includes('| Recovered in under half the estimate | 20 (100%) |'), allTooLong)
 })
-test('the two shares always sum to 100%, and the on-time share is rounded not truncated', () => {
-  // [50,51,99] is the case that catches an independently-rounded late share: 101/200 = 50.5% and
-  // 99/200 = 49.5%, so rounding each separately prints 51% + 50% = 101%. Deriving the second from
-  // the first is what prevents it.
-  for (const [accurate, early, late] of [[1, 1, 98], [33, 33, 34], [0, 0, 100], [50, 50, 0], [7, 4, 9], [50, 51, 99]]) {
+test('the three shares always sum to 100% (largest remainder)', () => {
+  // [50,51,99] /200 = 25 / 25.5 / 49.5: rounding each row prints 25 + 26 + 50 = 101.
+  for (const [accurate, early, late] of [[1, 1, 98], [33, 33, 34], [0, 0, 100], [50, 50, 0], [7, 4, 9], [50, 51, 99], [4, 3, 4]]) {
     const out = paSection({ ...julyAccuracy, total: accurate + early + late, accurate, overPredicted: early, underPredicted: late })
     const pcts = [...out.matchAll(/\((\d+)%\)/g)].map(m => Number(m[1]))
-    assert.equal(pcts.length, 2, `two shares expected: ${out}`)
-    assert.equal(pcts[0] + pcts[1], 100, `shares must sum to 100: ${pcts} for ${accurate}/${early}/${late}`)
+    assert.equal(pcts.length, 3, `three shares expected: ${out}`)
+    assert.equal(pcts[0] + pcts[1] + pcts[2], 100, `shares must sum to 100: ${pcts} for ${accurate}/${early}/${late}`)
   }
-  // 101/200 = 50.5% must round UP to 51%, not floor to 50%.
   const out = paSection({ ...julyAccuracy, total: 200, accurate: 50, overPredicted: 51, underPredicted: 99 })
-  assert.ok(out.includes('| Recovered by the estimated time | 101 (51%) |'), `rounded up: ${out}`)
-  assert.ok(out.includes('| Took longer than the estimate | 99 (49%) |'), `complement: ${out}`)
+  assert.ok(out.includes('| Recovered in under half the estimate | 51 (26%) |'), `remainder goes to the larger fraction: ${out}`)
+  assert.ok(out.includes('| Took longer than the estimate | 99 (49%) |'), out)
 })
-test('the on-time row leads the late row', () => {
-  // Deliberate: the section's point is calibration, and leading with the 30% miss rate is a
-  // different editorial claim than leading with the 70% hit rate.
+test('outcome rows run in-range, far-faster, took-longer', () => {
   const out = paSection(julyAccuracy)
-  assert.ok(out.indexOf('| Recovered by the estimated time') < out.indexOf('| Took longer than the estimate'),
-    'row order is part of the claim')
+  const at = (s) => out.indexOf(s)
+  assert.ok(at('| Recovered within ½× to 1×') < at('| Recovered in under half') && at('| Recovered in under half') < at('| Took longer than the estimate'),
+    'row order follows the estimate from inside the band outward')
+})
+
+// ── aiwatch#1777: archive.predictionBaseline ──────────────────────────
+// The real 2026-09 comparison, from the production incident:history records on 2026-10-25.
+const septBaseline = {
+  ai: { total: 78, accurate: 27, underPredicted: 12, overPredicted: 39, hitRate: 27 / 78, medianAbsErrorHours: 0.6166666666666667 },
+  pastMedian: { total: 78, accurate: 13, underPredicted: 29, overPredicted: 36, hitRate: 13 / 78, medianAbsErrorHours: 0.65 },
+  pastP80: { total: 78, accurate: 10, underPredicted: 9, overPredicted: 59, hitRate: 10 / 78, medianAbsErrorHours: 1.625 },
+}
+function pbRender(pb) {
+  const origLog = console.log; const origWarn = console.warn
+  const logged = []; const warned = []
+  console.log = m => logged.push(String(m)); console.warn = m => warned.push(String(m))
+  try {
+    const out = buildPredictionAccuracySection({ predictionAccuracy: julyAccuracy, predictionBaseline: pb }, '2026-09', {})
+    return { out, logged, warned }
+  } finally { console.log = origLog; console.warn = origWarn }
+}
+test('renders the past-recovery comparison when the archive carries one', () => {
+  const { out, warned } = pbRender(septBaseline)
+  assert.deepEqual(warned, [])
+  assert.ok(out.includes('For **78** of these incidents'), out)
+  assert.ok(out.includes('\n\n| Estimate | Within ½× to 1× | Under ½× | Took longer | Median absolute error |\n|---|---|---|---|---|\n'), `blank line + header + delimiter: ${out}`)
+  assert.ok(out.includes('| AIWatch AI estimate | 27 | 39 | 12 | 37m |'), out)
+  assert.ok(out.includes('| Past median recovery | 13 | 36 | 29 | 39m |'), out)
+  assert.ok(out.includes('| Past 80th-percentile recovery | 10 | 59 | 9 | 1h 38m |'), out)
+  assert.ok(out.includes('Would a simpler rule have done as well?'), 'the comparison states its question')
+  assert.ok(out.includes('Recovered within ½× to 1× the estimate: **27** of 78 for the AI estimate, 13 for the past median, 10 for the past 80th percentile. Took longer than the estimate: 12, 29 and 9.'),
+    `the result is read out, row by row: ${out}`)
+  assert.ok(out.includes('That difference is not adjusted for.'), 'the elapsed-time asymmetry is disclosed')
+  assert.ok(out.endsWith('\n\n---\n'), `blank line before the trailing rule: ${JSON.stringify(out.slice(-24))}`)
+})
+test('an archive without predictionBaseline renders the section with no comparison, silently', () => {
+  for (const pb of [null, undefined]) {
+    const { out, logged, warned } = pbRender(pb)
+    assert.ok(out.startsWith('## AI Prediction Accuracy'))
+    assert.ok(!out.includes('Against past recovery times'))
+    assert.deepEqual([...logged, ...warned], [])
+  }
+})
+test('a malformed predictionBaseline drops only the comparison, loudly', () => {
+  const cases = [
+    'nope',
+    { ...septBaseline, pastP80: null },
+    { ...septBaseline, pastMedian: { ...septBaseline.pastMedian, accurate: undefined } },
+    { ...septBaseline, ai: { ...septBaseline.ai, total: 80 } },             // verdicts do not partition
+    { ...septBaseline, pastP80: { ...septBaseline.pastP80, total: 77, overPredicted: 58 } }, // different incident set
+  ]
+  for (const pb of cases) {
+    const { out, warned } = pbRender(pb)
+    assert.ok(out.startsWith('## AI Prediction Accuracy'), 'the section itself survives')
+    assert.ok(!out.includes('Against past recovery times'), `comparison omitted for ${JSON.stringify(pb).slice(0, 80)}`)
+    assert.equal(warned.length, 1, `exactly one operator warning: ${warned.join('|')}`)
+    assert.ok(warned[0].includes('predictionBaseline'), warned[0])
+  }
+})
+test('a comparison that is not a subset of the scored estimates is dropped, loudly', () => {
+  // "For N of these incidents" claims a subset of the section's own sample; the two aggregates are
+  // read from KV separately, so the subset is checked here rather than trusted.
+  const pa = { total: 20, accurate: 5, overPredicted: 10, underPredicted: 5, medianAbsErrorHours: 1 }
+  const row = (accurate, overPredicted, underPredicted) => ({ total: accurate + overPredicted + underPredicted, accurate, overPredicted, underPredicted, medianAbsErrorHours: 1 })
+  for (const ai of [row(10, 10, 10), row(6, 2, 2)]) { // larger set; same size but more in-range than the whole month
+    const pb = { ai, pastMedian: ai, pastP80: ai }
+    const origWarn = console.warn; const warned = []
+    console.warn = m => warned.push(String(m))
+    let out
+    try { out = buildPredictionAccuracySection({ predictionAccuracy: pa, predictionBaseline: pb }, '2026-09', {}) } finally { console.warn = origWarn }
+    assert.ok(out.includes('| Estimates scored | 20 |'), 'the section itself survives')
+    assert.ok(!out.includes('Against past recovery times'), `comparison omitted: ${out}`)
+    assert.equal(warned.length, 1, warned.join('|'))
+    assert.ok(warned[0].includes('predictionBaseline'), warned[0])
+  }
+})
+test('a non-object predictionBaseline is named as such in the warning', () => {
+  const { warned } = pbRender('nope')
+  assert.ok(warned.some(m => m.includes('predictionBaseline is a string, not an object')), warned.join('|'))
+})
+test('the partition sentence is published', () => {
+  assert.ok(paSection(julyAccuracy).includes('The three outcome rows add up to the estimates scored.'))
+})
+test('a thin comparison is omitted with an author note, not a warning', () => {
+  const thin = Object.fromEntries(Object.entries(septBaseline).map(([k, v]) => [k, { ...v, total: 9, accurate: 3, overPredicted: 3, underPredicted: 3 }]))
+  const { out, logged, warned } = pbRender(thin)
+  assert.ok(!out.includes('Against past recovery times'))
+  assert.deepEqual(warned, [])
+  assert.ok(logged.some(m => m.includes('below the 10 floor')), logged.join('|'))
 })
 test('formats the median error in minutes, rounded, with no "—" for a real tiny value', () => {
   assert.ok(paSection({ ...julyAccuracy, medianAbsErrorHours: 0.004 }).includes('Median absolute error: **<1m**'),

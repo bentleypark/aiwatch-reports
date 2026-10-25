@@ -1116,13 +1116,92 @@ function buildDetectionSection(archive, meta) {
 // `---` (like buildSecuritySection / buildDetectionSection); returns '' unless every figure it
 // states is present and the sample clears the floor.
 //
-// Publishes a TWO-way split (recovered by the bound / past it), NOT summarizeAccuracy's three
-// verdicts. `accurate` is only the [0.5×bound, bound] band, so a row labelled for it sits beside an
-// `overPredicted` row whose incidents ALSO recovered inside the estimate — a reader takes the first
-// row as the total and reads 26% where 70% is true. Collapsing the two is also what keeps aiwatch's
-// 0.5 factor out of reader-facing prose, where nothing in this repo can pin it. `pa.hitRate` is that
-// band's rate and is unused for the same reason.
+// Publishes summarizeAccuracy's three verdicts as three rows (aiwatch#1777). A two-way split
+// (recovered by the bound / past it) counted an estimate more than twice the actual recovery as a
+// success, so a wider estimate always read better; a one-row "accurate" figure read far-faster
+// recoveries as misses. The rows are labelled as one partition so neither reading is available.
 const PREDICTION_ACCURACY_MIN_SAMPLE = 10
+
+// The five figures a scored set carries, or the reason it cannot be published. EVERY figure must be
+// present: defaulting a missing count to 0 publishes "0 of 172", a measurement nobody took, and
+// verdicts that do not partition `total` would print a count beside a percentage of something else.
+// summarizeAccuracy guarantees both today; check rather than inherit the invariant from another repo.
+function readAccuracyFigures(pa) {
+  if (pa === null || typeof pa !== 'object') return { error: `is ${pa === null ? 'null' : `a ${typeof pa}`}, not an object` }
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const figures = {
+    total: num(pa.total), accurate: num(pa.accurate), overPredicted: num(pa.overPredicted),
+    underPredicted: num(pa.underPredicted), medianAbsErrorHours: num(pa.medianAbsErrorHours),
+  }
+  const missing = Object.keys(figures).filter((k) => figures[k] === null)
+  if (missing.length) return { error: `is present but ${missing.join(', ')} missing or non-finite` }
+  const { total, accurate, overPredicted, underPredicted, medianAbsErrorHours } = figures
+  if (medianAbsErrorHours < 0) return { error: `carries a negative medianAbsErrorHours (${medianAbsErrorHours}) — impossible from a median of absolute values` }
+  if (accurate + overPredicted + underPredicted !== total) {
+    return { error: `verdicts do not sum to the total (${accurate}+${overPredicted}+${underPredicted} ≠ ${total})` }
+  }
+  return { figures }
+}
+
+// Whole percentages that sum to exactly 100 (largest remainder); rounding each row independently
+// prints 99% or 101% often enough to read as an arithmetic error. `counts` must sum to more than 0.
+function wholeShares(counts) {
+  const total = counts.reduce((a, b) => a + b, 0)
+  const exact = counts.map((c) => (c / total) * 100)
+  const out = exact.map(Math.floor)
+  const order = exact.map((x, i) => ({ i, r: x - Math.floor(x) })).sort((a, b) => b.r - a.r)
+  const deficit = 100 - out.reduce((a, b) => a + b, 0)
+  for (let k = 0; k < deficit; k++) out[order[k].i]++
+  return out
+}
+
+function fmtErrorHours(errHours) {
+  // fmtDurationMin renders <=0 as '—', which would read as "no data" for a genuinely tiny error.
+  const errMin = Math.round(errHours * 60)
+  return errMin < 1 ? '<1m' : fmtDurationMin(errMin)
+}
+
+// aiwatch#1777 — `archive.predictionBaseline`: the incidents whose service had a past-recovery
+// figure, scored against the AI estimate and against the past median and past p80. Absent on
+// archives written before it; a malformed one drops only this table, never the section.
+function buildBaselineComparison(archive, scored, env) {
+  const pb = archive && archive.predictionBaseline
+  if (pb == null) return []
+  const warn = (why) => {
+    emitUptimeWarnings([`archive.predictionBaseline ${why} — the past-recovery comparison was OMITTED`], env)
+    return []
+  }
+  if (typeof pb !== 'object') return warn(`is a ${typeof pb}, not an object`)
+  const rows = [['AIWatch AI estimate', 'ai'], ['Past median recovery', 'pastMedian'], ['Past 80th-percentile recovery', 'pastP80']]
+  const read = rows.map(([, key]) => ({ key, ...readAccuracyFigures(pb[key] ?? null) }))
+  const bad = read.find((r) => r.error)
+  if (bad) return warn(`.${bad.key} ${bad.error}`)
+  const n = read[0].figures.total
+  if (read.some((r) => r.figures.total !== n)) return warn('scores different incident sets')
+  const ai = read[0].figures
+  if (['accurate', 'overPredicted', 'underPredicted'].some((k) => ai[k] > scored[k])) {
+    return warn(`.ai is not a subset of the ${scored.total} scored estimates`)
+  }
+  if (n < PREDICTION_ACCURACY_MIN_SAMPLE) {
+    console.log(`[generate-report] AI Prediction Accuracy: ${n} incident(s) with a past-recovery figure, below the ${PREDICTION_ACCURACY_MIN_SAMPLE} floor — comparison omitted.`)
+    return []
+  }
+  return [
+    `**Against past recovery times.** Would a simpler rule have done as well? For **${n}** of these incidents the service had enough earlier recorded incidents to estimate from how long they took. The same incidents, scored against each estimate:`,
+    '',
+    '| Estimate | Within ½× to 1× | Under ½× | Took longer | Median absolute error |',
+    '|---|---|---|---|---|',
+    ...rows.map(([label], i) => {
+      const f = read[i].figures
+      return `| ${label} | ${f.accurate} | ${f.overPredicted} | ${f.underPredicted} | ${fmtErrorHours(f.medianAbsErrorHours)} |`
+    }),
+    '',
+    `Recovered within ½× to 1× the estimate: **${read[0].figures.accurate}** of ${n} for the AI estimate, ${read[1].figures.accurate} for the past median, ${read[2].figures.accurate} for the past 80th percentile. Took longer than the estimate: ${read[0].figures.underPredicted}, ${read[1].figures.underPredicted} and ${read[2].figures.underPredicted}.`,
+    '',
+    '> The AI estimate is made after an incident opens, sometimes hours in; the past-recovery figures use only incidents that had ended before it started. That difference is not adjusted for.',
+    '',
+  ]
+}
 
 function buildPredictionAccuracySection(archive, month, env = process.env) {
   const pa = archive && archive.predictionAccuracy
@@ -1131,31 +1210,12 @@ function buildPredictionAccuracySection(archive, month, env = process.env) {
   // garbage — omitting THAT silently loses a section nobody notices is missing, so it goes to the
   // operator channel, the same split buildSecuritySection draws on `totalAlerts`.
   if (pa == null) return ''
-  const drop = (why) => {
-    emitUptimeWarnings([`archive.predictionAccuracy ${why} — the AI Prediction Accuracy section was OMITTED`], env)
+  const { figures, error } = readAccuracyFigures(pa)
+  if (error) {
+    emitUptimeWarnings([`archive.predictionAccuracy ${error} — the AI Prediction Accuracy section was OMITTED`], env)
     return ''
   }
-  if (typeof pa !== 'object') return drop(`is a ${typeof pa}, not an object`)
-
-  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
-  const figures = {
-    total: num(pa.total), accurate: num(pa.accurate), overPredicted: num(pa.overPredicted),
-    underPredicted: num(pa.underPredicted), medianAbsErrorHours: num(pa.medianAbsErrorHours),
-  }
-  // EVERY figure the section states must be present. A partial aggregate must omit the section, not
-  // default a missing count to 0 — that publishes "0 of 172 recovered on time", a measurement nobody
-  // took, as a negative claim about AIWatch's own accuracy.
-  const missing = Object.keys(figures).filter((k) => figures[k] === null)
-  if (missing.length) return drop(`is present but ${missing.join(', ')} missing or non-finite`)
   const { total, accurate, overPredicted: early, underPredicted: late, medianAbsErrorHours: errHours } = figures
-  if (errHours < 0) return drop(`carries a negative medianAbsErrorHours (${errHours}) — impossible from a median of absolute values`)
-  // The late share is DERIVED from the on-time one (see below), so verdicts that don't partition
-  // `total` would print a count beside a percentage of something else, or a negative share.
-  // summarizeAccuracy guarantees the partition today; a self-contradicting row is worse than a
-  // missing section, so check it rather than inherit the invariant from another repo.
-  if (accurate + early + late !== total) {
-    return drop(`verdicts do not sum to the total (${accurate}+${early}+${late} ≠ ${total})`)
-  }
   // A thin month is a legitimate empty, not corruption — but the narrative runbook grounds every
   // prose claim in one of this report's own tables, and this one will not be there. Say why, on the
   // author-facing channel rather than the corruption alarm.
@@ -1164,13 +1224,8 @@ function buildPredictionAccuracySection(archive, month, env = process.env) {
     return ''
   }
 
-  // fmtDurationMin renders <=0 as '—', which would read as "no data" for a genuinely tiny error.
-  const errMin = Math.round(errHours * 60)
-  const errLabel = errMin < 1 ? '<1m' : fmtDurationMin(errMin)
-  const byBound = accurate + early
-  // Derive the late share from the early one so the two rows always sum to 100% — rounding each
-  // independently prints 101% often enough to read as an arithmetic error.
-  const byPct = Math.round((byBound / total) * 100)
+  const errLabel = fmtErrorHours(errHours)
+  const [inPct, earlyPct, latePct] = wholeShares([accurate, early, late])
 
   return [
     '## AI Prediction Accuracy',
@@ -1181,11 +1236,13 @@ function buildPredictionAccuracySection(archive, month, env = process.env) {
     '|---|---|',
     `| Estimates scored | ${total} |`,
     `| Median absolute error | ${errLabel} |`,
-    `| Recovered by the estimated time | ${byBound} (${byPct}%) |`,
-    `| Took longer than the estimate | ${late} (${100 - byPct}%) |`,
+    `| Recovered within ½× to 1× the estimate | ${accurate} (${inPct}%) |`,
+    `| Recovered in under half the estimate | ${early} (${earlyPct}%) |`,
+    `| Took longer than the estimate | ${late} (${latePct}%) |`,
     '',
-    '> **How this is scored**: the estimate is the upper bound of the recovery window AIWatch published for that incident, and the error is the gap between that bound and the actual recovery. One provider incident affecting several services is scored once. Not every incident carries an estimate, so this is a sample of the month\'s incidents — it is not comparable to the incident counts elsewhere in this report.',
+    '> **How this is scored**: the estimate is the upper bound of the recovery window AIWatch published for that incident, and the error is the gap between that bound and the actual recovery. The three outcome rows add up to the estimates scored. One provider incident affecting several services is scored once. Not every incident carries an estimate, so this is a sample of the month\'s incidents — it is not comparable to the incident counts elsewhere in this report.',
     '',
+    ...buildBaselineComparison(archive, figures, env),
     '---',
     '',
   ].join('\n')

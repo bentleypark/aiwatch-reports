@@ -399,10 +399,11 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 |---|---|
 | Estimates scored | 120 |
 | Median absolute error | 46m |
-| Recovered by the estimated time | 91 (76%) |
+| Recovered within ½× to 1× the estimate | 33 (28%) |
+| Recovered in under half the estimate | 58 (48%) |
 | Took longer than the estimate | 29 (24%) |
 
-> **How this is scored**: the estimate is the upper bound of the recovery window AIWatch published for that incident, and the error is the gap between that bound and the actual recovery. One provider incident affecting several services is scored once. Not every incident carries an estimate, so this is a sample of the month's incidents — it is not comparable to the incident counts elsewhere in this report.
+> **How this is scored**: the estimate is the upper bound of the recovery window AIWatch published for that incident, and the error is the gap between that bound and the actual recovery. The three outcome rows add up to the estimates scored. One provider incident affecting several services is scored once. Not every incident carries an estimate, so this is a sample of the month's incidents — it is not comparable to the incident counts elsewhere in this report.
 
 ---
 
