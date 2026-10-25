@@ -2868,6 +2868,66 @@ test('excludes a SCORE_WITHHELD service (bedrock) from the rendered movers — t
   })
 })
 
+// aiwatch-reports#161 — a window spanning the aiwatch#1505 counting change (2026-09). `summed` had
+// overlapping incidents in July: 6000m summed, 1000m once they count once. On the old figure it is the
+// window's biggest downtime improvement; on one rule it barely moved. `real` genuinely improved.
+function withRuleChangeFixture({ recount = true } = {}, fn) {
+  const dir = fsT.mkdtempSync(pathT.join(osT.tmpdir(), 'trend-1505-'))
+  const svc = (score, mttr, dt) => ({ monthlyScore: score, monthlyGrade: 'Good', avgResolutionMin: mttr, totalDowntimeMin: dt })
+  try {
+    fsT.writeFileSync(pathT.join(dir, '2026-07.json'), JSON.stringify({ period: '2026-07', daysCollected: 31, services: {
+      summed: svc(80, 60, 6000), real: svc(70, 300, 3000), p1: svc(85, 40, 400), p2: svc(75, 50, 500), p3: svc(90, 30, 300),
+    } }))
+    fsT.writeFileSync(pathT.join(dir, '2026-08.json'), JSON.stringify({ period: '2026-08', daysCollected: 31, services: {
+      summed: svc(80, 60, 5800), real: svc(72, 200, 1500), p1: svc(84, 42, 420), p2: svc(74, 52, 520), p3: svc(89, 31, 310),
+    } }))
+    const recountFile = (period, services) =>
+      fsT.writeFileSync(pathT.join(dir, `downtime-recount-${period}.json`), JSON.stringify({ period, services }))
+    if (recount) {
+      recountFile('2026-07', { summed: { downtime: 1000, mttr: 100 }, real: { downtime: 2900, mttr: 290 }, p1: { downtime: 400, mttr: 40 }, p2: { downtime: 500, mttr: 50 }, p3: { downtime: 300, mttr: 30 } })
+      recountFile('2026-08', { summed: { downtime: 950, mttr: 95 }, real: { downtime: 1500, mttr: 200 }, p1: { downtime: 420, mttr: 42 }, p2: { downtime: 520, mttr: 52 }, p3: { downtime: 310, mttr: 31 } })
+    }
+    return fn(dir)
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+}
+const RULE_META = { summed: { name: 'Summed' }, real: { name: 'Real' }, p1: { name: 'P1' }, p2: { name: 'P2' }, p3: { name: 'P3' } }
+const SEPT_RULE_ARCHIVE = { period: '2026-09', daysCollected: 30, services: {
+  summed: { monthlyScore: 80, monthlyGrade: 'Good', avgResolutionMin: 90, totalDowntimeMin: 900 },
+  real: { monthlyScore: 75, monthlyGrade: 'Good', avgResolutionMin: 100, totalDowntimeMin: 600 },
+  p1: { monthlyScore: 83, monthlyGrade: 'Good', avgResolutionMin: 44, totalDowntimeMin: 440 },
+  p2: { monthlyScore: 73, monthlyGrade: 'Good', avgResolutionMin: 54, totalDowntimeMin: 540 },
+  p3: { monthlyScore: 88, monthlyGrade: 'Good', avgResolutionMin: 32, totalDowntimeMin: 320 },
+} }
+test('aiwatch-reports#161 — a downtime move across the counting change is measured on one rule', () => {
+  withRuleChangeFixture({}, dir => {
+    const out = buildTrendSection('2026-09', SEPT_RULE_ARCHIVE, RULE_META, dir)
+    const notable = out.slice(out.indexOf('### Notable Movers'))
+    const lines = notable.split('\n').filter(l => l.startsWith('- '))
+    assert.ok(lines[0].includes('Real'), `the genuine improvement leads: ${lines[0]}`)
+    assert.ok(lines[0].includes('downtime 48h 20m → 25h → 10h'), `July's downtime is the recount (2900m), not the stored 3000m: ${lines[0]}`)
+    const summed = lines.find(l => l.includes('Summed'))
+    assert.ok(!summed || !summed.includes('100h'), `the summed July figure (6000m = 100h) is never shown: ${summed}`)
+    assert.ok(out.includes('**Downtime counting changed in September 2026**'), 'the note explains the recount')
+  })
+})
+test('aiwatch-reports#161 — with no recount the earlier months carry no downtime', () => {
+  withRuleChangeFixture({ recount: false }, dir => {
+    const warn = console.warn; const warned = []
+    console.warn = m => warned.push(String(m))
+    let out
+    try { out = buildTrendSection('2026-09', SEPT_RULE_ARCHIVE, RULE_META, dir) } finally { console.warn = warn }
+    const lines = out.slice(out.indexOf('### Notable Movers')).split('\n').filter(l => l.startsWith('- '))
+    assert.ok(lines.every(l => !/100h|96h 40m/.test(l)), `with no recount the earlier months show no downtime at all: ${lines.join(' | ')}`)
+    assert.ok(warned.some(m => m.includes('no downtime recount for 2026-07')), warned.join('|'))
+  })
+})
+test('aiwatch-reports#161 — a window on one side of the change carries no counting note', () => {
+  withTrendFixture(dir => {
+    assert.ok(!buildTrendSection('2026-06', TREND_ARCHIVE, TREND_META, dir).includes('Downtime counting changed'))
+  })
+})
 test('crossesScoreMethodCutover flags a window reaching before the June 2026 cutover (#713 + #993)', () => {
   assert.equal(crossesScoreMethodCutover('2026-04'), true)  // June report window (Apr→Jun)
   assert.equal(crossesScoreMethodCutover('2026-05'), true)  // July report window (May→Jul) still crosses

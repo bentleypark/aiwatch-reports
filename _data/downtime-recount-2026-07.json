@@ -1,0 +1,185 @@
+{
+  "period": "2026-07",
+  "services": {
+    "claude": {
+      "downtime": 7053,
+      "mttr": 176
+    },
+    "openai": {
+      "downtime": 3308,
+      "mttr": 414
+    },
+    "gemini": {
+      "downtime": null,
+      "mttr": null
+    },
+    "bedrock": {
+      "downtime": null,
+      "mttr": null
+    },
+    "azureopenai": {
+      "downtime": null,
+      "mttr": null
+    },
+    "mistral": {
+      "downtime": 7483,
+      "mttr": 468
+    },
+    "cohere": {
+      "downtime": 51,
+      "mttr": 51
+    },
+    "groq": {
+      "downtime": 94,
+      "mttr": 94
+    },
+    "together": {
+      "downtime": 1705,
+      "mttr": 28
+    },
+    "fireworks": {
+      "downtime": 264,
+      "mttr": 8
+    },
+    "cerebras": {
+      "downtime": 1,
+      "mttr": 1
+    },
+    "perplexity": {
+      "downtime": 127,
+      "mttr": 64
+    },
+    "xai": {
+      "downtime": 89,
+      "mttr": 45
+    },
+    "deepseek": {
+      "downtime": 117,
+      "mttr": 20
+    },
+    "openrouter": {
+      "downtime": 31,
+      "mttr": 16
+    },
+    "elevenlabs": {
+      "downtime": 845,
+      "mttr": 141
+    },
+    "assemblyai": {
+      "downtime": 21,
+      "mttr": 11
+    },
+    "deepgram": {
+      "downtime": 1632,
+      "mttr": 408
+    },
+    "huggingface": {
+      "downtime": 170,
+      "mttr": 43
+    },
+    "replicate": {
+      "downtime": 4173,
+      "mttr": 835
+    },
+    "fal": {
+      "downtime": null,
+      "mttr": null
+    },
+    "pinecone": {
+      "downtime": 689,
+      "mttr": 172
+    },
+    "stability": {
+      "downtime": null,
+      "mttr": null
+    },
+    "bfl": {
+      "downtime": 309,
+      "mttr": 309
+    },
+    "voyageai": {
+      "downtime": 670,
+      "mttr": 168
+    },
+    "modal": {
+      "downtime": 37,
+      "mttr": 12
+    },
+    "langsmith": {
+      "downtime": 118,
+      "mttr": 39
+    },
+    "helicone": {
+      "downtime": 4870,
+      "mttr": 2435
+    },
+    "langfuse": {
+      "downtime": 88,
+      "mttr": 44
+    },
+    "runway": {
+      "downtime": 84,
+      "mttr": 42
+    },
+    "luma": {
+      "downtime": 105,
+      "mttr": 105
+    },
+    "claudeai": {
+      "downtime": 3782,
+      "mttr": 95
+    },
+    "characterai": {
+      "downtime": null,
+      "mttr": null
+    },
+    "chatgpt": {
+      "downtime": 9038,
+      "mttr": 430
+    },
+    "deepseekapp": {
+      "downtime": 358,
+      "mttr": 72
+    },
+    "claudecode": {
+      "downtime": 5164,
+      "mttr": 132
+    },
+    "codex": {
+      "downtime": 3137,
+      "mttr": 523
+    },
+    "cursor": {
+      "downtime": 2650,
+      "mttr": 95
+    },
+    "copilot": {
+      "downtime": 648,
+      "mttr": 93
+    },
+    "windsurf": {
+      "downtime": null,
+      "mttr": null
+    },
+    "junie": {
+      "downtime": 63,
+      "mttr": 32
+    },
+    "turbopuffer": {
+      "downtime": 67,
+      "mttr": 67
+    },
+    "twelvelabs": {
+      "downtime": 221,
+      "mttr": 18
+    },
+    "kimi": {
+      "downtime": null,
+      "mttr": null
+    },
+    "grok": {
+      "downtime": null,
+      "mttr": null
+    }
+  }
+}

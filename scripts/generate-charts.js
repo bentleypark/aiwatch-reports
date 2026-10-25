@@ -898,7 +898,48 @@ function loadTrendEntries(month, currentEntry, opts = {}) {
     if (e) entries.push(e)
   }
   if (currentEntry) entries.push(currentEntry)
-  return entries
+  return alignDowntimeRule(entries, readDowntimeRecount(entries.map(e => e.month), dataDir))
+}
+
+// aiwatch#1505 — from this month the worker counts overlapping incidents once and counts incidents a
+// provider's automatic monitor opened; earlier archives summed every record and left those out. Both
+// MTTR and downtime changed with it.
+const DOWNTIME_RULE_FROM = '2026-09'
+
+function crossesDowntimeRuleChange(months) {
+  return months.some(m => m < DOWNTIME_RULE_FROM) && months.some(m => m >= DOWNTIME_RULE_FROM)
+}
+
+// `_data/downtime-recount-YYYY-MM.json` — `{ period, services: { id: { downtime, mttr } } }`, the file
+// aiwatch's `patch-archive-derived-dupes.ts --recount-downtime` writes: that month recounted under the
+// current rule by the worker's own functions. Returns `{ month: services }` for the months that have one.
+function readDowntimeRecount(months, dataDir) {
+  const out = {}
+  for (const m of months) {
+    try {
+      const d = JSON.parse(fs.readFileSync(path.join(dataDir, `downtime-recount-${m}.json`), 'utf-8'))
+      if (d && d.services && typeof d.services === 'object') out[m] = d.services
+    } catch { /* absent → that month carries no MTTR or downtime in a window spanning the change */ }
+  }
+  return out
+}
+
+// PURE. Keeps a window on one counting rule (aiwatch-reports#161): when it spans DOWNTIME_RULE_FROM,
+// each earlier month's MTTR and downtime come from its recount, and are null where there is none, so
+// no delta compares the two rules.
+function alignDowntimeRule(entries, recountByMonth) {
+  if (!crossesDowntimeRuleChange(entries.map(e => e.month))) return entries
+  return entries.map(e => {
+    if (e.month >= DOWNTIME_RULE_FROM) return e
+    const recount = recountByMonth[e.month]
+    if (!recount) console.warn(`[generate-charts] no downtime recount for ${e.month} — its MTTR and downtime are left out of the trend`)
+    const services = {}
+    for (const [id, s] of Object.entries(e.services)) {
+      const r = recount && recount[id]
+      services[id] = { ...s, mttr: r ? r.mttr : null, downtime: r ? r.downtime : null }
+    }
+    return { ...e, services }
+  })
 }
 
 // PURE. De-collide a set of label y-anchors so none overlap: sort by y, greedily push
@@ -1024,6 +1065,7 @@ module.exports = {
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, UPTIME_MAX_LOOKBACK_DAYS,
   buildTrendSeries, computeScoreMovers, computeNotableMovers, formatTrendArrow, fmtScoreDelta, loadTrendEntries,
+  alignDowntimeRule, crossesDowntimeRuleChange,
   generateTrendSvg, spreadLabelYs, nameToId, nameForMonth, normSubject, renamedServiceId, nameHistoryDrift, projectServiceMeta, TREND_MONTHS,
   // mover exclusion + chart-reshape (aiwatch-reports#67)
   isScoreWithheld, STALE_SOURCE, isStaleSource, isRecentlyAdded, buildMoverExclude, notableMoversForChart,
