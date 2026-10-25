@@ -171,7 +171,8 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
 
 <!-- PREDICTION_ACCURACY_SECTION -->
 <!-- ^ Auto-rendered by generate-report.js (buildPredictionAccuracySection) from
-     archive.predictionAccuracy (aiwatch#827 F3 / worker-side aiwatch#840). Emits the whole
+     archive.predictionAccuracy (aiwatch#827 F3 / worker-side aiwatch#840), plus a past-recovery
+     comparison table from archive.predictionBaseline when present (aiwatch#1777). Emits the whole
      "## AI Prediction Accuracy" section ending in its own `---`, and is omitted entirely when the
      month has no usable aggregate (the case for any month ≤ 2026-06). Do not hand-author. -->
 
