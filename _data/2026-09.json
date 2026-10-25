@@ -2759,14 +2759,14 @@
             "score": 69,
             "grade": "fair",
             "scoreConfidence": "high",
-            "monthlyScore": 72,
-            "monthlyGrade": "fair",
+            "monthlyScore": 82,
+            "monthlyGrade": "good",
             "monthlyScoreConfidence": "high",
-            "incidents": 13,
-            "countedIncidents": 13,
-            "avgResolutionMin": 7,
-            "totalDowntimeMin": 90,
-            "longestIncidentMin": 27,
+            "incidents": 1,
+            "countedIncidents": 1,
+            "avgResolutionMin": 23,
+            "totalDowntimeMin": 23,
+            "longestIncidentMin": 23,
             "avgLatencyMs": 767,
             "p95LatencyMs": 940,
             "latencySpikes": 5,
@@ -2779,114 +2779,6 @@
                     "startedAt": "2026-09-02T20:01:11.985+08:00",
                     "resolvedAt": "2026-09-02T20:23:12.271+08:00",
                     "durationMin": 23,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "bkt1c0nhb4lc",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-09T14:51:12.458+08:00",
-                    "resolvedAt": "2026-09-09T14:52:12.491+08:00",
-                    "durationMin": 2,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "nlfywd6vg5hk",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-09T14:45:12.377+08:00",
-                    "resolvedAt": "2026-09-09T14:46:12.408+08:00",
-                    "durationMin": 2,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "916q6b26236l",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-10T19:25:12.340+08:00",
-                    "resolvedAt": "2026-09-10T19:28:12.381+08:00",
-                    "durationMin": 4,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "4ttsljqpl37g",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-10T19:38:12.175+08:00",
-                    "resolvedAt": "2026-09-10T19:39:12.423+08:00",
-                    "durationMin": 2,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "fvvxtzvbk64p",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-10T19:30:12.041+08:00",
-                    "resolvedAt": "2026-09-10T19:35:12.079+08:00",
-                    "durationMin": 6,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "8zx8dxkw5qgf",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-10T19:42:13.067+08:00",
-                    "resolvedAt": "2026-09-10T19:43:12.034+08:00",
-                    "durationMin": 1,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "8r4x8clzcf9z",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-10T19:45:13.262+08:00",
-                    "resolvedAt": "2026-09-10T19:46:13.200+08:00",
-                    "durationMin": 1,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "n7d6rlxwd73j",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-11T05:27:12.030+08:00",
-                    "resolvedAt": "2026-09-11T05:28:12.031+08:00",
-                    "durationMin": 2,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "136vmqyx3d97",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-12T15:38:12.804+08:00",
-                    "resolvedAt": "2026-09-12T15:39:12.176+08:00",
-                    "durationMin": 1,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "yj0nhsr65bm2",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-14T03:06:12.131+08:00",
-                    "resolvedAt": "2026-09-14T03:08:12.383+08:00",
-                    "durationMin": 3,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "h4rhhrm6nwbp",
-                    "title": "Elevated search request error rate",
-                    "startedAt": "2026-09-19T18:36:12.056+08:00",
-                    "resolvedAt": "2026-09-19T18:51:12.471+08:00",
-                    "durationMin": 16,
-                    "finalStatus": "resolved",
-                    "impact": "critical"
-                },
-                {
-                    "id": "b0yb9hljvczz",
-                    "title": "kimi fs\u670d\u52a1\u5f02\u5e38",
-                    "startedAt": "2026-09-29T07:45:13.989+08:00",
-                    "resolvedAt": "2026-09-29T08:12:13.780+08:00",
-                    "durationMin": 27,
                     "finalStatus": "resolved",
                     "impact": "critical"
                 }

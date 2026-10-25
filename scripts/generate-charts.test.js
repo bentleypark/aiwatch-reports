@@ -5,6 +5,7 @@ const {
   buildMoverExclude, notableMoversForChart, medianOf, resolveMonthlyScore,
   uptimeLookbackDays, uptimeLookbackSpan, explainWindow, missingMonthDays, elapsedMonthDays, hasDayData,
   heatmapGate, describeMissing, dataSpan, daysInMonthOf, UPTIME_MAX_LOOKBACK_DAYS, nameForMonth, nameToId, renamedServiceId, nameHistoryDrift, projectServiceMeta,
+  alignDowntimeRule, crossesDowntimeRuleChange,
 } = require('./generate-charts')
 const assert = require('assert')
 const { spawnSync } = require('child_process')
@@ -1589,6 +1590,29 @@ test('an axis nobody moved on contributes 0 — no divide-by-zero', () => {
   }
   // c moved most on Score (+10 vs +6/+1) → ranks first.
   eq(movers[0].id, 'c')
+})
+
+console.log('\nalignDowntimeRule (aiwatch-reports#161)')
+const ruleEntry = (month, services) => ({ month, daysInMonth: 30, daysCollected: 30, services })
+const ruleSvc = (mttr, downtime) => ({ score: 80, grade: 'Good', mttr, downtime })
+test('replaces an earlier month\'s MTTR and downtime with its recount when the window spans the change', () => {
+  const entries = [ruleEntry('2026-08', { a: ruleSvc(60, 6000), b: ruleSvc(40, 400) }), ruleEntry('2026-09', { a: ruleSvc(90, 900) })]
+  const out = alignDowntimeRule(entries, { '2026-08': { a: { downtime: 1000, mttr: 100 } } })
+  assert.deepEqual(out[0].services.a, ruleSvc(100, 1000))
+  assert.deepEqual(out[0].services.b, ruleSvc(null, null), 'a service with no recount carries no cross-rule figure')
+  assert.strictEqual(out[1], entries[1], 'a month on the new rule is untouched')
+})
+test('leaves a window on one side of the change untouched', () => {
+  for (const months of [['2026-06', '2026-07', '2026-08'], ['2026-09', '2026-10', '2026-11']]) {
+    const entries = months.map(m => ruleEntry(m, { a: ruleSvc(60, 6000) }))
+    assert.strictEqual(alignDowntimeRule(entries, {}), entries, months.join(','))
+  }
+})
+test('crossesDowntimeRuleChange is true only when the window has months on both sides of 2026-09', () => {
+  assert.equal(crossesDowntimeRuleChange(['2026-07', '2026-08', '2026-09']), true)
+  assert.equal(crossesDowntimeRuleChange(['2026-08', '2026-09', '2026-10']), true)
+  assert.equal(crossesDowntimeRuleChange(['2026-09', '2026-10', '2026-11']), false)
+  assert.equal(crossesDowntimeRuleChange(['2026-06', '2026-07', '2026-08']), false)
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

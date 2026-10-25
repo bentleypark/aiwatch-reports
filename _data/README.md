@@ -5,6 +5,10 @@ Stored alongside KV for long-term git preservation and trend analysis.
 
 Files are named `{YYYY-MM}.json` (e.g., `2026-03.json`).
 
+`downtime-recount-{YYYY-MM}.json` files are that month's MTTR and downtime recounted under the counting
+rule in use from 2026-09 (aiwatch#1505), written by aiwatch's
+`npx tsx scripts/patch-archive-derived-dupes.ts --period YYYY-MM --recount-downtime`.
+
 ## Consumed by the 3-Month Trend section
 
 `generate-report.js` (`buildTrendSection`) and `generate-charts.js` (`generateTrendSvg`) read the
@@ -17,6 +21,9 @@ The drift caveats below are handled, not ignored:
   *movers* — a service needs a Score at BOTH window ends to qualify, so a mid-window add never reads as a fake change.
 - **Excluded services**: no-incident-feed (`bedrock`, `azureopenai`) and stale-source services are kept out
   of movers, mirroring the Score ranking's own exclusion.
+- **Downtime counting change** (aiwatch#1505, from 2026-09): in a window spanning it, each earlier month's
+  MTTR / downtime come from its `downtime-recount-{YYYY-MM}.json`, and are blank without one, so no delta
+  compares two counting rules (aiwatch-reports#161).
 - **Uptime is NOT trended** from these files — the `uptime` field mixes per-service sources (group aggregates /
   estimates), so only the incident-*measured* Score / MTTR / total-downtime fields feed the decomposition.
 

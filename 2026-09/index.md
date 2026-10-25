@@ -100,11 +100,13 @@ AIWatch Score direction over the last 3 months (2026-07 → 2026-09). The lines 
 
 *The 5 services whose **Score, recovery time (MTTR), or total downtime** changed most over the window (ranked by the largest single change, not a fixed threshold). The metric in **bold** is the change that ranked each service here; 🔺 / 🔻 mark whether that headline metric improved or worsened — so a service can show a small Score gain yet land here, and read 🔻, because its downtime regressed.*
 
-- 🔻 **Hugging Face** — Score 80 → 87 → 66 (−14) · **MTTR 39m → 2h 42m → 71h 54m (+71h 15m)** · downtime 4h 36m → 8h 7m → 149h 6m (+144h 30m)
-- 🔺 **Claude API** — Score 61 → 71 → 72 (+11) · MTTR 2h 42m → 1h 49m → 1h 16m (−1h 26m) · **downtime 121h 51m → 32h 38m → 11h 27m (−110h 24m)**
-- 🔺 **Mistral API** — Score 81 → 42 → 73 (−8) · MTTR 4h 37m → 2h 11m → 41m (−3h 56m) · **downtime 129h 28m → 138h 3m → 24h 49m (−104h 39m)**
-- 🔺 **Claude Code** — Score 60 → 69 → 72 (+12) · MTTR 2h 6m → 1h 38m → 1h 19m (−47m) · **downtime 98h 39m → 34h 27m → 9h 13m (−89h 26m)**
-- 🔺 **ChatGPT** — Score 57 → 66 → 67 (+10) · MTTR 6h 5m → 3h 42m → 3h 2m (−3h 3m) · **downtime 157h 57m → 62h 46m → 72h 58m (−84h 59m)**
+- 🔻 **Hugging Face** — Score 80 → 87 → 66 (−14) · **MTTR 43m → 4h 3m → 71h 54m (+71h 11m)** · downtime 2h 50m → 8h 6m → 149h 6m (+146h 16m)
+- 🔺 **Claude API** — Score 61 → 71 → 72 (+11) · MTTR 2h 56m → 1h 54m → 1h 16m (−1h 40m) · **downtime 117h 33m → 32h 15m → 11h 27m (−106h 6m)**
+- 🔺 **Mistral API** — Score 81 → 42 → 73 (−8) · MTTR 7h 48m → 6h 50m → 41m (−7h 7m) · **downtime 124h 43m → 129h 50m → 24h 49m (−99h 54m)**
+- 🔺 **ChatGPT** — Score 57 → 66 → 67 (+10) · MTTR 7h 10m → 3h 49m → 3h 2m (−4h 8m) · **downtime 150h 38m → 53h 27m → 72h 58m (−77h 40m)**
+- 🔺 **Claude Code** — Score 60 → 69 → 72 (+12) · MTTR 2h 12m → 1h 42m → 1h 19m (−53m) · **downtime 86h 4m → 34h 4m → 9h 13m (−76h 51m)**
+
+> **Downtime counting changed in September 2026**: from then on, time when several incidents were open at once counts once, and incidents opened by a provider's automatic monitor count as downtime. MTTR and downtime for the earlier months above are recounted from those months' incident records under the new rule, so they can differ from the figures in those months' own reports.
 
 ---
 

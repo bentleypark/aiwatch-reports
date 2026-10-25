@@ -75,7 +75,8 @@ const NEVER_PUBLISHES_UPTIME = new Set(['bedrock', 'azureopenai'])
 // The cross-boundary gap itself is unmeasurable — pre-2026-06 archives carry no `monthlyScore` and
 // cannot be back-filled — so the caveat sizes it from the 2026-06 archive, the one month carrying
 // BOTH values. That is a proxy, not a measurement of the spliced delta. MTTR / total-downtime come
-// from the incident feed; that basis never changed, so their deltas stay clean.
+// from the incident feed and did not change at this cutover (they did at aiwatch#1505 — see
+// crossesDowntimeRuleChange in generate-charts.js).
 const SCORE_METHOD_CUTOVER_MONTH = '2026-06'
 function crossesScoreMethodCutover(firstMonth) {
   return typeof firstMonth === 'string' && firstMonth < SCORE_METHOD_CUTOVER_MONTH
@@ -1347,6 +1348,12 @@ function buildTrendSection(month, archive, meta, dataDir = path.join(__dirname, 
   if (crossesScoreMethodCutover(entries[0].month)) {
     parts.push(
       `> **Scoring-method transition**: Score points before June 2026 were produced two different ways, and both changed at that boundary — so **for every service**, a Score delta spanning it compares two different measurements rather than two months of the same one. First, the earlier points are a snapshot of a rolling 30-day window taken on the day the report was built, whereas June onward scores the report month itself. Where both figures exist for the same month, they agree exactly for about a quarter of services and sit within two points for over half — but reach ten points apart at the extreme. Second, the earlier points predate a change that stopped inventing an uptime figure for services with no official uptime, which had scored those services (e.g. Deepgram) on an assumed ~99.5% uptime, later dropped. Read a Score delta across this boundary as directional, not exact. The MTTR and total-downtime deltas are measured from the incident record throughout and are unaffected.`,
+      '',
+    )
+  }
+  if (charts.crossesDowntimeRuleChange(entries.map(e => e.month))) {
+    parts.push(
+      `> **Downtime counting changed in September 2026**: from then on, time when several incidents were open at once counts once, and incidents opened by a provider's automatic monitor count as downtime. MTTR and downtime for the earlier months above are recounted from those months' incident records under the new rule, so they can differ from the figures in those months' own reports.`,
       '',
     )
   }
