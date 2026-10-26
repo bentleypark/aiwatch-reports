@@ -6,8 +6,8 @@
       "mttr": 114
     },
     "openai": {
-      "downtime": 507,
-      "mttr": 507
+      "downtime": 1745,
+      "mttr": 873
     },
     "gemini": {
       "downtime": null,

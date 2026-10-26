@@ -65,33 +65,33 @@
   <text x="195" y="572" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Runway</text>
   <rect x="203" y="559" width="256" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="467" y="572" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">80  (Good)</text>
-  <text x="195" y="600" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenAI API</text>
+  <text x="195" y="600" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Replicate</text>
   <rect x="203" y="587" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="464" y="600" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
-  <text x="195" y="628" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Replicate</text>
-  <rect x="203" y="615" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="464" y="628" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
-  <text x="195" y="656" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">DeepSeek API</text>
+  <text x="195" y="628" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">DeepSeek API</text>
+  <rect x="203" y="615" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="461" y="628" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
+  <text x="195" y="656" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">AssemblyAI</text>
   <rect x="203" y="643" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="656" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="684" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">AssemblyAI</text>
+  <text x="195" y="684" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">turbopuffer</text>
   <rect x="203" y="671" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="684" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="712" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">turbopuffer</text>
-  <rect x="203" y="699" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="461" y="712" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="740" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">LangChain (LangSmith)</text>
+  <text x="195" y="712" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">LangChain (LangSmith)</text>
+  <rect x="203" y="699" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="454" y="712" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
+  <text x="195" y="740" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Langfuse</text>
   <rect x="203" y="727" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="454" y="740" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
-  <text x="195" y="768" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Langfuse</text>
-  <rect x="203" y="755" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="454" y="768" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
-  <text x="195" y="796" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Fireworks AI</text>
+  <text x="195" y="768" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Fireworks AI</text>
+  <rect x="203" y="755" width="240" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="451" y="768" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">75  (Good)</text>
+  <text x="195" y="796" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">claude.ai</text>
   <rect x="203" y="783" width="240" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="451" y="796" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">75  (Good)</text>
-  <text x="195" y="824" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">claude.ai</text>
-  <rect x="203" y="811" width="240" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="451" y="824" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">75  (Good)</text>
+  <text x="195" y="824" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenAI API</text>
+  <rect x="203" y="811" width="237" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="448" y="824" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">74  (Fair)</text>
   <text x="195" y="852" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Voyage AI</text>
   <rect x="203" y="839" width="237" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="448" y="852" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">74  (Fair)</text>
