@@ -73,14 +73,14 @@ published: true
 
 ## Key Insight
 
-September's middle tier slid: in the main ranking table Good fell from 24 services to 19 and Fair rose from 9 to 15. 40 of 46 services recorded at least one incident, for a combined 777h 40m of downtime.
+September's middle tier slid: in the main ranking table Good fell from 23 services to 19 and Fair rose from 10 to 15. 40 of 46 services recorded at least one incident, for a combined 815h 29m of downtime.
 
 - **Pattern 1 — all 49 of Together AI's September incidents are reconstructed from its status page's daily availability record.** None is an incident the provider posted, so the month is not comparable with August, when 24 of 64 were reconstructed. This is the first month its record rests entirely on reconstruction. Its Score barely moved, 71 → 73.
 - **Pattern 2 — AIWatch's probes caught degradations the status pages weren't showing at the time.** Direct RTT probes flagged 230 RTT degradations this month, 208 of them not reflected on the providers' own status pages at the time of detection. Gemini API logged 64 flagged, 49 of them not on its status page, in a month that page carried a single incident. Deepgram led the count at 94, 93 of them not on its status page. Per-service breakdown in [RTT Degradation Detection](#rtt-degradation-detection).
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p>9월에는 Good 등급이 줄고 Fair 등급이 늘었습니다. 메인 순위표에서 Good은 24곳에서 19곳으로, Fair는 9곳에서 15곳으로 바뀌었습니다. 46곳 중 40곳에서 장애가 1건 이상 있었고, 다운타임은 모두 합쳐 777시간 40분입니다.</p>
+<p>9월에는 Good 등급이 줄고 Fair 등급이 늘었습니다. 메인 순위표에서 Good은 23곳에서 19곳으로, Fair는 10곳에서 15곳으로 바뀌었습니다. 46곳 중 40곳에서 장애가 1건 이상 있었고, 다운타임은 모두 합쳐 815시간 29분입니다.</p>
 <ul>
 <li><strong>패턴 1 — Together AI의 9월 장애 기록 49건은 모두 상태 페이지의 일별 가용성 데이터에서 재구성한 것입니다.</strong> 업체가 올린 장애 공지가 아니어서 8월(64건 중 24건 재구성)과 같은 기준으로 비교할 수 없습니다. Together AI의 장애 기록이 모두 재구성한 기록으로만 채워진 달은 이번이 처음입니다. 점수는 71점에서 73점으로 거의 변하지 않았습니다.</li>
 <li><strong>패턴 2 — 상태 페이지에 나타나지 않았던 성능 저하를 AIWatch 프로브가 잡아냈습니다.</strong> 이달 AIWatch가 RTT를 직접 측정해 감지한 성능 저하는 230건이며, 그중 208건은 감지 당시 해당 업체의 상태 페이지에 표시되지 않았습니다. Gemini API의 상태 페이지에는 이달 장애가 단 1건만 올라왔지만, 프로브는 성능 저하 64건을 감지했고 그중 49건은 상태 페이지에 없었습니다. 감지 건수는 Deepgram이 94건으로 가장 많았고, 그중 93건이 상태 페이지에 없었습니다. 서비스별 내역은 <a href="#rtt-degradation-detection">RTT Degradation Detection</a> 섹션에서 확인할 수 있습니다.</li></ul>
@@ -103,8 +103,8 @@ AIWatch Score direction over the last 3 months (2026-07 → 2026-09). The lines 
 - 🔻 **Hugging Face** — Score 80 → 87 → 66 (−14) · **MTTR 43m → 4h 3m → 71h 54m (+71h 11m)** · downtime 2h 50m → 8h 6m → 149h 6m (+146h 16m)
 - 🔺 **Claude API** — Score 61 → 71 → 72 (+11) · MTTR 2h 56m → 1h 54m → 1h 16m (−1h 40m) · **downtime 117h 33m → 32h 15m → 11h 27m (−106h 6m)**
 - 🔺 **Mistral API** — Score 81 → 42 → 73 (−8) · MTTR 7h 48m → 6h 50m → 41m (−7h 7m) · **downtime 124h 43m → 129h 50m → 24h 49m (−99h 54m)**
-- 🔺 **ChatGPT** — Score 57 → 66 → 67 (+10) · MTTR 7h 10m → 3h 49m → 3h 2m (−4h 8m) · **downtime 150h 38m → 53h 27m → 72h 58m (−77h 40m)**
 - 🔺 **Claude Code** — Score 60 → 69 → 72 (+12) · MTTR 2h 12m → 1h 42m → 1h 19m (−53m) · **downtime 86h 4m → 34h 4m → 9h 13m (−76h 51m)**
+- 🔻 **Luma (Dream Machine)** — Score 78 → 85 → 62 (−16) · MTTR 1h 45m → — → 8h (+6h 15m) · **downtime 1h 45m → — → 72h (+70h 15m)**
 
 > **Downtime counting changed in September 2026**: from then on, time when several incidents were open at once counts once, and incidents opened by a provider's automatic monitor count as downtime. MTTR and downtime for the earlier months above are recounted from those months' incident records under the new rule, so they can differ from the figures in those months' own reports.
 
@@ -154,8 +154,8 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 28= | Claude Code | 72 | Fair | Official | 7 incidents, avg 1h 19m |
 | 30 | Black Forest Labs (FLUX) | 70 | Fair | Official | 2 incidents, avg 13h 23m |
 | 31 | Pinecone | 68 | Fair | Official | 4 incidents, avg 4h 14m |
-| 32 | ChatGPT | 67 | Fair | Official | 26 incidents, avg 3h 2m over 24 |
-| 33 | Hugging Face | 66 | Fair | Platform | 7 incidents, avg 71h 54m over 1 |
+| 32= | Hugging Face | 66 | Fair | Platform | 7 incidents, avg 71h 54m over 1 |
+| 32= | ChatGPT | 66 | Fair | Official | 26 incidents, avg 4h 37m over 24 |
 | 34 | OpenAI API | 65 | Fair | Official | 8 incidents, avg 2h 51m over 7 |
 | 35 | ElevenLabs | 63 | Fair | Official | 10 incidents, avg 5h 49m over 9 |
 | 36 | Luma (Dream Machine) | 62 | Fair | Platform | 13 incidents, avg 8h over 3 |
@@ -434,6 +434,8 @@ Recovery fell on two long incidents (20h 43m and 15h 41m); Responsiveness on a s
 > **Longest and Avg Resolution read "—" for Together AI.** Every entry for this service this month is reconstructed, so none carries a recovery time.
 >
 > **From September, time when several incidents were open at once is counted once.** Earlier months add up every incident's duration, so their Downtime is not directly comparable. Mistral API's September incidents, for example, add up to 39h 7m; counted this way they come to 24h 49m. Reconstructed entries are daily totals and are still added one by one.
+>
+> **ChatGPT** — "Elevated errors in ChatGPT Space Pages" began 2026-09-30 02:20 UTC and was resolved by the provider 2026-10-01 23:44 UTC; its full 45h 25m is counted in September, the month it began.
 
 <table>
 <thead>
@@ -441,7 +443,7 @@ Recovery fell on two long incidents (20h 43m and 15h 41m); Responsiveness on a s
 </thead>
 <tbody>
 <tr><td>Hugging Face</td><td>7</td><td>149h 6m (71h 54m)</td><td class="hide-mobile">71h 54m</td><td class="hide-mobile">71h 54m over 1</td></tr>
-<tr><td>ChatGPT</td><td>26</td><td>72h 58m (12h 7m)</td><td class="hide-mobile">12h 7m</td><td class="hide-mobile">3h 2m over 24</td></tr>
+<tr><td>ChatGPT</td><td>26</td><td>110h 47m (45h 25m)</td><td class="hide-mobile">45h 25m</td><td class="hide-mobile">4h 37m over 24</td></tr>
 <tr><td>Luma (Dream Machine)</td><td>13</td><td>72h (13h)</td><td class="hide-mobile">13h</td><td class="hide-mobile">8h over 3</td></tr>
 <tr><td>ElevenLabs</td><td>10</td><td>52h 20m (32h 3m)</td><td class="hide-mobile">32h 3m</td><td class="hide-mobile">5h 49m over 9</td></tr>
 <tr><td>Cursor</td><td>32</td><td>48h 28m (6h 30m)</td><td class="hide-mobile">6h 30m</td><td class="hide-mobile">1h 44m over 28</td></tr>

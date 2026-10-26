@@ -4665,14 +4665,14 @@
             "score": 72,
             "grade": "fair",
             "scoreConfidence": "high",
-            "monthlyScore": 67,
+            "monthlyScore": 66,
             "monthlyGrade": "fair",
             "monthlyScoreConfidence": "high",
             "incidents": 26,
             "countedIncidents": 24,
-            "avgResolutionMin": 182,
-            "totalDowntimeMin": 4378,
-            "longestIncidentMin": 727,
+            "avgResolutionMin": 277,
+            "totalDowntimeMin": 6647,
+            "longestIncidentMin": 2725,
             "avgLatencyMs": null,
             "p95LatencyMs": null,
             "latencySpikes": null,
@@ -4907,11 +4907,11 @@
                 {
                     "id": "01M3R1T4FCR1337FBBYY9K2RPB",
                     "title": "Elevated errors in ChatGPT Space Pages",
-                    "startedAt": "2026-09-30T02:20:32Z",
-                    "resolvedAt": null,
-                    "durationMin": 0,
-                    "finalStatus": "monitoring",
-                    "impact": "minor"
+                    "startedAt": "2026-09-30T02:20:32.108Z",
+                    "resolvedAt": "2026-10-01T23:44:57.067Z",
+                    "impact": "minor",
+                    "durationMin": 2725,
+                    "finalStatus": "resolved"
                 }
             ],
             "components": [
@@ -4985,7 +4985,16 @@
                     "name": "Sites",
                     "uptime": 96.6
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 29,
+                "incidents": 12.7,
+                "recovery": 11.3,
+                "responsiveness": null,
+                "speed": null,
+                "stability": null,
+                "responsivenessStatus": "unsupported"
+            }
         },
         "deepseekapp": {
             "uptime": 99.96,

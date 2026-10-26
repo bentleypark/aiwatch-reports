@@ -195,14 +195,14 @@
             "score": 74,
             "grade": "fair",
             "scoreConfidence": "high",
-            "monthlyScore": 79,
-            "monthlyGrade": "good",
+            "monthlyScore": 74,
+            "monthlyGrade": "fair",
             "monthlyScoreConfidence": "high",
             "incidents": 2,
-            "countedIncidents": 1,
-            "avgResolutionMin": 507,
-            "totalDowntimeMin": 507,
-            "longestIncidentMin": 507,
+            "countedIncidents": 2,
+            "avgResolutionMin": 873,
+            "totalDowntimeMin": 1745,
+            "longestIncidentMin": 1238,
             "avgLatencyMs": 150,
             "p95LatencyMs": 210,
             "latencySpikes": 502,
@@ -221,11 +221,11 @@
                 {
                     "id": "01M1CYZDD84XD0H56XNEV2PT98",
                     "title": "Elevated latency in the Responses API",
-                    "startedAt": "2026-08-31T22:27:56Z",
-                    "resolvedAt": null,
-                    "durationMin": 0,
-                    "finalStatus": "monitoring",
-                    "impact": "minor"
+                    "startedAt": "2026-08-31T22:27:56.967Z",
+                    "resolvedAt": "2026-09-01T19:05:46.393Z",
+                    "impact": "minor",
+                    "durationMin": 1238,
+                    "finalStatus": "resolved"
                 }
             ],
             "components": [
@@ -289,7 +289,16 @@
                     "name": "Sora",
                     "uptime": 100
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 39.2,
+                "incidents": 22.8,
+                "recovery": 2.1,
+                "responsiveness": 10.2,
+                "speed": 7.3,
+                "stability": 2.9,
+                "responsivenessStatus": "available"
+            }
         },
         "gemini": {
             "uptime": 100,

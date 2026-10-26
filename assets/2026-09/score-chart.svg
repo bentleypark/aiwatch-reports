@@ -101,10 +101,10 @@
   <text x="195" y="908" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Pinecone</text>
   <rect x="203" y="895" width="218" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="429" y="908" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">68  (Fair)</text>
-  <text x="195" y="936" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">ChatGPT</text>
-  <rect x="203" y="923" width="214" height="18" rx="3" fill="#eab308" opacity="0.85"/>
-  <text x="425" y="936" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">67  (Fair)</text>
-  <text x="195" y="964" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Hugging Face</text>
+  <text x="195" y="936" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Hugging Face</text>
+  <rect x="203" y="923" width="211" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="422" y="936" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">66  (Fair)</text>
+  <text x="195" y="964" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">ChatGPT</text>
   <rect x="203" y="951" width="211" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="422" y="964" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">66  (Fair)</text>
   <text x="195" y="992" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenAI API</text>
