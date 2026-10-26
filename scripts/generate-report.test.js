@@ -49,6 +49,7 @@ const {
   nextMonthName,
   replaceTableBody,
   fillTemplate,
+  formatPointsLost,
 } = require('./generate-report')
 const assert = require('assert')
 const charts = require('./generate-charts')
@@ -4262,6 +4263,62 @@ test('the RECONSTRUCTED_SERVICES placeholder is filled from the month, never lef
   const aug = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', '2026-08.json'), 'utf-8'))
   const out = fillTemplate(REAL_TEMPLATE, '2026-08', aug, metaFor(aug))
   assert.ok(out.includes('methodology#incidents).\n>\n> **Longest and Avg Resolution read "—" for helicone.** Every entry for this service this month is reconstructed, so none carries a recovery time.\n>\n> <!-- Cycle-specific'), 'August names helicone in its own note (metaFor names services by id)')
+})
+
+console.log('\naiwatch#1779 — Score breakdown')
+
+const FULL_BREAKDOWN = { uptime: 40, incidents: 25, recovery: 15, responsiveness: 9.3, speed: 6.1, stability: 3.2, responsivenessStatus: 'available' }
+
+test('formatPointsLost states each shortfall in Score points', () => {
+  eq(formatPointsLost(FULL_BREAKDOWN), '11 pts on Responsiveness (latency)')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 36, responsiveness: 9 }), '4 pts on Uptime, 11 pts on Responsiveness (latency)')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: 20 }), null)
+})
+
+test('formatPointsLost scales a rescaled row so the losses still add up to 100 minus the Score', () => {
+  // (25 + 15 + 12) / 60 × 100 = 86.7 → printed 87; 8 of 60 lost = 13 Score points.
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), '13 pts on Responsiveness (latency)')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: null, responsivenessStatus: 'unsupported' }), null)
+})
+
+test('formatPointsLost names the short-probe penalty, which no component shows', () => {
+  // (40 + 25 + 15) / 80 × 100 × 0.95 = 95.
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: null, responsivenessStatus: 'insufficient' }), '5 pts for a short probe history')
+  // (34 + 25 + 15) / 80 × 100 × 0.95 = 87.9 → 88: 6 × 1.25 × 0.95 = 7.1 → 7 (8 without the penalty), plus the 5.
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 34, responsiveness: null, responsivenessStatus: 'insufficient' }), '7 pts on Uptime, 5 pts for a short probe history')
+})
+
+test('formatPointsLost never prints a shortfall as 0', () => {
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.8, responsiveness: 20 }), '<1 pt on Uptime')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.2, responsiveness: 20 }), '1 pt on Uptime')
+})
+
+const zeroRow = (id, score, conf, breakdown) => ({
+  id, data: { score, grade: 'good', officialUptime: conf === 'high' ? 100 : null, uptime: 100, incidents: 0, avgResolutionMin: null, totalDowntimeMin: 0, monthlyScoreConfidence: conf, monthlyScoreBreakdown: breakdown },
+})
+
+test('buildWhy says where a zero-incident row below 100 lost its points (the Groq case)', () => {
+  eq(buildWhy(zeroRow('groq', 89, 'high', FULL_BREAKDOWN), 'groq'), 'Zero incidents, 100.00% uptime — lost 11 pts on Responsiveness (latency)')
+})
+
+test('buildWhy adds nothing at 100, even when a component rounds into it', () => {
+  eq(buildWhy(zeroRow('windsurf', 100, 'high', { ...FULL_BREAKDOWN, responsiveness: 20 }), 'windsurf'), 'Zero incidents, 100.00% uptime')
+  eq(buildWhy(zeroRow('windsurf', 100, 'high', { ...FULL_BREAKDOWN, responsiveness: 19.9 }), 'windsurf'), 'Zero incidents, 100.00% uptime')
+})
+
+test('buildWhy on a medium-tier zero-incident row never names Uptime', () => {
+  eq(buildWhy(zeroRow('gemini', 87, 'medium', { ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), 'gemini'), 'Zero incidents — lost 13 pts on Responsiveness (latency)')
+})
+
+test('buildWhy leaves a month written before the field, and every row with incidents, as it was', () => {
+  eq(buildWhy(zeroRow('groq', 89, 'high', undefined), 'groq'), 'Zero incidents, 100.00% uptime')
+  const withIncident = { id: 'modal', data: { ...zeroRow('modal', 80, 'high', FULL_BREAKDOWN).data, officialUptime: 99.5, incidents: 2, avgResolutionMin: 40, countedIncidents: 2 } }
+  assert.ok(!buildWhy(withIncident, 'modal').includes(' lost '), buildWhy(withIncident, 'modal'))
+})
+
+test('buildScoreTable carries the lost-points note into the ranking row', () => {
+  const table = buildScoreTable([zeroRow('groq', 89, 'high', FULL_BREAKDOWN)], { groq: { name: 'Groq Cloud' } }, '2026-10')
+  assert.match(table, /\| 1 \| Groq Cloud \| 89 \| Good \| Official \| Zero incidents, 100\.00% uptime — lost 11 pts on Responsiveness \(latency\) \|/)
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
