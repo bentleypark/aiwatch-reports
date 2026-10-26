@@ -292,27 +292,34 @@ function avgOverDivisor(data) {
 
 // ── "Why" text generation for Score Ranking ──────────────────────────
 // Formulaic — intentional. Human editors refine as needed.
+function zeroIncidentWhy(svc, id) {
+  // aiwatch#951 — cite the OFFICIAL figure, never the daily-counter `uptime`. A service that
+  // publishes no official uptime has no comparable % to quote, and quoting the measured one made
+  // "Zero incidents, 100.00% uptime" sit next to a Score rescaled as if no uptime existed
+  // (OpenRouter 80, Stability AI 76 — impossible under the formula, whose floor is 80 with uptime).
+  const official = officialUptimeFor(svc, id)
+  if (typeof official === 'number') {
+    return `Zero incidents, ${official.toFixed(2)}% uptime`
+  } else if (scoreTier(svc) !== 'medium' && publishesNoOfficialUptime(svc, id)) {
+    // "They publish none" — a statement about the provider.
+    return 'Zero incidents (no published uptime)'
+  } else {
+    // "We have no figure" — a statement about our data: a legacy archive, missing counters, or a
+    // figure we withheld because it contradicted the Score. Different claim; don't put words in
+    // the provider's mouth.
+    return 'Zero incidents'
+  }
+}
+
 function buildWhy(svc, id) {
   const { incidents, avgResolutionMin } = svc.data
   const pieces = []
   if (incidents === 0) {
-    // aiwatch#951 — cite the OFFICIAL figure, never the daily-counter `uptime`. A service that
-    // publishes no official uptime has no comparable % to quote, and quoting the measured one made
-    // "Zero incidents, 100.00% uptime" sit next to a Score rescaled as if no uptime existed
-    // (OpenRouter 80, Stability AI 76 — impossible under the formula, whose floor is 80 with uptime).
-    const official = officialUptimeFor(svc, id)
-    if (typeof official === 'number') {
-      pieces.push('Zero incidents', `${official.toFixed(2)}% uptime`)
-    } else if (scoreTier(svc) !== 'medium' && publishesNoOfficialUptime(svc, id)) {
-      // "They publish none" — a statement about the provider.
-      return 'Zero incidents (no published uptime)'
-    } else {
-      // "We have no figure" — a statement about our data: a legacy archive, missing counters, or a
-      // figure we withheld because it contradicted the Score. Different claim; don't put words in
-      // the provider's mouth.
-      return 'Zero incidents'
-    }
-  } else if (incidents === 1) {
+    const base = zeroIncidentWhy(svc, id)
+    const lost = svc.data.score < 100 && svc.data.monthlyScoreBreakdown ? formatPointsLost(svc.data.monthlyScoreBreakdown) : null
+    return lost ? `${base} — lost ${lost}` : base
+  }
+  if (incidents === 1) {
     pieces.push('1 incident')
     if (avgResolutionMin) pieces.push(fmtDurationMin(avgResolutionMin))
   } else if (avgResolutionMin !== null && avgResolutionMin < 30) {
@@ -323,6 +330,33 @@ function buildWhy(svc, id) {
     if (avgResolutionMin) pieces.push(`avg ${avgOverDivisor(svc.data)}`)
   }
   return pieces.join(', ')
+}
+
+// aiwatch#1779 — where a zero-incident row's Score lost points, in Score points, from
+// `monthlyScoreBreakdown`. The worker sums the components present, rescales that sum to 100 by their
+// combined maximum and applies the short-probe penalty, so each component's shortfall is scaled the
+// same way; the losses then add up to 100 minus the Score, to rounding. null when nothing was lost.
+const SCORE_COMPONENTS = [
+  ['uptime', 'Uptime', 40],
+  ['incidents', 'Incidents', 25],
+  ['recovery', 'Recovery', 15],
+  ['responsiveness', 'Responsiveness (latency)', 20],
+]
+const SHORT_PROBE_FACTOR = 0.95
+
+function fmtLostPoints(points) {
+  const rounded = Math.round(points)
+  return rounded === 0 ? '<1 pt' : `${rounded} pt${rounded === 1 ? '' : 's'}`
+}
+
+function formatPointsLost(breakdown) {
+  const present = SCORE_COMPONENTS.filter(([key]) => typeof breakdown[key] === 'number')
+  const outOf = present.reduce((sum, [, , max]) => sum + max, 0)
+  const factor = breakdown.responsivenessStatus === 'insufficient' ? SHORT_PROBE_FACTOR : 1
+  const lost = present.filter(([key, , max]) => breakdown[key] < max)
+    .map(([key, label, max]) => `${fmtLostPoints((max - breakdown[key]) * (100 / outOf) * factor)} on ${label}`)
+  if (factor < 1) lost.push(`${fmtLostPoints(100 * (1 - factor))} for a short probe history`)
+  return lost.length > 0 ? lost.join(', ') : null
 }
 
 // Grade → capitalized label
@@ -2502,6 +2536,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  formatPointsLost,
   parseCliMonth,
   fmtPercent,
   fmtMs,
