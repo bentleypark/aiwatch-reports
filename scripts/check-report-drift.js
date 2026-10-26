@@ -19,15 +19,7 @@ const RANK_UNCHECKED_MONTHS = ['2026-06']
 
 // A row where the archive, not the body, is wrong. Each entry names the issue that corrects the
 // archive; once `_data` is fixed the entry stops matching and the check fails until it is removed.
-const KNOWN_DRIFT = [
-  {
-    month: '2026-08',
-    table: 'incidents',
-    published: '2 | 8h 27m (8h 27m) | 8h 27m | 8h 27m over 1',
-    expected: '2 | 8h 27m (8h 27m) | 8h 27m | 4h 14m',
-    issue: 'bentleypark/aiwatch#1793',
-  },
-]
+const KNOWN_DRIFT = []
 
 function section(md, heading) {
   const start = md.search(new RegExp(`^## ${heading}`, 'm'))
