@@ -32,64 +32,64 @@
   <text x="195" y="264" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Fireworks AI</text>
   <rect x="203" y="251" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="473" y="264" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
-  <text x="195" y="292" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">GitHub Copilot</text>
+  <text x="195" y="292" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Kimi (Moonshot AI)</text>
   <rect x="203" y="279" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="473" y="292" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
-  <text x="195" y="320" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cohere API</text>
-  <rect x="203" y="307" width="259" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="470" y="320" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">81  (Good)</text>
-  <text x="195" y="348" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cerebras Inference</text>
-  <rect x="203" y="335" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="464" y="348" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
-  <text x="195" y="376" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">turbopuffer</text>
+  <text x="195" y="320" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">GitHub Copilot</text>
+  <rect x="203" y="307" width="262" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="473" y="320" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">82  (Good)</text>
+  <text x="195" y="348" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cohere API</text>
+  <rect x="203" y="335" width="259" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="470" y="348" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">81  (Good)</text>
+  <text x="195" y="376" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Cerebras Inference</text>
   <rect x="203" y="363" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="464" y="376" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
-  <text x="195" y="404" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Runway</text>
+  <text x="195" y="404" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">turbopuffer</text>
   <rect x="203" y="391" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="464" y="404" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
-  <text x="195" y="432" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Perplexity</text>
-  <rect x="203" y="419" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="461" y="432" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="460" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenRouter</text>
+  <text x="195" y="432" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Runway</text>
+  <rect x="203" y="419" width="253" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="464" y="432" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">79  (Good)</text>
+  <text x="195" y="460" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Perplexity</text>
   <rect x="203" y="447" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="460" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="488" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">AssemblyAI</text>
+  <text x="195" y="488" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">OpenRouter</text>
   <rect x="203" y="475" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="488" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="516" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Voyage AI</text>
+  <text x="195" y="516" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">AssemblyAI</text>
   <rect x="203" y="503" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="516" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="544" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">claude.ai</text>
+  <text x="195" y="544" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Voyage AI</text>
   <rect x="203" y="531" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="461" y="544" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
-  <text x="195" y="572" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Twelve Labs</text>
-  <rect x="203" y="559" width="246" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="457" y="572" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">77  (Good)</text>
-  <text x="195" y="600" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">DeepSeek API</text>
-  <rect x="203" y="587" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
-  <text x="454" y="600" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
-  <text x="195" y="628" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Stability AI</text>
+  <text x="195" y="572" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">claude.ai</text>
+  <rect x="203" y="559" width="250" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="461" y="572" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">78  (Good)</text>
+  <text x="195" y="600" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Twelve Labs</text>
+  <rect x="203" y="587" width="246" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="457" y="600" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">77  (Good)</text>
+  <text x="195" y="628" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">DeepSeek API</text>
   <rect x="203" y="615" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
   <text x="454" y="628" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
-  <text x="195" y="656" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">LangChain (LangSmith)</text>
-  <rect x="203" y="643" width="237" height="18" rx="3" fill="#eab308" opacity="0.85"/>
-  <text x="448" y="656" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">74  (Fair)</text>
-  <text x="195" y="684" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Codex</text>
+  <text x="195" y="656" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Stability AI</text>
+  <rect x="203" y="643" width="243" height="18" rx="3" fill="#3b82f6" opacity="0.85"/>
+  <text x="454" y="656" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">76  (Good)</text>
+  <text x="195" y="684" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">LangChain (LangSmith)</text>
   <rect x="203" y="671" width="237" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="448" y="684" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">74  (Fair)</text>
-  <text x="195" y="712" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Mistral API</text>
-  <rect x="203" y="699" width="234" height="18" rx="3" fill="#eab308" opacity="0.85"/>
-  <text x="445" y="712" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">73  (Fair)</text>
-  <text x="195" y="740" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Together AI</text>
+  <text x="195" y="712" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Codex</text>
+  <rect x="203" y="699" width="237" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="448" y="712" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">74  (Fair)</text>
+  <text x="195" y="740" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Mistral API</text>
   <rect x="203" y="727" width="234" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="445" y="740" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">73  (Fair)</text>
-  <text x="195" y="768" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Langfuse</text>
+  <text x="195" y="768" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Together AI</text>
   <rect x="203" y="755" width="234" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="445" y="768" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">73  (Fair)</text>
-  <text x="195" y="796" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Claude API</text>
-  <rect x="203" y="783" width="230" height="18" rx="3" fill="#eab308" opacity="0.85"/>
-  <text x="441" y="796" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">72  (Fair)</text>
-  <text x="195" y="824" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Kimi (Moonshot AI)</text>
+  <text x="195" y="796" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Langfuse</text>
+  <rect x="203" y="783" width="234" height="18" rx="3" fill="#eab308" opacity="0.85"/>
+  <text x="445" y="796" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">73  (Fair)</text>
+  <text x="195" y="824" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Claude API</text>
   <rect x="203" y="811" width="230" height="18" rx="3" fill="#eab308" opacity="0.85"/>
   <text x="441" y="824" fill="#8b949e" font-size="11" font-family="ui-monospace,monospace">72  (Fair)</text>
   <text x="195" y="852" fill="#e6edf3" font-size="12" font-family="ui-monospace,monospace" text-anchor="end">Claude Code</text>

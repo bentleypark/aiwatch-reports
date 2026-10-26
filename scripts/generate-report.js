@@ -1580,6 +1580,13 @@ function replaceTableBody(template, sectionHeading, replacement) {
   return template
 }
 
+function servicesFromArchive(archive) {
+  return Object.entries(archive.services).map(([id, data]) => {
+    const { score, grade } = charts.resolveMonthlyScore(data)
+    return { id, data: { ...data, score, grade } }
+  })
+}
+
 function fillTemplate(template, month, archive, meta) {
   const [year] = month.split('-').map(Number)
   const mName = monthName(month)
@@ -1599,10 +1606,7 @@ function fillTemplate(template, month, archive, meta) {
   // fallback. The raw `officialUptime` field is left untouched here, but aiwatch-reports#106 made its
   // gating read the MONTHLY confidence (see `printedScoreConfidence`) so the gate describes the score
   // this normalization produces, not the build-day snapshot it replaced.
-  const services = Object.entries(archive.services).map(([id, data]) => {
-    const { score, grade } = charts.resolveMonthlyScore(data)
-    return { id, data: { ...data, score, grade } }
-  })
+  const services = servicesFromArchive(archive)
 
   // aiwatch#951 — the uptime columns now trust the archive. Say so out loud when the archive can't
   // be trusted, rather than publishing fabricated "Official" figures silently (which is the bug).
@@ -2590,6 +2594,7 @@ module.exports = {
   nextMonthName,
   replaceTableBody,
   fillTemplate,
+  servicesFromArchive,
   injectAutoDraft,
   archiveToAnalysisRows,
   applyAutoDraft,

@@ -73,14 +73,14 @@ published: true
 
 ## Key Insight
 
-September's middle tier slid: in the main ranking table Good fell from 24 services to 18 and Fair rose from 9 to 16. 40 of 46 services recorded at least one incident, for a combined 778h 47m of downtime.
+September's middle tier slid: in the main ranking table Good fell from 24 services to 19 and Fair rose from 9 to 15. 40 of 46 services recorded at least one incident, for a combined 777h 40m of downtime.
 
 - **Pattern 1 — all 49 of Together AI's September incidents are reconstructed from its status page's daily availability record.** None is an incident the provider posted, so the month is not comparable with August, when 24 of 64 were reconstructed. This is the first month its record rests entirely on reconstruction. Its Score barely moved, 71 → 73.
 - **Pattern 2 — AIWatch's probes caught degradations the status pages weren't showing at the time.** Direct RTT probes flagged 230 RTT degradations this month, 208 of them not reflected on the providers' own status pages at the time of detection. Gemini API logged 64 flagged, 49 of them not on its status page, in a month that page carried a single incident. Deepgram led the count at 94, 93 of them not on its status page. Per-service breakdown in [RTT Degradation Detection](#rtt-degradation-detection).
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p>9월에는 Good 등급이 줄고 Fair 등급이 늘었습니다. 메인 순위표에서 Good은 24곳에서 18곳으로, Fair는 9곳에서 16곳으로 바뀌었습니다. 46곳 중 40곳에서 장애가 1건 이상 있었고, 다운타임은 모두 합쳐 778시간 47분입니다.</p>
+<p>9월에는 Good 등급이 줄고 Fair 등급이 늘었습니다. 메인 순위표에서 Good은 24곳에서 19곳으로, Fair는 9곳에서 15곳으로 바뀌었습니다. 46곳 중 40곳에서 장애가 1건 이상 있었고, 다운타임은 모두 합쳐 777시간 40분입니다.</p>
 <ul>
 <li><strong>패턴 1 — Together AI의 9월 장애 기록 49건은 모두 상태 페이지의 일별 가용성 데이터에서 재구성한 것입니다.</strong> 업체가 올린 장애 공지가 아니어서 8월(64건 중 24건 재구성)과 같은 기준으로 비교할 수 없습니다. Together AI의 장애 기록이 모두 재구성한 기록으로만 채워진 달은 이번이 처음입니다. 점수는 71점에서 73점으로 거의 변하지 않았습니다.</li>
 <li><strong>패턴 2 — 상태 페이지에 나타나지 않았던 성능 저하를 AIWatch 프로브가 잡아냈습니다.</strong> 이달 AIWatch가 RTT를 직접 측정해 감지한 성능 저하는 230건이며, 그중 208건은 감지 당시 해당 업체의 상태 페이지에 표시되지 않았습니다. Gemini API의 상태 페이지에는 이달 장애가 단 1건만 올라왔지만, 프로브는 성능 저하 64건을 감지했고 그중 49건은 상태 페이지에 없었습니다. 감지 건수는 Deepgram이 94건으로 가장 많았고, 그중 93건이 상태 페이지에 없었습니다. 서비스별 내역은 <a href="#rtt-degradation-detection">RTT Degradation Detection</a> 섹션에서 확인할 수 있습니다.</li></ul>
@@ -131,27 +131,27 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 6= | fal.ai | 85 | Good | Official | Zero incidents, 99.89% uptime — lost 1 pt on Uptime, 14 pts on Responsiveness (latency) |
 | 6= | Helicone | 85 | Good | Platform | Zero incidents, 99.99% uptime — lost <1 pt on Uptime, 15 pts on Responsiveness (latency) |
 | 8= | Fireworks AI | 82 | Good | Official | 36 incidents, avg 40m over 32 |
+| 8= | Kimi (Moonshot AI) | 82 | Good | Official | 1 incident, 23m |
 | 8= | GitHub Copilot | 82 | Good | Official | 6 incidents, avg 3h 4m |
-| 10 | Cohere API | 81 | Good | Official | 1 incident, 4h 23m |
-| 11= | Cerebras Inference | 79 | Good | Official | 1 incident, 4h 59m |
-| 11= | turbopuffer | 79 | Good | Official | 2 incidents, fast recovery (avg 20m) |
-| 11= | Runway | 79 | Good | Official | 1 incident, 2h 22m |
-| 14= | Perplexity | 78 | Good | Official | 4 incidents, avg 3h 19m over 1 |
-| 14= | OpenRouter | 78 | Good | Official | 3 incidents, avg 1h 37m |
-| 14= | AssemblyAI | 78 | Good | Official | 3 incidents, avg 53m over 2 |
-| 14= | Voyage AI | 78 | Good | Official | 4 incidents, fast recovery (avg 22m) |
-| 14= | claude.ai | 78 | Good | Official | 9 incidents, avg 1h 11m |
-| 19 | Twelve Labs | 77 | Good | Official | 11 incidents, avg 40m |
-| 20= | DeepSeek API | 76 | Good | Official | 9 incidents, avg 38m |
-| 20= | Stability AI | 76 | Good | Official | 1 incident, 4h 8m |
-| 22= | LangChain (LangSmith) | 74 | Fair | Official | 3 incidents, avg 1h 57m |
-| 22= | Codex | 74 | Fair | Official | 6 incidents, avg 2h 17m |
-| 24= | Mistral API | 73 | Fair | Official | 75 incidents, avg 41m over 36 |
-| 24= | Together AI | 73 | Fair | Platform | 49 incidents |
-| 24= | Langfuse | 73 | Fair | Official | 6 incidents, avg 2h 15m |
-| 27= | Claude API | 72 | Fair | Official | 9 incidents, avg 1h 16m |
-| 27= | Kimi (Moonshot AI) | 72 | Fair | Official | 13 incidents, fast recovery (avg 7m) |
-| 27= | Claude Code | 72 | Fair | Official | 7 incidents, avg 1h 19m |
+| 11 | Cohere API | 81 | Good | Official | 1 incident, 4h 23m |
+| 12= | Cerebras Inference | 79 | Good | Official | 1 incident, 4h 59m |
+| 12= | turbopuffer | 79 | Good | Official | 2 incidents, fast recovery (avg 20m) |
+| 12= | Runway | 79 | Good | Official | 1 incident, 2h 22m |
+| 15= | Perplexity | 78 | Good | Official | 4 incidents, avg 3h 19m over 1 |
+| 15= | OpenRouter | 78 | Good | Official | 3 incidents, avg 1h 37m |
+| 15= | AssemblyAI | 78 | Good | Official | 3 incidents, avg 53m over 2 |
+| 15= | Voyage AI | 78 | Good | Official | 4 incidents, fast recovery (avg 22m) |
+| 15= | claude.ai | 78 | Good | Official | 9 incidents, avg 1h 11m |
+| 20 | Twelve Labs | 77 | Good | Official | 11 incidents, avg 40m |
+| 21= | DeepSeek API | 76 | Good | Official | 9 incidents, avg 38m |
+| 21= | Stability AI | 76 | Good | Official | 1 incident, 4h 8m |
+| 23= | LangChain (LangSmith) | 74 | Fair | Official | 3 incidents, avg 1h 57m |
+| 23= | Codex | 74 | Fair | Official | 6 incidents, avg 2h 17m |
+| 25= | Mistral API | 73 | Fair | Official | 75 incidents, avg 41m over 36 |
+| 25= | Together AI | 73 | Fair | Platform | 49 incidents |
+| 25= | Langfuse | 73 | Fair | Official | 6 incidents, avg 2h 15m |
+| 28= | Claude API | 72 | Fair | Official | 9 incidents, avg 1h 16m |
+| 28= | Claude Code | 72 | Fair | Official | 7 incidents, avg 1h 19m |
 | 30 | Black Forest Labs (FLUX) | 70 | Fair | Official | 2 incidents, avg 13h 23m |
 | 31 | Pinecone | 68 | Fair | Official | 4 incidents, avg 4h 14m |
 | 32 | ChatGPT | 67 | Fair | Official | 26 incidents, avg 3h 2m over 24 |
@@ -475,9 +475,9 @@ Recovery fell on two long incidents (20h 43m and 15h 41m); Responsiveness on a s
 <tr><td>Perplexity</td><td>4</td><td>3h 19m (3h 19m)</td><td class="hide-mobile">3h 19m</td><td class="hide-mobile">3h 19m over 1</td></tr>
 <tr><td>Runway</td><td>1</td><td>2h 22m (2h 22m)</td><td class="hide-mobile">2h 22m</td><td class="hide-mobile">2h 22m</td></tr>
 <tr><td>AssemblyAI</td><td>3</td><td>1h 46m (1h 15m)</td><td class="hide-mobile">1h 15m</td><td class="hide-mobile">53m over 2</td></tr>
-<tr><td>Kimi (Moonshot AI)</td><td>13</td><td>1h 30m (27m)</td><td class="hide-mobile">27m</td><td class="hide-mobile">7m</td></tr>
 <tr><td>Voyage AI</td><td>4</td><td>1h 26m (29m)</td><td class="hide-mobile">29m</td><td class="hide-mobile">22m</td></tr>
 <tr><td>turbopuffer</td><td>2</td><td>40m (27m)</td><td class="hide-mobile">27m</td><td class="hide-mobile">20m</td></tr>
+<tr><td>Kimi (Moonshot AI)</td><td>1</td><td>23m (23m)</td><td class="hide-mobile">23m</td><td class="hide-mobile">23m</td></tr>
 <tr><td>Junie</td><td>1</td><td>8m (8m)</td><td class="hide-mobile">8m</td><td class="hide-mobile">8m</td></tr>
 <tr><td>Windsurf (Devin Desktop)</td><td>1</td><td>1m (1m)</td><td class="hide-mobile">1m</td><td class="hide-mobile">1m</td></tr>
 </tbody>

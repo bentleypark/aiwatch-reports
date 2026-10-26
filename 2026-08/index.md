@@ -54,7 +54,7 @@ published: true
 
 ## Key Insight
 
-August's worst grades thinned while its single longest entry got longer. 35 of 45 services recorded at least one incident, for a combined 929h 6m of downtime.
+August's worst grades thinned while its single longest entry got longer. 35 of 45 services recorded at least one incident, for a combined 899h 23m of downtime.
 
 - **Pattern 1 — small moves in the grade tallies hid eleven grade changes.** July's one Unstable grade is gone, Degrading fell 2 → 1 and Fair held at 11 — but eleven services changed grade underneath those totals. Replicate, Helicone and Deepgram climbed out of the bottom two tiers while Mistral API fell into Degrading, now the only one. Of the other seven, four moved Fair → Good, two Good → Fair, and Groq Cloud rose to Excellent.
 - **Pattern 2 — a count that reads flat because two different things are being counted.** From August, a Better Stack-sourced service whose feed stopped publishing monitor events has those days reconstructed from the page's daily availability record — one entry per component-day rather than one per event (see [How AIWatch Works → Incident counting](https://ai-watch.dev/methodology#incidents)). Together AI shows the effect at its most misleading: 65 → 64 rows looks like a quiet month, but 24 of the 64 are reconstructed, so its published-event count fell by nearly 40% while downtime went 29h 22m → 80h 31m and its longest single event went 1h 45m → 21h 49m. Helicone is the extreme case: every one of its August rows is reconstructed.
@@ -62,7 +62,7 @@ August's worst grades thinned while its single longest entry got longer. 35 of 4
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p>8월은 하위 두 등급(Unstable·Degrading) 서비스가 줄어든 달이지만, 가장 긴 단일 장애는 오히려 더 길어졌습니다. 45개 서비스 중 35개가 한 건 이상 장애를 겪었고, 다운타임 합계는 929시간 6분이었습니다.</p>
+<p>8월은 하위 두 등급(Unstable·Degrading) 서비스가 줄어든 달이지만, 가장 긴 단일 장애는 오히려 더 길어졌습니다. 45개 서비스 중 35개가 한 건 이상 장애를 겪었고, 다운타임 합계는 899시간 23분이었습니다.</p>
 <ul>
 <li><strong>패턴 1 — 등급별 분포는 비슷해 보여도 11개 서비스의 등급이 바뀌었다</strong>: 7월에 하나 있던 Unstable은 없어졌고, Degrading은 2개에서 1개로 줄었으며, Fair는 11개 그대로입니다. Replicate, Helicone, Deepgram은 하위 두 등급에서 벗어났고, 대신 Mistral API가 Degrading으로 떨어져 이 등급의 유일한 서비스가 됐습니다. 나머지 7개 중 4개는 Fair에서 Good으로 올랐고, 2개는 Good에서 Fair로 내려갔으며, Groq Cloud는 Excellent로 올라섰습니다.</li>
 <li><strong>패턴 2 — 집계 기준이 바뀌어 건수가 제자리처럼 보인다</strong>: 8월부터 Better Stack을 출처로 쓰는 서비스의 경우, 그 피드가 모니터 이벤트 게시를 멈춘 기간의 장애를 AIWatch가 상태 페이지의 일별 가용성 기록으로 재구성합니다 — 장애 하나당 1건이 아니라, 컴포넌트별로 다운타임이 있던 날을 하루 1건으로 셉니다(<a href="https://ai-watch.dev/methodology#incidents">측정 방법론</a> 참고). Together AI가 가장 오해하기 쉬운 사례입니다. 건수만 보면 65건에서 64건이라 조용한 달처럼 보이지만, 64건 중 24건이 재구성된 기록입니다. 제공사가 실제로 게시한 건수는 40% 가까이 줄었고, 다운타임은 29시간 22분에서 80시간 31분으로, 최장 장애는 1시간 45분에서 21시간 49분으로 늘었습니다. Helicone은 더 극단적인 경우로, 이달 장애 기록은 전부 재구성된 것입니다.</li>
@@ -119,16 +119,16 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 9= | Twelve Labs | 86 | Good | Official | 3 incidents |
 | 9= | Codex | 86 | Good | Official | 2 incidents, avg 1h 1m |
 | 14 | Luma (Dream Machine) | 85 | Good | Platform | Zero incidents, 100.00% uptime |
-| 15= | ElevenLabs | 83 | Good | Official | 6 incidents, avg 3h 24m |
-| 15= | Pinecone | 83 | Good | Official | 1 incident, 22m |
-| 17= | Perplexity | 80 | Good | Official | 3 incidents, avg 1h 52m |
-| 17= | Runway | 80 | Good | Official | 4 incidents, avg 57m |
-| 19= | OpenAI API | 79 | Good | Official | 2 incidents, avg 8h 27m over 1 |
-| 19= | Replicate | 79 | Good | Official | 4 incidents, avg 1h 31m |
-| 21= | DeepSeek API | 78 | Good | Official | 14 incidents, avg 4h 44m |
-| 21= | AssemblyAI | 78 | Good | Official | 6 incidents, avg 39m |
-| 21= | turbopuffer | 78 | Good | Official | 1 incident, 1h 38m |
-| 24 | Kimi (Moonshot AI) | 77 | Good | Official | 44 incidents, avg 1h 26m over 21 |
+| 15 | Kimi (Moonshot AI) | 84 | Good | Official | 3 incidents, fast recovery (avg 8m) |
+| 16= | ElevenLabs | 83 | Good | Official | 6 incidents, avg 3h 24m |
+| 16= | Pinecone | 83 | Good | Official | 1 incident, 22m |
+| 18= | Perplexity | 80 | Good | Official | 3 incidents, avg 1h 52m |
+| 18= | Runway | 80 | Good | Official | 4 incidents, avg 57m |
+| 20= | OpenAI API | 79 | Good | Official | 2 incidents, avg 8h 27m over 1 |
+| 20= | Replicate | 79 | Good | Official | 4 incidents, avg 1h 31m |
+| 22= | DeepSeek API | 78 | Good | Official | 14 incidents, avg 4h 44m |
+| 22= | AssemblyAI | 78 | Good | Official | 6 incidents, avg 39m |
+| 22= | turbopuffer | 78 | Good | Official | 1 incident, 1h 38m |
 | 25= | LangChain (LangSmith) | 76 | Good | Official | 5 incidents, avg 5h 51m |
 | 25= | Langfuse | 76 | Good | Official | 8 incidents, avg 1h 39m |
 | 27= | Fireworks AI | 75 | Good | Official | 138 incidents, avg 58m |
@@ -411,7 +411,7 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 >
 > **OpenAI API** — one of its two entries, "Elevated latency in the Responses API", began 2026-08-31 22:27 UTC and was still open when the month closed; the provider resolved it 2026-09-01 19:05 UTC. It is counted here, but its duration is in neither the downtime nor the recovery figures, which is why its average reads "over 1".
 >
-> **Twelve Labs** — its three entries carry a title AIWatch registers as an automated-monitor title, and entries with a registered title are left out of downtime, recovery and the Score's incident and recovery components, which is why the row shows no downtime. Kimi (Moonshot AI)'s re-published entries this month carry a title that is not registered, so they are counted, with repeats of one event merged — the two rows are not on the same basis.
+> **Twelve Labs** — its three entries carry a title AIWatch registers as an automated-monitor title, and entries with a registered title are left out of downtime, recovery and the Score's incident and recovery components, which is why the row shows no downtime.
 
 <table>
 <thead>
@@ -421,7 +421,6 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 <tr><td>Fireworks AI</td><td>138</td><td>133h 48m (46h 36m)</td><td class="hide-mobile">46h 36m</td><td class="hide-mobile">58m</td></tr>
 <tr><td>Together AI</td><td>64</td><td>80h 31m (21h 49m)</td><td class="hide-mobile">21h 49m</td><td class="hide-mobile">1h 21m over 39</td></tr>
 <tr><td>Mistral API</td><td>63</td><td>138h 3m (122h 14m)</td><td class="hide-mobile">122h 14m</td><td class="hide-mobile">2h 11m</td></tr>
-<tr><td>Kimi (Moonshot AI)</td><td>44</td><td>30h 8m (9h 26m)</td><td class="hide-mobile">9h 26m</td><td class="hide-mobile">1h 26m over 21</td></tr>
 <tr><td>Cursor</td><td>27</td><td>63h 13m (6h 57m)</td><td class="hide-mobile">6h 57m</td><td class="hide-mobile">2h 20m</td></tr>
 <tr><td>claude.ai</td><td>21</td><td>30h 49m (7h 9m)</td><td class="hide-mobile">7h 9m</td><td class="hide-mobile">1h 28m</td></tr>
 <tr><td>Claude Code</td><td>21</td><td>34h 27m (7h 9m)</td><td class="hide-mobile">7h 9m</td><td class="hide-mobile">1h 38m</td></tr>
@@ -441,6 +440,7 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 <tr><td>Replicate</td><td>4</td><td>6h 2m (3h 8m)</td><td class="hide-mobile">3h 8m</td><td class="hide-mobile">1h 31m</td></tr>
 <tr><td>Runway</td><td>4</td><td>3h 47m (1h 24m)</td><td class="hide-mobile">1h 24m</td><td class="hide-mobile">57m</td></tr>
 <tr><td>Perplexity</td><td>3</td><td>5h 35m (3h 33m)</td><td class="hide-mobile">3h 33m</td><td class="hide-mobile">1h 52m</td></tr>
+<tr><td>Kimi (Moonshot AI)</td><td>3</td><td>25m (11m)</td><td class="hide-mobile">11m</td><td class="hide-mobile">8m</td></tr>
 <tr><td>Hugging Face</td><td>3</td><td>8h 7m (8h)</td><td class="hide-mobile">8h</td><td class="hide-mobile">2h 42m</td></tr>
 <tr><td>Twelve Labs</td><td>3</td><td>—</td><td class="hide-mobile">—</td><td class="hide-mobile">—</td></tr>
 <tr><td>OpenAI API</td><td>2</td><td>8h 27m (8h 27m)</td><td class="hide-mobile">8h 27m</td><td class="hide-mobile">8h 27m over 1</td></tr>
