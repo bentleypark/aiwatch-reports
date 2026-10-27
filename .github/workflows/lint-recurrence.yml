@@ -33,7 +33,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
+          check-latest: true
 
       - name: Determine changed report index.md files
         id: changed

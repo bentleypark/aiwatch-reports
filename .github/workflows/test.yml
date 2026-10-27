@@ -40,7 +40,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
+          check-latest: true
 
       - name: Verify no node_modules dependency drift
         # The repo intentionally has no package.json — tests are pure Node + assert.
