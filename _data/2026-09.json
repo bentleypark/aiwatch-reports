@@ -5848,23 +5848,20 @@
         }
     },
     "security": {
-        "totalAlerts": 30,
+        "totalAlerts": 5,
         "bySource": {
-            "osv": 25,
+            "osv": 0,
             "hackernews": 0,
             "nvd": 5
         },
         "bySeverity": {
-            "critical": 2,
-            "high": 13,
-            "medium": 11,
-            "low": 3
+            "critical": 1,
+            "high": 2,
+            "medium": 0,
+            "low": 1
         },
         "byService": {
-            "Hugging Face": 13,
             "OpenAI Codex": 1,
-            "Anthropic (Claude)": 2,
-            "LangChain": 10,
             "Gemini": 3,
             "Claude Code": 1
         },
@@ -5876,22 +5873,6 @@
                 "severity": "critical",
                 "service": "Gemini",
                 "detectedAt": "2026-09-10T10:00:54.708Z"
-            },
-            {
-                "title": "LangChain serialization injection vulnerability enables secret extraction in dumps/loads APIs",
-                "url": "https://github.com/langchain-ai/langchain/security/advisories/GHSA-c67j-w6g6-q2cm",
-                "source": "osv",
-                "severity": "critical",
-                "service": "LangChain",
-                "detectedAt": "2026-09-10T04:01:11.527Z",
-                "timeline": [
-                    {
-                        "stage": "detected",
-                        "at": "2026-06-29T13:08:24.577Z",
-                        "severity": "critical",
-                        "fixedVersion": "1.2.5"
-                    }
-                ]
             },
             {
                 "title": "CVE-2026-19407: Bucket Squatting in Google Cloud Gemini Enterprise Agent Platform SDK for Python versions prior to 1.166.1 allows an attacker to achieve ...",
@@ -5910,66 +5891,19 @@
                 "detectedAt": "2026-09-11T10:00:50.779Z"
             },
             {
-                "title": "huggingface/transformers: Arbitrary Code Execution During Model Initialization in the LightGlue Model Loading Path",
-                "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-5241",
-                "source": "osv",
-                "severity": "high",
-                "service": "Hugging Face",
-                "detectedAt": "2026-09-10T05:01:01.031Z",
-                "epssPercentile": 0.46534,
-                "epssPercentage": 0.00597
+                "title": "CVE-2026-103012: Claude Code selected an API key stored by Claude Code, for example from an earlier `/login` or written directly to its configuration, ahe...",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-103012",
+                "source": "nvd",
+                "severity": "low",
+                "service": "Claude Code",
+                "detectedAt": "2026-09-30T13:01:29.563Z"
             },
             {
-                "title": "Deserialization of Untrusted Data in Hugging Face Transformers",
-                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-11394",
-                "source": "osv",
-                "severity": "high",
-                "service": "Hugging Face",
-                "detectedAt": "2026-09-10T05:01:01.031Z",
-                "epssPercentile": 0.83955,
-                "epssPercentage": 0.02566
-            },
-            {
-                "title": "Deserialization of Untrusted Data in Hugging Face Transformers",
-                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-11392",
-                "source": "osv",
-                "severity": "high",
-                "service": "Hugging Face",
-                "detectedAt": "2026-09-10T05:01:01.031Z"
-            },
-            {
-                "title": "Deserialization of Untrusted Data in Hugging Face Transformers",
-                "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-11393",
-                "source": "osv",
-                "severity": "high",
-                "service": "Hugging Face",
-                "detectedAt": "2026-09-10T05:01:01.031Z",
-                "epssPercentile": 0.86673,
-                "epssPercentage": 0.03074
-            },
-            {
-                "title": "LangSmith SDK: Public prompt pull deserializes untrusted manifests without trust boundary warning",
-                "url": "https://github.com/langchain-ai/langsmith-sdk/security/advisories/GHSA-3644-q5cj-c5c7",
-                "source": "osv",
-                "severity": "high",
-                "service": "LangChain",
-                "detectedAt": "2026-09-10T04:01:11.527Z",
-                "timeline": [
-                    {
-                        "stage": "detected",
-                        "at": "2026-05-13T16:03:10.396Z",
-                        "severity": "high",
-                        "fixedVersion": "0.8.0"
-                    }
-                ]
-            },
-            {
-                "title": "Langchain Community Vulnerable to XML External Entity (XXE) Attacks",
-                "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-6984",
-                "source": "osv",
-                "severity": "high",
-                "service": "LangChain",
-                "detectedAt": "2026-09-10T04:01:11.527Z"
+                "title": "CVE-2026-19591: OpenAI Codex CLI for Windows, macOS, and Linux and Codex Desktop for Windows and macOS misclassified certain PowerShell commands as safe ...",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-19591",
+                "source": "nvd",
+                "service": "OpenAI Codex",
+                "detectedAt": "2026-09-01T22:00:39.119Z"
             }
         ]
     },
