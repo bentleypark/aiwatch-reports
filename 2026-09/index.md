@@ -542,30 +542,27 @@ An integration surface rather than speech generation itself. It overlapped an 11
 
 > **Note:** Security alerts captured during the month from OSV.dev (AI SDK package vulnerabilities), Hacker News (security posts mentioning monitored services), and NVD (first-party product CVEs). Section omitted for months without detections.
 
-**Total alerts:** 30
+**Total alerts:** 5
 
 **By source**
 
 | Source | Count |
 |---|---|
-| OSV.dev | 25 |
 | NVD | 5 |
 
 **By severity**
 
 | Critical | High | Medium | Low |
 | --- | --- | --- | --- |
-| 2 | 13 | 11 | 3 |
+| 1 | 2 | 0 | 1 |
 
 **Most affected services**
 
 | Service | Count |
 |---|---|
-| Hugging Face | 13 |
-| LangChain | 10 |
 | Gemini | 3 |
-| Anthropic (Claude) | 2 |
 | OpenAI Codex | 1 |
+| Claude Code | 1 |
 
 ### Top Findings
 
@@ -586,7 +583,17 @@ An integration surface rather than speech generation itself. It overlapped an 11
 - **Affected:** Gemini
 - **Detected:** 2026-09-11
 
-> **Only advisories first published in September are listed.** Seven of the ten highest-ranked alerts were older advisories, first published between November 2024 and June 2026, whose OSV records were updated during the month — twelve Hugging Face Transformers records were updated within one minute on 10 September. They are counted in the totals above but not listed here.
+#### 4. [CVE-2026-103012: Claude Code selected an API key stored by Claude Code, for example from an earlier `/login` or written directly to its configuration, ahe...](https://nvd.nist.gov/vuln/detail/CVE-2026-103012) · `low`
+- **Source:** NVD
+- **Affected:** Claude Code
+- **Detected:** 2026-09-30
+
+#### 5. [CVE-2026-19591: OpenAI Codex CLI for Windows, macOS, and Linux and Codex Desktop for Windows and macOS misclassified certain PowerShell commands as safe ...](https://nvd.nist.gov/vuln/detail/CVE-2026-19591) · `unrated`
+- **Source:** NVD
+- **Affected:** OpenAI Codex
+- **Detected:** 2026-09-01
+
+> **Correction (October 2026):** This section first reported 30 alerts. 25 of them were OSV.dev advisories first published between November 2024 and August 2026 whose records were updated in September, and have been removed from every figure above.
 
 ---
 
