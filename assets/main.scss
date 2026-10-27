@@ -59,6 +59,8 @@ th {
 }
 tr:nth-child(even) { background: var(--bg1) !important; }
 tr:nth-child(odd) { background: transparent !important; }
+.numeric-table th, .numeric-table td { text-align: center !important; }
+.numeric-table.label-first th:first-child, .numeric-table.label-first td:first-child { text-align: left !important; }
 /* Mobile table adjustments */
 @media (max-width: 768px) {
   th, td {
@@ -69,6 +71,7 @@ tr:nth-child(odd) { background: transparent !important; }
     white-space: normal !important;
     min-width: 120px;
   }
+  .numeric-table td:last-child, .numeric-table th:last-child { min-width: 0; }
   .hide-mobile { display: none !important; }
 }
 

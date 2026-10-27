@@ -877,10 +877,7 @@ function buildUptimeTable(services, meta) {
 
 // ── Security section (refs aiwatch#290 / aiwatch#291) ───────────────
 //
-// Schema: archive.security shape from MonthlySecuritySummary in worker/src/monthly-archive.ts:
-//   { totalAlerts, bySource: { osv, hackernews, nvd }, bySeverity: { critical, high, medium, low },
-//     byService: { [serviceName]: count },
-//     topFindings: { title, url, source, severity?, service?, detectedAt, timeline? }[] }
+// Schema: archive.security is MonthlySecuritySummary in worker/src/monthly-archive.ts.
 // `timeline` only present on OSV findings whose security:timeline:osv:{id} key existed at
 // archive build time (#291). HN findings never carry a timeline.
 //
@@ -906,9 +903,9 @@ function fmtIso(d) {
 // is read off it, as `undefined`). `Map.get` has no prototype chain, which removes that failure
 // instead of guarding against it.
 const SOURCES = new Map([
-  ['osv', { label: 'OSV.dev', note: 'AI SDK package vulnerabilities' }],
-  ['hackernews', { label: 'Hacker News', note: 'security posts mentioning monitored services' }],
-  ['nvd', { label: 'NVD', note: 'first-party product CVEs' }],
+  ['osv', { label: 'OSV.dev', note: 'AI SDK package vulnerabilities', kind: 'SDK', kindNote: 'a CVE in an SDK/package you install (OSV)' }],
+  ['hackernews', { label: 'Hacker News', note: 'security posts mentioning monitored services', kind: 'News', kindNote: 'security news / community discussion (Hacker News)' }],
+  ['nvd', { label: 'NVD', note: 'first-party product CVEs', kind: 'Product', kindNote: "a CVE in the service's own product (NVD)" }],
 ])
 
 // A key the registry does not know still renders, under its own name, rather than vanishing — the
@@ -961,14 +958,34 @@ function buildBySeverityTable(bySeverity) {
   ].join('\n')
 }
 
-function buildByServiceTable(byService, limit = 5) {
+// aiwatch#1805 — with `byServiceSource` (archives built after it shipped), each service's count
+// splits into one column per kind, using the dashboard card's Product / SDK / News labels. Older
+// archives keep the two-column table.
+const KIND_ORDER = ['nvd', 'osv', 'hackernews']
+
+function buildByServiceTable(byService, limit = 5, byServiceSource) {
   const entries = Object.entries(byService || {})
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
   if (entries.length === 0) return ''
-  const rows = entries.map(([name, count]) => `| ${name} | ${count} |`)
-  return ['| Service | Count |', '|---|---|', ...rows].join('\n')
+  const present = new Set(entries.flatMap(([name]) =>
+    Object.entries(byServiceSource?.[name] || {}).filter(([, n]) => n > 0).map(([key]) => key)))
+  if (present.size === 0) {
+    const rows = entries.map(([name, count]) => `| ${name} | ${count} |`)
+    return ['| Service | Count |', '|---|---|', ...rows].join('\n')
+  }
+  const kinds = [...KIND_ORDER.filter((k) => present.has(k)), ...[...present].filter((k) => !KIND_ORDER.includes(k)).sort()]
+  const label = (key) => SOURCES.get(key)?.kind ?? sourceLabel(key)
+  const rows = entries.map(([name, count]) =>
+    `| ${name} | ${kinds.map((k) => byServiceSource[name]?.[k] ?? 0).join(' | ')} | ${count} |`)
+  const legend = kinds.filter((k) => SOURCES.get(k)?.kindNote).map((k) => `- **${label(k)}**: ${SOURCES.get(k).kindNote}`)
+  const table = [
+    `| Service | ${kinds.map(label).join(' | ')} | Total |`,
+    `|---|${kinds.map(() => '---|').join('')}---|`,
+    ...rows,
+  ].join('\n')
+  return legend.length ? `${legend.join('\n')}\n\n${table}` : table
 }
 
 function buildTimelineDetails(timeline) {
@@ -1011,6 +1028,12 @@ function buildTopFindings(findings) {
   return ['### Top Findings', '', ...sections].join('\n\n')
 }
 
+// aiwatch#1805 — kramdown attaches these classes to the table above it. assets/main.scss centres the
+// counts and drops the mobile last-column min-width, which exists for wrapping text columns.
+// `label-first` keeps a name column (Source, Service) left-aligned.
+const NUMERIC_TABLE = '{: .numeric-table}'
+const LABELLED_NUMERIC_TABLE = '{: .numeric-table .label-first}'
+
 function buildSecuritySection(security) {
   // Schema-aligned fast paths — surface nothing when there's nothing to report.
   if (!security) return ''
@@ -1035,13 +1058,13 @@ function buildSecuritySection(security) {
   ]
 
   const bySrc = buildBySourceTable(security.bySource || {})
-  if (bySrc) parts.push('**By source**', '', bySrc, '')
+  if (bySrc) parts.push('**By source**', '', bySrc, LABELLED_NUMERIC_TABLE, '')
 
   const bySev = buildBySeverityTable(security.bySeverity || {})
-  if (bySev) parts.push('**By severity**', '', bySev, '')
+  if (bySev) parts.push('**By severity**', '', bySev, NUMERIC_TABLE, '')
 
-  const bySvc = buildByServiceTable(security.byService || {})
-  if (bySvc) parts.push('**Most affected services**', '', bySvc, '')
+  const bySvc = buildByServiceTable(security.byService || {}, 5, security.byServiceSource)
+  if (bySvc) parts.push('**Most affected services**', '', bySvc, LABELLED_NUMERIC_TABLE, '')
 
   const top = buildTopFindings(security.topFindings || [])
   if (top) parts.push(top, '')
