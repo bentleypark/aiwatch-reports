@@ -1479,6 +1479,53 @@ test('returns empty string for missing byService input', () => {
   eq(buildByServiceTable(undefined), '')
 })
 
+test('aiwatch#1805: one row per service, one column per kind shown, legend for those kinds only', () => {
+  const out = buildByServiceTable(
+    { 'Claude Code': 4, 'Hugging Face': 1, Gemini: 2 },
+    2,
+    { 'Claude Code': { hackernews: 1, osv: 1, nvd: 2 }, 'Hugging Face': { osv: 1 }, Gemini: { nvd: 2 } },
+  )
+  eq(out, [
+    "- **Product**: a CVE in the service's own product (NVD)",
+    '- **SDK**: a CVE in an SDK/package you install (OSV)',
+    '- **News**: security news / community discussion (Hacker News)',
+    '',
+    '| Service | Product | SDK | News | Total |',
+    '|---|---|---|---|---|',
+    '| Claude Code | 2 | 1 | 1 | 4 |',
+    '| Gemini | 2 | 0 | 0 | 2 |',
+  ].join('\n'))
+})
+test('aiwatch#1805: a kind no shown service has gets no column and no legend line', () => {
+  const out = buildByServiceTable({ Gemini: 2, X: 1 }, 1, { Gemini: { nvd: 2 }, X: { osv: 1 } })
+  eq(out, "- **Product**: a CVE in the service's own product (NVD)\n\n| Service | Product | Total |\n|---|---|---|\n| Gemini | 2 | 2 |")
+})
+test('aiwatch#1805: a byServiceSource with no shown service in it keeps the two-column table', () => {
+  eq(buildByServiceTable({ X: 1 }, 5, {}), '| Service | Count |\n|---|---|\n| X | 1 |')
+})
+test('aiwatch#1805: buildSecuritySection passes byServiceSource through to the services table', () => {
+  const out = buildSecuritySection({
+    totalAlerts: 1, bySource: { osv: 0, hackernews: 0, nvd: 1 }, bySeverity: { critical: 0, high: 1, medium: 0, low: 0 },
+    byService: { Gemini: 1 }, byServiceSource: { Gemini: { nvd: 1 } }, topFindings: [],
+  })
+  assert.ok(out.includes('| Service | Product | Total |\n|---|---|---|\n| Gemini | 1 | 1 |'), out)
+})
+test('aiwatch#1805: each security count table carries its class line; name-column tables add label-first', () => {
+  const out = buildSecuritySection({
+    totalAlerts: 2, bySource: { osv: 1, hackernews: 0, nvd: 1 }, bySeverity: { critical: 0, high: 2, medium: 0, low: 0 },
+    byService: { Gemini: 1, X: 1 }, byServiceSource: { Gemini: { nvd: 1 }, X: { osv: 1 } }, topFindings: [],
+  })
+  const tables = out.split('\n\n').filter((b) => /\n\| ?---/.test(b))
+  assert.deepStrictEqual(tables.map((t) => t.split('\n').pop()), [
+    '{: .numeric-table .label-first}',
+    '{: .numeric-table}',
+    '{: .numeric-table .label-first}',
+  ])
+})
+test('aiwatch#1805: an archive without byServiceSource keeps the two-column table', () => {
+  eq(buildByServiceTable({ X: 4 }), '| Service | Count |\n|---|---|\n| X | 4 |')
+})
+
 console.log('\nfmtIso edge cases')
 test('returns em dash on null/undefined', () => {
   const { fmtIso } = require('./generate-report')
