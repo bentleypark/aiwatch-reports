@@ -5316,14 +5316,14 @@
             "score": 61,
             "grade": "fair",
             "scoreConfidence": "high",
-            "monthlyScore": 60,
+            "monthlyScore": 64,
             "monthlyGrade": "fair",
             "monthlyScoreConfidence": "high",
-            "incidents": 32,
-            "countedIncidents": 28,
-            "avgResolutionMin": 104,
-            "totalDowntimeMin": 2908,
-            "longestIncidentMin": 390,
+            "incidents": 23,
+            "countedIncidents": 20,
+            "avgResolutionMin": 82,
+            "totalDowntimeMin": 1641,
+            "longestIncidentMin": 285,
             "avgLatencyMs": 1998,
             "p95LatencyMs": 2350,
             "latencySpikes": 79,
@@ -5423,15 +5423,6 @@
                     "zeroLengthRecord": true
                 },
                 {
-                    "id": "jw6mzctqkq56",
-                    "title": "Grok Bot computers unreachable for some users",
-                    "startedAt": "2026-09-07T20:32:42.825Z",
-                    "resolvedAt": "2026-09-07T21:37:45.304Z",
-                    "durationMin": 66,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
                     "id": "8mwzyv0n0jyk",
                     "title": "Investigating service degradation \u2014 Review Agents and Cloud Agents",
                     "startedAt": "2026-09-10T17:07:24.485Z",
@@ -5477,56 +5468,11 @@
                     "impact": "minor"
                 },
                 {
-                    "id": "37hs7jj05wkx",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-16T14:27:16.798Z",
-                    "resolvedAt": "2026-09-16T20:57:14.427Z",
-                    "durationMin": 390,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "lqp75t47dvpm",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-17T12:30:56.764Z",
-                    "resolvedAt": "2026-09-17T14:34:44.089Z",
-                    "durationMin": 124,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
                     "id": "jdm0j510q78b",
                     "title": "Investigating service degradation \u2014 Cloud Agents and Grok Bot",
                     "startedAt": "2026-09-17T15:20:00.000Z",
                     "resolvedAt": "2026-09-17T20:04:04.911Z",
                     "durationMin": 285,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "3slwgs0612sc",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-18T11:37:50.837Z",
-                    "resolvedAt": "2026-09-18T14:33:59.979Z",
-                    "durationMin": 177,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "14xbn0wxbpdb",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-18T17:19:03.596Z",
-                    "resolvedAt": "2026-09-18T23:02:23.121Z",
-                    "durationMin": 344,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "r44l5qk34kj1",
-                    "title": "Sign-in and dashboard errors for some users",
-                    "startedAt": "2026-09-18T23:02:10.202Z",
-                    "resolvedAt": "2026-09-18T23:13:29.911Z",
-                    "durationMin": 12,
                     "finalStatus": "resolved",
                     "impact": "minor"
                 },
@@ -5572,33 +5518,6 @@
                     "startedAt": "2026-09-23T20:28:02.043Z",
                     "resolvedAt": "2026-09-23T20:36:47.177Z",
                     "durationMin": 9,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "n540z31sbqp6",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-25T05:17:29.487Z",
-                    "resolvedAt": "2026-09-25T06:51:32.108Z",
-                    "durationMin": 95,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "bfcck6qks18q",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-25T23:47:29.436Z",
-                    "resolvedAt": "2026-09-26T00:32:45.766Z",
-                    "durationMin": 46,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "x2g19tzq27sg",
-                    "title": "Investigating service degradation \u2014 Grok Bot",
-                    "startedAt": "2026-09-28T20:23:05.972Z",
-                    "resolvedAt": "2026-09-28T20:36:19.950Z",
-                    "durationMin": 14,
                     "finalStatus": "resolved",
                     "impact": "minor"
                 },
@@ -5657,7 +5576,16 @@
                     "name": "Origin",
                     "uptime": 99.98
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 35.1,
+                "incidents": 12,
+                "recovery": 12,
+                "responsiveness": 4.7,
+                "speed": 0.2,
+                "stability": 4.5,
+                "responsivenessStatus": "available"
+            }
         },
         "copilot": {
             "uptime": 99.84,
