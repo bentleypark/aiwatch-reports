@@ -44,7 +44,7 @@ test('every checked published month matches its _data', () => {
 
 test('the pre-fix 2026-09 Kimi rows are drift', () => {
   let md = read('2026-09')
-  md = replaceOnce(md, '| 8= | Kimi (Moonshot AI) | 82 | Good | Official | 1 incident, 23m |', '| 27= | Kimi (Moonshot AI) | 72 | Fair | Official | 13 incidents, fast recovery (avg 7m) |')
+  md = replaceOnce(md, '| 7= | Kimi (Moonshot AI) | 82 | Good | Official | 1 incident, 23m |', '| 27= | Kimi (Moonshot AI) | 72 | Fair | Official | 13 incidents, fast recovery (avg 7m) |')
   md = replaceOnce(md, '<tr><td>Kimi (Moonshot AI)</td><td>1</td><td>23m (23m)</td><td class="hide-mobile">23m</td><td class="hide-mobile">23m</td></tr>',
     '<tr><td>Kimi (Moonshot AI)</td><td>13</td><td>1h 30m (27m)</td><td class="hide-mobile">27m</td><td class="hide-mobile">7m</td></tr>')
   const drift = findDrift(md, data('2026-09'), '2026-09')
@@ -54,7 +54,7 @@ test('the pre-fix 2026-09 Kimi rows are drift', () => {
 })
 
 test('a stale rank alone is drift', () => {
-  const md = replaceOnce(read('2026-09'), '| 11 | Cohere API | 81 |', '| 10 | Cohere API | 81 |')
+  const md = replaceOnce(read('2026-09'), '| 10= | Cohere API | 81 |', '| 11 | Cohere API | 81 |')
   assert.deepStrictEqual(findDrift(md, data('2026-09'), '2026-09').map(d => d.published?.name ?? d.expected.name), ['Cohere API', 'cohere'])
 })
 

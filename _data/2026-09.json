@@ -3397,14 +3397,14 @@
             "score": 84,
             "grade": "good",
             "scoreConfidence": "high",
-            "monthlyScore": 85,
+            "monthlyScore": 81,
             "monthlyGrade": "good",
             "monthlyScoreConfidence": "high",
-            "incidents": 0,
-            "countedIncidents": 0,
-            "avgResolutionMin": null,
-            "totalDowntimeMin": null,
-            "longestIncidentMin": null,
+            "incidents": 2,
+            "countedIncidents": 2,
+            "avgResolutionMin": 25,
+            "totalDowntimeMin": 49,
+            "longestIncidentMin": 30,
             "avgLatencyMs": 719,
             "p95LatencyMs": 880,
             "latencySpikes": 22,
@@ -3427,7 +3427,36 @@
                     "uptime": 100
                 }
             ],
-            "addedAt": "2026-06-24"
+            "addedAt": "2026-06-24",
+            "incidentList": [
+                {
+                    "id": "cmtn4hy2u0d4r1mqj4tgiir1w",
+                    "title": "fal.run is unreachable for synchronous requests",
+                    "startedAt": "2026-09-04T13:58:00.000Z",
+                    "resolvedAt": "2026-09-04T14:28:00.000Z",
+                    "impact": "major",
+                    "durationMin": 30,
+                    "finalStatus": "resolved"
+                },
+                {
+                    "id": "cmumesz6f02sk0wmobbyr9i01",
+                    "title": "Investigating slowness and reduced traffic",
+                    "startedAt": "2026-09-29T08:23:20.404Z",
+                    "resolvedAt": "2026-09-29T08:41:50.684Z",
+                    "impact": "minor",
+                    "durationMin": 19,
+                    "finalStatus": "resolved"
+                }
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 39.1,
+                "incidents": 22,
+                "recovery": 13.5,
+                "responsiveness": 6.4,
+                "speed": 2.3,
+                "stability": 4.1,
+                "responsivenessStatus": "available"
+            }
         },
         "pinecone": {
             "uptime": 99.51,
