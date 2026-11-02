@@ -165,8 +165,8 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
 <!-- ^ Auto-rendered by generate-report.js (buildDetectionSection) from archive.degradation
      (aiwatch#511) + archive.detectionLead (aiwatch#369). Emits the whole "## Detection & RTT
      Degradation" section ending in its own `---` when there's data, and is omitted entirely
-     otherwise (the case for any month ≤ 2026-05). #464 framing is fixed — detection latency
-     (MTTD) + RTT degradation, never a "faster than the official status page" claim. Do not
+     otherwise (the case for any month ≤ 2026-05). #464 framing is fixed — RTT degradation as a
+     signal, never a "faster than the official status page" claim. Do not
      hand-author. -->
 
 <!-- PREDICTION_ACCURACY_SECTION -->

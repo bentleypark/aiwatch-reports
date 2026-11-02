@@ -1742,12 +1742,20 @@ test('renders RTT Degradation from archive.degradation', () => {
     degradation: { total: 12, noStatusTotal: 8, byService: { deepgram: 5, mistral: 4 }, noStatusByService: { deepgram: 4, mistral: 3 } },
   }, detMeta)
   assert.ok(out.startsWith('## Detection & RTT Degradation'), `heading first: ${out.slice(0, 40)}`)
-  assert.ok(out.includes('### Detection Latency'), 'keeps the static Detection Latency blurb')
+  assert.ok(!out.includes('Detection Latency'), 'no Detection Latency subsection: AIWatch measures no detection time (#178)')
   assert.ok(/flagged \*\*12\*\* RTT degradations/.test(out), `total: ${out}`)
   assert.ok(out.includes("**8** were **not reflected on the providers' official status pages at the time of detection**."), 'noStatus total rendered')
   assert.ok(/\| Deepgram \| 5 \| 4 \|/.test(out), 'degradation row rendered with display name')
   assert.ok(!out.includes('### Early RTT Detections'), 'no Early RTT subsection without leads')
   assert.ok(out.trimEnd().endsWith('---'), 'section ends with its own trailing separator')
+})
+test('RTT degradation note frames a detection as a signal, not a confirmed outage (#178)', () => {
+  const out = buildDetectionSection({
+    degradation: { total: 12, noStatusTotal: 8, byService: { deepgram: 5 }, noStatusByService: { deepgram: 4 } },
+  }, detMeta)
+  assert.ok(out.includes('A detection is a signal, not a confirmed outage'), `signal framing: ${out}`)
+  assert.ok(out.includes('](https://ai-watch.dev/methodology#detection)'), 'links the definition on the methodology page')
+  assert.ok(!/differentiator|real latency degradation/.test(out), 'no unmeasured claim that the detections are real')
 })
 test('renders Early RTT Detections + Official Update = detectedAt + leadMs', () => {
   const out = buildDetectionSection({

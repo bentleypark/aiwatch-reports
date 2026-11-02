@@ -1079,8 +1079,8 @@ function buildSecuritySection(security) {
 // aiwatch#369). The whole section is OMITTED when neither exists — the common case for months
 // ≤ 2026-05 (no accumulator) and any month with no data — matching what 2026-04/2026-05 did by
 // hand. Emits its own trailing `---` (like buildSecuritySection) so the marker carries no
-// separator in the template. The #464 framing is fixed: detection latency (MTTD) + RTT
-// degradation, NOT any "faster than the official status page" headline.
+// separator in the template. The #464 framing is fixed: RTT degradation as a signal, NOT any
+// "faster than the official status page" headline.
 const DETECTION_LEAD_MIN_SAMPLE = 5  // mirrors worker MIN_LEAD_SAMPLE_SIZE / canPresentLeadAverage
 
 function fmtUtcMinute(iso) {
@@ -1106,10 +1106,6 @@ function buildDetectionSection(archive, meta) {
   const parts = [
     '## Detection & RTT Degradation',
     '',
-    '### Detection Latency',
-    '',
-    "AIWatch independently detects incidents and alerts within **~5 minutes** — the probe/poll cadence, the upper bound on how long an issue can go unnoticed by our monitoring. This is independent, low-latency awareness across all monitored services, not a timing comparison against any provider's status page.",
-    '',
   ]
 
   if (hasDeg) {
@@ -1133,7 +1129,7 @@ function buildDetectionSection(archive, meta) {
       )
     }
     parts.push(
-      "> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages often omit.",
+      "> A detection is a signal, not a confirmed outage — what is counted: [How AIWatch Works → Detection](https://ai-watch.dev/methodology#detection).",
       '',
     )
   }
@@ -1157,7 +1153,7 @@ function buildDetectionSection(archive, meta) {
       parts.push(`**Average early detection**: ${fmtLeadMin(lead.avgLeadMs)} (across ${lead.count} events)`, '')
     }
     parts.push(
-      '> Occasional cases where AIWatch\'s RTT probe flagged degradation before the official status update. Rare by design — the headline metrics are detection latency and degradation detection above, not a "faster than official" average.',
+      '> Occasional cases where AIWatch\'s RTT probe flagged degradation before the official status update. Rare by design — the headline metric is degradation detection above, not a "faster than official" average.',
       '',
     )
   }
