@@ -387,10 +387,6 @@ These p75 figures are a network-latency reference: direct API-endpoint round-tri
 
 ## Detection & RTT Degradation
 
-### Detection Latency
-
-AIWatch independently detects incidents and alerts within **~5 minutes** — the probe/poll cadence, the upper bound on how long an issue can go unnoticed by our monitoring. This is independent, low-latency awareness across all monitored services, not a timing comparison against any provider's status page.
-
 ### RTT Degradation Detection
 
 AIWatch's direct RTT probes flagged **145** RTT degradations this month, of which **107** were **not reflected on the providers' official status pages at the time of detection**.
@@ -412,7 +408,7 @@ AIWatch's direct RTT probes flagged **145** RTT degradations this month, of whic
 | Cursor | 1 | 1 |
 | Fireworks AI | 1 | 1 |
 
-> **RTT degradation detection** is AIWatch's differentiator: synthetic probes measure real latency degradation that official status pages often omit.
+> A detection is a signal, not a confirmed outage — what is counted: [How AIWatch Works → Detection](https://ai-watch.dev/methodology#detection).
 
 ---
 
