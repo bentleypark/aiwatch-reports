@@ -86,7 +86,7 @@ function buildPeriodSuffix(year, month, daysCollected) {
 function buildEntry({ period, year, month, services, daysCollected }) {
   const fullName = `${MONTH_NAMES[month]} ${year}`
   const periodSuffix = buildPeriodSuffix(year, month, daysCollected)
-  return `- [**${fullName}**](${period}/) — ${services} services, ${periodSuffix}`
+  return `- [**${fullName}**](${period}/) <span class="report-meta">${services} services, ${periodSuffix}</span>`
 }
 
 function readArchiveSnapshot(period) {

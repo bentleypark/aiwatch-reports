@@ -162,7 +162,7 @@ test('renders the full markdown bullet for April 2026', () => {
   })
   assert.strictEqual(
     entry,
-    '- [**April 2026**](2026-04/) — 31 services, 30-day monitoring period (Apr 1–30)',
+    '- [**April 2026**](2026-04/) <span class="report-meta">31 services, 30-day monitoring period (Apr 1–30)</span>',
   )
 })
 
@@ -175,7 +175,7 @@ test('matches the 2026-03 hand-authored entry exactly (regression baseline)', ()
   })
   assert.strictEqual(
     entry,
-    '- [**March 2026**](2026-03/) — 27 services, 12-day monitoring period (Mar 20–31)',
+    '- [**March 2026**](2026-03/) <span class="report-meta">27 services, 12-day monitoring period (Mar 20–31)</span>',
   )
 })
 
@@ -188,7 +188,7 @@ test('a short post-onboarding month renders a countable bullet, not a false span
   })
   assert.strictEqual(
     entry,
-    '- [**August 2026**](2026-08/) — 45 services, 30 of 31 days with uptime data',
+    '- [**August 2026**](2026-08/) <span class="report-meta">45 services, 30 of 31 days with uptime data</span>',
   )
 })
 
