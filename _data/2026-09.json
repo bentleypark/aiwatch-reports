@@ -351,278 +351,17 @@
             "monthlyScore": 73,
             "monthlyGrade": "fair",
             "monthlyScoreConfidence": "high",
-            "incidents": 75,
+            "incidents": 46,
             "countedIncidents": 36,
             "avgResolutionMin": 41,
-            "totalDowntimeMin": 1489,
-            "longestIncidentMin": 469,
+            "totalDowntimeMin": 1469,
+            "longestIncidentMin": 468,
             "avgLatencyMs": 246,
             "p95LatencyMs": 310,
             "latencySpikes": 82,
             "p50LatencyMs": 204,
             "cvCombined": 0.489,
             "incidentList": [
-                {
-                    "id": "a0f7135c-4b1e-451c-a6bd-14b4ec72b3c1",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T11:35:10.062Z",
-                    "resolvedAt": "2026-09-01T11:43:33.062Z",
-                    "durationMin": 9,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "80a6b0ff-c56a-43ac-ad0e-dc9390eb9e54",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T12:05:06.832Z",
-                    "resolvedAt": "2026-09-01T12:18:40.832Z",
-                    "durationMin": 14,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "29e6393b-76ff-4a67-aa2c-49e0836d5447",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T13:39:43.159Z",
-                    "resolvedAt": "2026-09-01T13:54:48.159Z",
-                    "durationMin": 16,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "a4532d96-3ee5-4ce8-9820-a263efab951b",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T14:15:15.170Z",
-                    "resolvedAt": "2026-09-01T14:24:45.170Z",
-                    "durationMin": 10,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "e987cf71-4736-421a-b0bd-148d46f92d98",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T14:40:11.685Z",
-                    "resolvedAt": "2026-09-01T14:44:13.685Z",
-                    "durationMin": 5,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "f9d26cb7-11a5-49be-8baa-7a20da7aaa7c",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-01T15:09:43.631Z",
-                    "resolvedAt": "2026-09-01T15:29:00.631Z",
-                    "durationMin": 20,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "fd3ff31a-6986-4c8f-b0b2-508b0f49cb26",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-02T09:14:43.052Z",
-                    "resolvedAt": "2026-09-02T09:24:08.052Z",
-                    "durationMin": 10,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "e1494538-38fd-49be-8655-138b5a0fda05",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-02T11:50:13.146Z",
-                    "resolvedAt": "2026-09-02T11:54:34.146Z",
-                    "durationMin": 5,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "45c88dc1-c248-4313-b23b-97656b573b74",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-02T23:07:53.725Z",
-                    "resolvedAt": "2026-09-02T23:10:47.725Z",
-                    "durationMin": 3,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "0ef54c57-d861-4f60-81cd-b27cebabf7b4",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-03T01:38:48.827Z",
-                    "resolvedAt": "2026-09-03T01:45:21.827Z",
-                    "durationMin": 7,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "4224a6a6-4a22-4a3e-86b8-33583c65a942",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-03T06:02:52.968Z",
-                    "resolvedAt": "2026-09-03T06:09:47.968Z",
-                    "durationMin": 7,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "581ab454-42e9-476f-b5aa-67a28377dcc3",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-03T07:05:52.773Z",
-                    "resolvedAt": "2026-09-03T07:08:42.773Z",
-                    "durationMin": 3,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "bac9427a-c64a-447d-8fae-de4b53bc1283",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-03T07:15:14.921Z",
-                    "resolvedAt": "2026-09-03T07:20:02.921Z",
-                    "durationMin": 5,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "1874121f-9929-41a6-a6a5-44af41115d42",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-03T07:13:55.223Z",
-                    "resolvedAt": "2026-09-03T07:22:49.223Z",
-                    "durationMin": 9,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "f0151c87-169e-4bbc-bf18-9020b1ceb07e",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-03T14:25:55.086Z",
-                    "resolvedAt": "2026-09-03T14:41:48.086Z",
-                    "durationMin": 16,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "b822d6a1-968f-45b3-9686-5e5f3fc8646b",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-03T14:35:17.701Z",
-                    "resolvedAt": "2026-09-03T14:44:52.701Z",
-                    "durationMin": 10,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "42d40d86-1afb-43ab-a24b-09658eae5953",
-                    "title": "Conversations API Degraded",
-                    "startedAt": "2026-09-03T14:54:38.291Z",
-                    "resolvedAt": "2026-09-03T15:03:36.291Z",
-                    "durationMin": 9,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "f4a10a95-ae80-467f-bb10-ca9aa98652ae",
-                    "title": "AI Registry Skills API Degraded",
-                    "startedAt": "2026-09-04T01:11:12.861Z",
-                    "resolvedAt": "2026-09-04T01:21:06.861Z",
-                    "durationMin": 10,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "04dbc8d6-bbd3-44fc-b236-371e1edeb00e",
-                    "title": "Audio API Text-to-Speech Degraded",
-                    "startedAt": "2026-09-04T10:26:24.415Z",
-                    "resolvedAt": "2026-09-04T10:34:53.415Z",
-                    "durationMin": 9,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "395324c5-09d0-4f54-b0b3-b90fcfd7b529",
-                    "title": "Audio API Text-to-Speech Degraded",
-                    "startedAt": "2026-09-04T10:39:24.455Z",
-                    "resolvedAt": "2026-09-04T10:43:19.455Z",
-                    "durationMin": 4,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "f6c48e28-38e2-464c-8669-024534972135",
-                    "title": "Model mistral-ocr-2512 not available \u00b7 OCR API",
-                    "startedAt": "2026-09-04T13:30:46.628Z",
-                    "resolvedAt": "2026-09-04T14:31:08.628Z",
-                    "durationMin": 61,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "d0eca2ab-09b1-422c-95b9-d0307d90a6c6",
-                    "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
-                    "startedAt": "2026-09-04T14:31:43.744Z",
-                    "resolvedAt": "2026-09-04T14:43:20.744Z",
-                    "durationMin": 12,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "08959438-23b5-4715-8ab7-c65b2e663e7b",
-                    "title": "AI Registry Prompts API Degraded",
-                    "startedAt": "2026-09-04T15:19:57.464Z",
-                    "resolvedAt": "2026-09-04T15:59:46.464Z",
-                    "durationMin": 40,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "01e4e59d-33cb-4b0d-b3e1-a30be943dd6c",
-                    "title": "Integrations API Degraded",
-                    "startedAt": "2026-09-04T15:18:22.961Z",
-                    "resolvedAt": "2026-09-04T15:20:23.961Z",
-                    "durationMin": 3,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "7316f046-2ad5-442b-8c90-2bbc000201e1",
-                    "title": "Files API Degraded",
-                    "startedAt": "2026-09-04T15:16:13.533Z",
-                    "resolvedAt": "2026-09-04T15:36:16.533Z",
-                    "durationMin": 21,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "f8f6252f-0feb-4139-8ba8-f660ce8e59f8",
-                    "title": "AI Registry Skills API Degraded",
-                    "startedAt": "2026-09-04T15:26:26.131Z",
-                    "resolvedAt": "2026-09-04T15:51:06.131Z",
-                    "durationMin": 25,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "27d5ca10-a159-43c4-bc48-5fc73ccb85f4",
-                    "title": "Integrations API Degraded",
-                    "startedAt": "2026-09-04T15:47:22.568Z",
-                    "resolvedAt": "2026-09-04T15:50:24.568Z",
-                    "durationMin": 4,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "8041e0d6-40c9-4e73-9d13-aa725e19b52b",
-                    "title": "Integrations API Degraded",
-                    "startedAt": "2026-09-04T16:35:22.766Z",
-                    "resolvedAt": "2026-09-04T16:36:22.766Z",
-                    "durationMin": 1,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "5e6cdda0-0807-48d0-ada2-9acd2655e39f",
-                    "title": "Degraded OCR 4.1 Availability \u00b7 OCR API",
-                    "startedAt": "2026-09-04T22:00:00.000Z",
-                    "resolvedAt": "2026-09-05T05:48:20.000Z",
-                    "durationMin": 469,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
                 {
                     "id": "dd2adb8b-bbe9-4b58-b065-550d20e296cb",
                     "title": "Completion API Degraded - glm-5-2 \u00b7 Chat Completions API",
@@ -1104,7 +843,16 @@
                     "name": "Workflows API",
                     "uptime": 100
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 35.6,
+                "incidents": 13.6,
+                "recovery": 14.4,
+                "responsiveness": 9.8,
+                "speed": 6,
+                "stability": 3.8,
+                "responsivenessStatus": "available"
+            }
         },
         "cohere": {
             "uptime": 100,
@@ -2525,38 +2273,20 @@
             "score": 77,
             "grade": "good",
             "scoreConfidence": "high",
-            "monthlyScore": 78,
+            "monthlyScore": 79,
             "monthlyGrade": "good",
             "monthlyScoreConfidence": "high",
-            "incidents": 4,
+            "incidents": 2,
             "countedIncidents": 1,
-            "avgResolutionMin": 199,
-            "totalDowntimeMin": 199,
-            "longestIncidentMin": 199,
+            "avgResolutionMin": 140,
+            "totalDowntimeMin": 140,
+            "longestIncidentMin": 140,
             "avgLatencyMs": 479,
             "p95LatencyMs": 591,
             "latencySpikes": 170,
             "p50LatencyMs": 391,
             "cvCombined": 0.499,
             "incidentList": [
-                {
-                    "id": "cmtlzck6l02ny0wo50uicmt68",
-                    "title": "Issue with usage based billing",
-                    "startedAt": "2026-09-03T20:30:59.824Z",
-                    "resolvedAt": "2026-09-03T21:10:35.884Z",
-                    "durationMin": 40,
-                    "finalStatus": "resolved",
-                    "impact": null
-                },
-                {
-                    "id": "cmtnypntq056g13qw1u9uixby",
-                    "title": "We have identified few connectors that are currently impacting users.",
-                    "startedAt": "2026-09-05T05:48:43.668Z",
-                    "resolvedAt": "2026-09-05T07:09:00.672Z",
-                    "durationMin": 140,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
                 {
                     "id": "01M1Z156VYPETMR4QRNMQMF3AM",
                     "title": "We have identified few connectors that are impacting users.",
@@ -2597,7 +2327,16 @@
                     "name": "Website",
                     "uptime": 100
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": 38.5,
+                "incidents": 22.6,
+                "recovery": 10.5,
+                "responsiveness": 7.5,
+                "speed": 3.8,
+                "stability": 3.7,
+                "responsivenessStatus": "available"
+            }
         },
         "xai": {
             "uptime": 98.29,
@@ -2635,7 +2374,8 @@
                     "resolvedAt": "2026-09-03T17:09:14.000Z",
                     "durationMin": 220,
                     "finalStatus": "resolved",
-                    "impact": "major"
+                    "impact": "major",
+                    "crossEventKey": "xai:53g239"
                 },
                 {
                     "id": "xai-evt:w28qgm",
@@ -5148,7 +4888,8 @@
                     "resolvedAt": "2026-09-03T17:08:11.000Z",
                     "durationMin": 219,
                     "finalStatus": "resolved",
-                    "impact": "major"
+                    "impact": "major",
+                    "crossEventKey": "xai:53g239"
                 }
             ],
             "addedAt": "2026-07-26"
