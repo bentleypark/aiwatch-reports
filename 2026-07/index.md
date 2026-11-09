@@ -47,7 +47,7 @@ published: true
 <tr><td><strong>Coding Agents</strong></td><td>Windsurf</td><td>100 — zero incidents and 100.00% uptime, the top Score among fully-ranked services. Junie is the next-safest at 95 (7 incidents, 1h 5m total)</td></tr>
 <tr><td><strong>Inference / infra</strong></td><td>Modal</td><td>97, 99.98% uptime — three incidents totalling 37m, and the highest Score of any fully-ranked service outside the coding-agent tier</td></tr>
 <tr><td><strong>Voice / audio</strong></td><td>AssemblyAI</td><td>83, 100.00% uptime, 21m of downtime all month; ElevenLabs 73. Deepgram scores 48 but publishes no official uptime, so it isn't on the same scale as the two figures above</td></tr>
-<tr><td><strong>Observability</strong></td><td>Langfuse</td><td>81 on 100.00% uptime, two incidents totalling 1h 28m; LangSmith 77 and Helicone 39, the lowest Score among fully-ranked services this month</td></tr>
+<tr><td><strong>Observability</strong></td><td>Langfuse</td><td>81 on 100.00% uptime, two incidents totalling 1h 28m; LangSmith 76 and Helicone 39, the lowest Score among fully-ranked services this month</td></tr>
 <tr><td><strong>Video</strong></td><td>Runway</td><td>78, 99.86% uptime across two incidents (avg 42m). Luma ties on Score (78) with one 1h 45m authentication incident traced to an upstream provider</td></tr>
 <tr><td><strong>Image</strong></td><td>Black Forest Labs (FLUX) / Stability AI</td><td>FLUX 86 and Stability 85, both on 100.00% uptime; FLUX's only entry was a 5h 9m latency increase on its US3 cluster, and Stability recorded no incidents at all</td></tr>
 </tbody>
@@ -57,7 +57,7 @@ published: true
 
 ## Key Insight
 
-July's downtime was concentrated rather than widespread. 37 of 45 services recorded at least one incident, for a combined 1033h 41m. Just nine of those entries ran 24 hours or longer, yet together they account for 403h 32m of it — 39% of that combined downtime. Where those long events landed explains most of the movement in the table.
+July's downtime was concentrated rather than widespread. 37 of 45 services recorded at least one incident, for a combined 1032h 57m. Just nine of those entries ran 24 hours or longer, yet together they account for 403h 32m of it — 39% of that combined downtime. Where those long events landed explains most of the movement in the table.
 
 - **Pattern 1 — one provider event, three of its products.** On 23–24 July a single incident, *"Elevated error rates on ChatGPT"*, ran 27h 58m and was published against ChatGPT, the OpenAI API **and** Codex simultaneously; a 14h 13m enterprise-rollout failure hit ChatGPT and Codex, and a 16h 15m image-generation outage hit ChatGPT and the API. So the three surfaces moved as one: the OpenAI API went from a single 40m incident in June to 11 incidents and 58h 33m, ChatGPT from 26h 49m to 157h 57m, and Codex held its count at 8 while slipping to 74.
 - **Pattern 2 — the downtime column and the Score disagreed, and what the hours consisted of is why.** Mistral logged the month's longest single incident (120h 10m of *"Fine Tuning Jobs API Degraded"* — 93% of its 129h 28m total downtime this month) and still finished Good at 81: its computed uptime read 99.92%, so five days of a *degraded* fine-tuning job API barely registered as lost availability — the uptime and incident-total scopes differ (see [About This Report](#about-this-report)). Helicone logged two incidents to Mistral's 28 and finished at 39, the lowest of the fully-ranked services, because both were an endpoint going hard down — 96.24% uptime. The two figures also come from different **Uptime Sources** (Official vs Platform), which measure differently, so the downtime column is best read beside the Score and [Component Reliability](#component-reliability) rather than on its own. Mistral's weakest component in July was its Audio API, at 86.28% on the separate [Component Reliability](#component-reliability) measure — a surface the 129h headline never names.
@@ -65,7 +65,7 @@ July's downtime was concentrated rather than widespread. 37 of 45 services recor
 
 <details>
 <summary><strong>Key Insight in Korean</strong></summary>
-<p>7월의 다운타임은 여기저기 흩어졌다기보다 몇 건에 몰렸습니다. 45개 서비스 중 37개가 최소 1건의 장애를 겪어 총 1033시간 41분을 기록했습니다. 이 중 24시간을 넘긴 기록은 9건에 불과했지만, 이 9건만으로 403시간 32분 — 다운타임 합계의 39%를 차지합니다. 순위표의 움직임도 대부분 이 긴 장애들이 어디를 덮쳤느냐로 설명됩니다.</p>
+<p>7월의 다운타임은 여기저기 흩어졌다기보다 몇 건에 몰렸습니다. 45개 서비스 중 37개가 최소 1건의 장애를 겪어 총 1032시간 57분을 기록했습니다. 이 중 24시간을 넘긴 기록은 9건에 불과했지만, 이 9건만으로 403시간 32분 — 다운타임 합계의 39%를 차지합니다. 순위표의 움직임도 대부분 이 긴 장애들이 어디를 덮쳤느냐로 설명됩니다.</p>
 <ul>
 <li><strong>패턴 1 — 하나의 장애가 한 제공사의 세 제품을 동시에 덮쳤다</strong>: 7월 23~24일 <em>"Elevated error rates on ChatGPT"</em> 장애 한 건이 27시간 58분 이어졌는데, 이 건이 ChatGPT·OpenAI API·Codex 세 곳에 동시에 게시됐습니다. Codex 권한이 없는 기업 사용자에게는 신규 ChatGPT 앱 접근이 막혔는데, 이 14시간 13분짜리 장애가 ChatGPT와 Codex를, 16시간 15분짜리 이미지 생성 장애는 ChatGPT와 API를 함께 때렸습니다. 그래서 세 서비스가 한 몸처럼 움직였습니다 — OpenAI API는 6월 40분짜리 1건에서 7월 11건·58시간 33분으로 늘었고, ChatGPT는 26시간 49분에서 157시간 57분으로, Codex는 건수가 8건 그대로였지만 점수는 74로 내려갔습니다.</li>
 <li><strong>패턴 2 — 다운타임 수치와 점수가 엇갈렸고, 그 시간이 무엇으로 채워졌는지가 이유였다</strong>: Mistral은 이달 최장 단일 장애(<em>"Fine Tuning Jobs API Degraded"</em> 120시간 10분, 이달 총 다운타임 129시간 28분의 93%)를 기록하고도 Good 81점으로 마무리했습니다. AIWatch가 산출한 업타임이 99.92%로 나왔기 때문입니다 — 닷새간 <em>성능 저하</em> 상태였던 건 파인튜닝 작업 API였고 서빙 경로는 살아 있었던 터라, 가용성 손실로는 거의 잡히지 않았습니다 — 업타임과 인시던트 집계는 애초에 스코프가 다릅니다(<a href="#about-this-report">About This Report</a> 참고). 반면 Helicone은 Mistral의 28건에 견줘 단 2건이었지만 둘 다 엔드포인트가 완전히 멈춘 경우여서 업타임 96.24%, 점수는 완전 순위에 오른 서비스 중 최저인 39점이었습니다. 게다가 두 수치는 <strong>Uptime Source</strong>부터 갈립니다 — Mistral은 Official, Helicone은 Platform이라 측정 방식 자체가 같지 않습니다. 그러니 다운타임 수치는 단독으로 읽지 말고 점수, 그리고 <a href="#component-reliability">Component Reliability</a>와 함께 확인하세요. 7월 Mistral에서 가장 취약했던 컴포넌트는 정작 별도 측정치인 <a href="#component-reliability">Component Reliability</a> 기준 86.28%의 Audio API였는데, 129시간이라는 대표 숫자만으로는 드러나지 않습니다.</li>
@@ -131,8 +131,8 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 18= | Hugging Face | 80 | Good | Platform | 7 incidents, avg 39m |
 | 20= | Runway | 78 | Good | Official | 2 incidents, avg 42m |
 | 20= | Luma (Dream Machine) | 78 | Good | Platform | 1 incident, 1h 45m |
-| 22 | LangChain (LangSmith) | 77 | Good | Official | 5 incidents, avg 32m |
-| 23 | OpenAI API | 76 | Good | Official | 11 incidents, avg 5h 19m |
+| 22= | OpenAI API | 76 | Good | Official | 11 incidents, avg 5h 19m |
+| 22= | LangChain (LangSmith) | 76 | Good | Official | 3 incidents, avg 39m |
 | 24 | Codex | 74 | Fair | Official | 8 incidents, avg 7h 10m |
 | 25= | Together AI | 73 | Fair | Platform | 65 incidents, fast recovery (avg 27m) |
 | 25= | ElevenLabs | 73 | Fair | Official | 6 incidents, avg 2h 21m |
@@ -420,12 +420,12 @@ When an incident opens, AIWatch's AI publishes an estimated recovery window. **1
 <tr><td>DeepSeek API</td><td>6</td><td>1h 57m (1h 10m)</td><td class="hide-mobile">1h 10m</td><td class="hide-mobile">20m</td></tr>
 <tr><td>ElevenLabs</td><td>6</td><td>14h 5m (5h 2m)</td><td class="hide-mobile">5h 2m</td><td class="hide-mobile">2h 21m</td></tr>
 <tr><td>Replicate</td><td>5</td><td>69h 33m (26h 29m)</td><td class="hide-mobile">26h 29m</td><td class="hide-mobile">13h 55m</td></tr>
-<tr><td>LangChain (LangSmith)</td><td>5</td><td>2h 42m (48m)</td><td class="hide-mobile">48m</td><td class="hide-mobile">32m</td></tr>
 <tr><td>DeepSeek App</td><td>5</td><td>5h 58m (3h 53m)</td><td class="hide-mobile">3h 53m</td><td class="hide-mobile">1h 12m</td></tr>
 <tr><td>Deepgram</td><td>4</td><td>27h 12m (23h 8m)</td><td class="hide-mobile">23h 8m</td><td class="hide-mobile">6h 48m</td></tr>
 <tr><td>Pinecone</td><td>4</td><td>11h 29m (4h 55m)</td><td class="hide-mobile">4h 55m</td><td class="hide-mobile">2h 52m</td></tr>
 <tr><td>Voyage AI</td><td>4</td><td>11h 10m (7h)</td><td class="hide-mobile">7h</td><td class="hide-mobile">2h 48m</td></tr>
 <tr><td>Modal</td><td>3</td><td>37m (31m)</td><td class="hide-mobile">31m</td><td class="hide-mobile">12m</td></tr>
+<tr><td>LangChain (LangSmith)</td><td>3</td><td>1h 58m (48m)</td><td class="hide-mobile">48m</td><td class="hide-mobile">39m</td></tr>
 <tr><td>Perplexity</td><td>2</td><td>2h 7m (1h 41m)</td><td class="hide-mobile">1h 41m</td><td class="hide-mobile">1h 4m</td></tr>
 <tr><td>xAI API</td><td>2</td><td>1h 29m (1h 3m)</td><td class="hide-mobile">1h 3m</td><td class="hide-mobile">45m</td></tr>
 <tr><td>OpenRouter</td><td>2</td><td>31m (30m)</td><td class="hide-mobile">30m</td><td class="hide-mobile">16m</td></tr>
