@@ -19,6 +19,7 @@
 
 Each monthly report includes:
 
+- **At a glance** — for general readers, at the top of the page: what the report measures and what it does not, and a table per group of the AI apps and coding agents whose incident feed is current: each one's reported incident count, its own previous month's count and the change, and its longest incident. No Score and no ranking. Generated from the archive, with its Korean version in a collapsible block right under it
 - **AIWatch Score Rankings** — Composite reliability score (uptime + incidents + recovery time)
 - **3-Month Trend** — Score direction over the trailing 3 months (slope chart), plus **Notable Movers**: the services whose Score, recovery time (MTTR), or total downtime changed most, so a flat Score can't hide a recovery-time regression. Auto-rendered once ≥2 months of archive exist; omitted otherwise. (Uptime is intentionally not trended — see *Methodology*.)
 - **Incident Summary** — Total downtime and incident counts per service

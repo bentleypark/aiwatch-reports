@@ -1606,6 +1606,168 @@ function servicesFromArchive(archive) {
   })
 }
 
+// ── At a glance (aiwatch-reports#162) ────────────────────────────────
+const GLANCE_GROUPS = ['apps', 'agents']
+const GLANCE_GROUP_KO = { apps: 'AI 앱', agents: '코딩 에이전트' }
+
+function longestIncident(data) {
+  const mins = data.longestIncidentMin
+  if (typeof mins !== 'number' || mins <= 0) return null
+  const list = data.incidentList || []
+  const match = list.filter(inc => inc?.durationMin === mins)
+  const complete = list.length > 0 && list.length >= data.incidents
+  return { durationMin: mins, startedAt: match.length === 1 ? match[0].startedAt : null, merged: complete && match.length === 0 }
+}
+
+function prevIncidentsOf(id, prevArchive, prevMonth) {
+  if (!prevArchive?.services) return null
+  if (typeof prevArchive.daysCollected === 'number' && prevArchive.daysCollected < charts.daysInMonthOf(prevMonth)) return null
+  const p = prevArchive.services[id]
+  if (!p) return 'new'
+  if (typeof p.incidents !== 'number' || isStaleSource({ id, data: p }) || isRecentlyAdded({ data: p }, prevMonth)) return null
+  return p.incidents
+}
+
+function buildReaderSummary(services, meta, prevArchive, prevMonth) {
+  const groups = GLANCE_GROUPS.map(group => {
+    const facts = services
+      .filter(s => meta[s.id]?.group === group && !isStaleSource(s))
+      .map(s => {
+        const prevIncidents = prevIncidentsOf(s.id, prevArchive, prevMonth)
+        return {
+          id: s.id,
+          name: serviceName(s.id, meta),
+          incidents: s.data.incidents,
+          prevIncidents,
+          longest: longestIncident(s.data),
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
+    return { group, facts }
+  }).filter(g => g.facts.length > 0)
+  return { groups }
+}
+
+function fmtDurationKo(mins) {
+  const h = Math.floor(mins / 60)
+  const m = Math.round(mins % 60)
+  if (h === 0) return `${m}분`
+  if (m === 0) return `${h}시간`
+  return `${h}시간 ${m}분`
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+}
+
+function shortMonth(month) {
+  return monthName(month).slice(0, 3)
+}
+
+function changeCell(f, newLabel) {
+  if (f.prevIncidents === 'new') return newLabel
+  if (f.prevIncidents === null) return '—'
+  const d = f.incidents - f.prevIncidents
+  return d === 0 ? '±0' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d)}`
+}
+
+function prevCell(f) {
+  return typeof f.prevIncidents === 'number' ? String(f.prevIncidents) : '—'
+}
+
+function keepTogether(text) {
+  return text.replace(/ /g, '\u00a0')
+}
+
+function longestCellEn(f) {
+  if (!f.longest) return '—'
+  const dur = keepTogether(fmtDurationMin(f.longest.durationMin))
+  if (f.longest.merged) return `${dur} (overlapping incidents)`
+  if (!f.longest.startedAt) return dur
+  const d = new Date(f.longest.startedAt)
+  return `${dur} · ${keepTogether(`${d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })} ${d.getUTCDate()}`)}`
+}
+
+function longestCellKo(f) {
+  if (!f.longest) return '—'
+  const dur = keepTogether(fmtDurationKo(f.longest.durationMin))
+  if (f.longest.merged) return `${dur} (겹친 장애 합산)`
+  if (!f.longest.startedAt) return dur
+  const d = new Date(f.longest.startedAt)
+  return `${dur} · ${keepTogether(`${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`)}`
+}
+
+function anchorIfPresent(md, re) {
+  return re.test(md) ? anchorForHeading(md, re) : null
+}
+
+function glanceLinks(md) {
+  return {
+    incidents: anchorIfPresent(md, /^## (Incident Summary)$/m),
+    notable: anchorIfPresent(md, /^## (Notable Incidents)$/m),
+    recommendations: anchorIfPresent(md, /^## (Recommendations)$/m),
+  }
+}
+
+function glanceTable(facts, head, row) {
+  return [
+    '<table class="numeric-table label-first glance-table">',
+    '<thead>',
+    `<tr><th rowspan="2">${head.service}</th><th colspan="3">${head.incidents}</th><th rowspan="2">${head.longest}</th></tr>`,
+    `<tr><th>${head.month}</th><th>${head.prev}</th><th>${head.change}</th></tr>`,
+    '</thead>',
+    '<tbody>',
+    ...facts.map(f => `<tr>${row(f).map(c => `<td>${c}</td>`).join('')}</tr>`),
+    '</tbody>',
+    '</table>',
+  ]
+}
+
+function renderGlanceEn(summary, month, prevMonth, links) {
+  const out = ['## At a glance', '']
+  out.push(
+    '> This report covers incidents that providers posted on their status pages, plus AIWatch\'s own measurements. It does not measure the quality of a model\'s answers. Providers split incidents differently, so here each count is compared only with the same service\'s previous month, not with other services.',
+    '',
+  )
+  for (const g of summary.groups) {
+    const label = GROUP_LABELS[g.group][1]
+    out.push(`**${label.charAt(0).toUpperCase()}${label.slice(1)}**`, '')
+    const head = { service: 'Service', incidents: 'Incidents', longest: 'Longest incident (duration · start date)', month: shortMonth(month), prev: shortMonth(prevMonth), change: 'Change' }
+    out.push(...glanceTable(g.facts, head, f => [escapeHtml(f.name), f.incidents, prevCell(f), changeCell(f, 'new'), longestCellEn(f)]), '')
+  }
+  const jumps = [
+    links.incidents && `Did a tool you use have problems? [Incident Summary](#${links.incidents})`,
+    links.notable && `The biggest incidents: [Notable Incidents](#${links.notable})`,
+    links.recommendations && `Choosing a service: [Recommendations](#${links.recommendations})`,
+  ].filter(Boolean)
+  if (jumps.length) out.push('**Where to look next**', '', ...jumps.map(j => `- ${j}`))
+  return out.join('\n').trimEnd()
+}
+
+function renderGlanceKo(summary, month, prevMonth, links) {
+  const out = ['<details>', '<summary><strong>At a glance in Korean</strong></summary>']
+  out.push('<p>이 리포트는 제공업체가 상태 페이지에 올린 장애와 AIWatch의 직접 측정을 다룹니다. 모델 답변의 품질은 측정하지 않습니다. 제공업체마다 장애를 나누는 기준이 달라, 여기서는 건수를 다른 서비스가 아니라 같은 서비스의 지난달과만 비교합니다.</p>')
+  for (const g of summary.groups) {
+    const prevKo = `${Number(prevMonth.slice(5))}월`
+    const head = { service: '서비스', incidents: '장애 건수', longest: '가장 긴 장애 (지속 시간 · 시작일)', month: `${Number(month.slice(5))}월`, prev: prevKo, change: `${prevKo} 대비` }
+    out.push(`<p><strong>${GLANCE_GROUP_KO[g.group]}</strong></p>`, ...glanceTable(g.facts, head, f => [escapeHtml(f.name), f.incidents, prevCell(f), changeCell(f, '새로 추가'), longestCellKo(f)]))
+  }
+  const jumps = [
+    links.incidents && `쓰는 도구에 문제가 있었는지: <a href="#${links.incidents}">Incident Summary</a>`,
+    links.notable && `큰 장애: <a href="#${links.notable}">Notable Incidents</a>`,
+    links.recommendations && `서비스 고르기: <a href="#${links.recommendations}">Recommendations</a>`,
+  ].filter(Boolean)
+  if (jumps.length) out.push('<p><strong>더 보기</strong></p>', '<ul>', ...jumps.map(j => `<li>${j}</li>`), '</ul>')
+  out.push('</details>')
+  return out.join('\n')
+}
+
+function injectGlance(md, summary, month, prevMonth) {
+  if (summary.groups.length === 0) return md.replace(/<!-- AT_A_GLANCE -->\n*/, '')
+  const links = glanceLinks(md)
+  return md.replace('<!-- AT_A_GLANCE -->', () => `${renderGlanceEn(summary, month, prevMonth, links)}\n\n${renderGlanceKo(summary, month, prevMonth, links)}`)
+}
+
 function fillTemplate(template, month, archive, meta) {
   const [year] = month.split('-').map(Number)
   const mName = monthName(month)
@@ -1765,6 +1927,10 @@ function fillTemplate(template, month, archive, meta) {
   } else {
     out = out.replace(/\n*<!-- PREDICTION_ACCURACY_SECTION -->(?:\n*<!--[\s\S]*?-->)?\n*(?:---\n*)?/, '\n\n')
   }
+
+  const prevMonth = charts.monthsBefore(month, 1)[0]
+  const prevArchive = charts.readDataArchive(prevMonth, path.join(__dirname, '..', '_data'))
+  out = injectGlance(out, buildReaderSummary(services, meta, prevArchive, prevMonth), month, prevMonth)
 
   return out
 }
@@ -2457,15 +2623,13 @@ function loadPriorNarrative(month, opts = {}) {
   return prior
 }
 
-// Month-over-month incident-count deltas, keyed by service display name, for every
-// service with a count this month AND last month. Feeds both the RECURRENCE block's
+// Month-over-month incident-count deltas, keyed by service display name. Feeds both the RECURRENCE block's
 // "133 → 85" hint and the auto-draft's MoM-framed "Most incidents" bullet (#54 bonus).
 function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
   const { dataDir = path.join(__dirname, '..', '_data') } = opts
   const map = {}
   const prevMonth = charts.monthsBefore(month, 1)[0]
   const prev = charts.readDataArchive(prevMonth, dataDir)
-  if (!prev || !prev.services) return map
   // `month` matters even though only `incidents` is read here: without it `isRecentlyAdded` sees an
   // undefined period and every mid-month-added service is silently marked rankable (8 of 38 rows on
   // 2026-06). Harmless while this destructures one key, silently wrong the moment it destructures
@@ -2475,7 +2639,7 @@ function buildMomIncidentDeltas(archive, meta, month, opts = {}) {
     const curr = parseInt(r.Incidents, 10)
     if (Number.isNaN(curr)) continue
     const id = charts.nameToId(r.Service, meta)
-    const p = prev.services[id]?.incidents
+    const p = prevIncidentsOf(id, prev, prevMonth)
     if (typeof p !== 'number') continue
     map[r.Service] = { curr, prev: p }
   }
@@ -2576,6 +2740,10 @@ module.exports = {
   emitBreakdownWarnings,
   projectServiceMeta,
   buildScoreTable,
+  buildReaderSummary,
+  renderGlanceEn,
+  renderGlanceKo,
+  injectGlance,
   scoreTier,
   isScoreWithheld,
   buildHeldOutNote,
