@@ -1717,7 +1717,7 @@ function glanceTable(facts, head, row) {
     `<tr><th>${head.month}</th><th>${head.prev}</th><th>${head.change}</th></tr>`,
     '</thead>',
     '<tbody>',
-    ...facts.map(f => `<tr>${row(f).map(c => `<td>${c}</td>`).join('')}</tr>`),
+    ...facts.map(f => `<tr data-service="${f.id}">${row(f).map(c => `<td>${c}</td>`).join('')}</tr>`),
     '</tbody>',
     '</table>',
   ]

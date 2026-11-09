@@ -1,4 +1,4 @@
-// aiwatch-reports#167 — a published report's ranking and Incident Summary must still say what its own
+// aiwatch-reports#167 — a published report's ranking, Incident Summary and At a glance tables must still say what its own
 // `_data/YYYY-MM.json` says. An archive correction re-synced into `_data` without the body (2026-09
 // Kimi) is the drift this catches. The expected rows come from the generator's own table builders,
 // so the check has no second copy of the ranking or formatting rules.
@@ -9,9 +9,11 @@
 // run: node scripts/check-report-drift.js   (exit 1 on drift)
 const fs = require('fs')
 const path = require('path')
-const { buildScoreTable, buildIncidentTable, servicesFromArchive } = require('./generate-report')
+const { buildScoreTable, buildIncidentTable, servicesFromArchive, buildReaderSummary, injectGlance } = require('./generate-report')
+const { monthsBefore, readDataArchive } = require('./generate-charts')
 const { parseTableGroups } = require('./generate-summary')
 
+const ROOT = path.join(__dirname, '..')
 const EXCLUDED_MONTHS = ['2026-03']
 // 2026-06 ranks both confidence tiers in one table (aiwatch-reports#106 split them later), so only its
 // rank column differs from today's builder.
@@ -45,13 +47,34 @@ function incidentRows(md) {
   return [...section(md, 'Incident Summary').matchAll(rows)].map(m => ({ name: m[1], key: m.slice(2).join(' | ') }))
 }
 
-// { published, expected }, each { scores, incidents }: the rows of one month as the body states them
-// and as its _data rebuilds them.
-function monthRows(md, archive, month, rank = !RANK_UNCHECKED_MONTHS.includes(month)) {
+// { glance, glanceKo }. A row is keyed by the service id the generator wrote on it (aiwatch-reports#184):
+// which services a table lists comes from the live service list, which _data does not hold.
+function glanceRows(md) {
+  const rowsOf = text => [...text.matchAll(/<tr data-service="([^"]+)"><td>.*?<\/td>(.*?)<\/tr>/g)].map(m => {
+    const cells = [...m[2].matchAll(/<td>(.*?)<\/td>/g)].map(c => c[1])
+    return { name: m[1], key: [m[1], ...cells].join(' | ') }
+  })
+  const koAt = md.indexOf('At a glance in Korean')
+  return koAt < 0 ? { glance: rowsOf(md), glanceKo: [] } : { glance: rowsOf(md.slice(0, koAt)), glanceKo: rowsOf(md.slice(koAt)) }
+}
+
+function builtGlance(services, month, root) {
+  const prevMonth = monthsBefore(month, 1)[0]
+  const everyService = Object.fromEntries(services.map(s => [s.id, { group: 'apps' }]))
+  const summary = buildReaderSummary(services, everyService, readDataArchive(prevMonth, path.join(root, '_data')), prevMonth)
+  return glanceRows(injectGlance('<!-- AT_A_GLANCE -->', summary, month, prevMonth))
+}
+
+// { published, expected }, each { scores, incidents, glance, glanceKo }: the rows of one month as the
+// body states them and as its _data rebuilds them.
+function monthRows(md, archive, month, rank = !RANK_UNCHECKED_MONTHS.includes(month), root = ROOT) {
   const services = servicesFromArchive(archive)
   const built = `## AIWatch Score\n\n${buildScoreTable(services, {}, month)}\n\n## Incident Summary\n\n${buildIncidentTable(services, {}).tableRows}\n`
   const rows = text => ({ scores: scoreRows(text, { rank }), incidents: incidentRows(text) })
-  return { published: rows(md), expected: rows(built) }
+  const published = { ...rows(md), ...glanceRows(md) }
+  const glance = builtGlance(services, month, root)
+  const listed = (candidates, shown) => candidates.filter(r => shown.some(s => s.name === r.name))
+  return { published, expected: { ...rows(built), glance: listed(glance.glance, published.glance), glanceKo: listed(glance.glanceKo, published.glanceKo) } }
 }
 
 // Rows present on one side more often than on the other.
@@ -75,10 +98,10 @@ function isKnown(known, month, table, publishedKey, expectedKey) {
 }
 
 // [{ table, published?, expected? }] for one month; [] when the body matches its data.
-function findDrift(md, archive, month, known = KNOWN_DRIFT) {
-  const { published, expected } = monthRows(md, archive, month)
+function findDrift(md, archive, month, known = KNOWN_DRIFT, root) {
+  const { published, expected } = monthRows(md, archive, month, undefined, root)
   const drift = []
-  for (const table of ['scores', 'incidents']) {
+  for (const table of ['scores', 'incidents', 'glance', 'glanceKo']) {
     const { onlyPublished, onlyExpected } = multisetDiff(published[table], expected[table])
     const unmatched = [...onlyExpected]
     for (const p of onlyPublished) {
@@ -97,7 +120,7 @@ function staleKnownDrift(root, known = KNOWN_DRIFT) {
     const md = readMonth(root, k.month)
     if (!md) return true
     const archive = JSON.parse(fs.readFileSync(path.join(root, '_data', `${k.month}.json`), 'utf8'))
-    const { published, expected } = monthRows(md, archive, k.month)
+    const { published, expected } = monthRows(md, archive, k.month, undefined, root)
     return !published[k.table].some(r => r.key === k.published) || !expected[k.table].some(r => r.key === k.expected)
   })
 }
@@ -118,7 +141,7 @@ function checkRepo(root, known = KNOWN_DRIFT) {
   const problems = []
   for (const month of checkedMonths(root)) {
     const archive = JSON.parse(fs.readFileSync(path.join(root, '_data', `${month}.json`), 'utf8'))
-    for (const d of findDrift(readMonth(root, month), archive, month, known)) {
+    for (const d of findDrift(readMonth(root, month), archive, month, known, root)) {
       problems.push(d.published
         ? `${month} ${d.table}: published "${d.published.name} | ${d.published.key}" is not in _data`
         : `${month} ${d.table}: _data has "${d.expected.name} | ${d.expected.key}", missing from the body`)
@@ -131,10 +154,10 @@ function checkRepo(root, known = KNOWN_DRIFT) {
 }
 
 if (require.main === module) {
-  const problems = checkRepo(path.join(__dirname, '..'))
+  const problems = checkRepo(ROOT)
   for (const p of problems) console.log(`::error::${p}`)
   console.log(problems.length ? `[check-report-drift] ${problems.length} problem(s).` : '[check-report-drift] every checked month matches its _data.')
   process.exit(problems.length ? 1 : 0)
 }
 
-module.exports = { EXCLUDED_MONTHS, RANK_UNCHECKED_MONTHS, KNOWN_DRIFT, incidentCountOf, scoreRows, incidentRows, monthRows, findDrift, staleKnownDrift, checkedMonths, checkRepo }
+module.exports = { EXCLUDED_MONTHS, RANK_UNCHECKED_MONTHS, KNOWN_DRIFT, incidentCountOf, scoreRows, incidentRows, glanceRows, monthRows, findDrift, staleKnownDrift, checkedMonths, checkRepo }

@@ -4489,7 +4489,7 @@ console.log('\nAt a glance (aiwatch-reports#162)')
     '</thead>',
     '<tbody>',
   ]
-  const tableLines = lines => lines.filter(l => /^<\/?(table|thead|tbody|tr)\b/.test(l))
+  const tableLines = lines => lines.filter(l => /^<\/?(table|thead|tbody|tr)\b/.test(l)).map(l => l.replace(/ data-service="[^"]+"/, ''))
   test('English: one table per group, one "Incidents" header over this month, last month and the change', () => {
     const head = H('Service', 'Incidents', 'Longest incident (duration · start date)', 'Oct', 'Sep', 'Change')
     assert.deepStrictEqual(tableLines(en), [
@@ -4547,7 +4547,7 @@ console.log('\nAt a glance (aiwatch-reports#162)')
     const glance = out.indexOf('## At a glance'); const koAt = out.indexOf('<summary><strong>At a glance in Korean'); const summaryAt = out.indexOf('## Summary')
     assert.ok(glance > 0 && glance < koAt && koAt < summaryAt, `glance ${glance}, ko ${koAt}, summary ${summaryAt}`)
     const koBlock = out.slice(koAt, out.indexOf('</details>', koAt))
-    assert.ok(koBlock.includes('<tr><td>Beta App</td><td>3</td>'), koBlock)
+    assert.match(koBlock, /<tr data-service="[^"]+"><td>Beta App<\/td><td>3<\/td>/, koBlock)
     assert.ok(out.includes('<summary><strong>Summary in Korean</strong></summary>\n<ul>'), 'Summary in Korean unchanged')
     for (const a of ['incident-summary', 'notable-incidents', 'recommendations']) {
       assert.ok(out.includes(`](#${a})`) && koBlock.includes(`<a href="#${a}">`), `link #${a}`)
