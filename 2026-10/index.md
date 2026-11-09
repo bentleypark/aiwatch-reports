@@ -2,7 +2,7 @@
 layout: page
 title: "October 2026 AI Reliability Report"
 description: "Monthly reliability report for 49 AI services including OpenAI, Anthropic Claude, Gemini, Amazon Bedrock, Pinecone, and more. Uptime, incidents, and AIWatch Score rankings."
-date: 2026-11-02
+date: 2026-11-09
 published: false
 ---
 
@@ -28,6 +28,91 @@ published: false
         ADVISORY, not downtime — label it so (as the Anthropic entries do). If the archive counted such a
         notice as downtime it inflates the Score drop (a worker-side classification bug, cf. aiwatch#707);
         flag it. A long duration alone does not make an availability incident. -->
+
+## At a glance
+
+> This report covers incidents that providers posted on their status pages, plus AIWatch's own measurements. It does not measure the quality of a model's answers. Providers split incidents differently, so here each count is compared only with the same service's previous month, not with other services.
+
+**AI apps**
+
+<table class="numeric-table label-first glance-table">
+<thead>
+<tr><th rowspan="2">Service</th><th colspan="3">Incidents</th><th rowspan="2">Longest incident (duration · start date)</th></tr>
+<tr><th>Oct</th><th>Sep</th><th>Change</th></tr>
+</thead>
+<tbody>
+<tr data-service="chatgpt"><td>ChatGPT</td><td>28</td><td>26</td><td>▲ 2</td><td>19h 7m · Oct 5</td></tr>
+<tr data-service="claudeai"><td>claude.ai</td><td>13</td><td>9</td><td>▲ 4</td><td>4h 17m · Oct 22</td></tr>
+<tr data-service="deepseekapp"><td>DeepSeek App</td><td>6</td><td>8</td><td>▼ 2</td><td>4h 53m · Oct 15</td></tr>
+<tr data-service="grok"><td>Grok</td><td>2</td><td>1</td><td>▲ 1</td><td>1h 4m · Oct 30</td></tr>
+<tr data-service="grokbot"><td>Grok Bot</td><td>19</td><td>—</td><td>new</td><td>5h 19m · Oct 14</td></tr>
+<tr data-service="kimiapp"><td>Kimi App</td><td>6</td><td>—</td><td>new</td><td>7m · Oct 1</td></tr>
+</tbody>
+</table>
+
+**Coding agents**
+
+<table class="numeric-table label-first glance-table">
+<thead>
+<tr><th rowspan="2">Service</th><th colspan="3">Incidents</th><th rowspan="2">Longest incident (duration · start date)</th></tr>
+<tr><th>Oct</th><th>Sep</th><th>Change</th></tr>
+</thead>
+<tbody>
+<tr data-service="claudecode"><td>Claude Code</td><td>12</td><td>7</td><td>▲ 5</td><td>3h 47m · Oct 28</td></tr>
+<tr data-service="codex"><td>Codex</td><td>7</td><td>6</td><td>▲ 1</td><td>8h 27m · Oct 13</td></tr>
+<tr data-service="cursor"><td>Cursor</td><td>24</td><td>23</td><td>▲ 1</td><td>9h 35m · Oct 29</td></tr>
+<tr data-service="copilot"><td>GitHub Copilot</td><td>3</td><td>6</td><td>▼ 3</td><td>2h 30m · Oct 29</td></tr>
+<tr data-service="junie"><td>Junie</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>
+<tr data-service="windsurf"><td>Windsurf (Devin Desktop)</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>
+</tbody>
+</table>
+
+**Where to look next**
+
+- Did a tool you use have problems? [Incident Summary](#incident-summary)
+- The biggest incidents: [Notable Incidents](#notable-incidents)
+- Choosing a service: [Recommendations](#recommendations)
+
+<details>
+<summary><strong>At a glance in Korean</strong></summary>
+<p>이 리포트는 제공업체가 상태 페이지에 올린 장애와 AIWatch의 직접 측정을 다룹니다. 모델 답변의 품질은 측정하지 않습니다. 제공업체마다 장애를 나누는 기준이 달라, 여기서는 건수를 다른 서비스가 아니라 같은 서비스의 지난달과만 비교합니다.</p>
+<p><strong>AI 앱</strong></p>
+<table class="numeric-table label-first glance-table">
+<thead>
+<tr><th rowspan="2">서비스</th><th colspan="3">장애 건수</th><th rowspan="2">가장 긴 장애 (지속 시간 · 시작일)</th></tr>
+<tr><th>10월</th><th>9월</th><th>9월 대비</th></tr>
+</thead>
+<tbody>
+<tr data-service="chatgpt"><td>ChatGPT</td><td>28</td><td>26</td><td>▲ 2</td><td>19시간 7분 · 10월 5일</td></tr>
+<tr data-service="claudeai"><td>claude.ai</td><td>13</td><td>9</td><td>▲ 4</td><td>4시간 17분 · 10월 22일</td></tr>
+<tr data-service="deepseekapp"><td>DeepSeek App</td><td>6</td><td>8</td><td>▼ 2</td><td>4시간 53분 · 10월 15일</td></tr>
+<tr data-service="grok"><td>Grok</td><td>2</td><td>1</td><td>▲ 1</td><td>1시간 4분 · 10월 30일</td></tr>
+<tr data-service="grokbot"><td>Grok Bot</td><td>19</td><td>—</td><td>새로 추가</td><td>5시간 19분 · 10월 14일</td></tr>
+<tr data-service="kimiapp"><td>Kimi App</td><td>6</td><td>—</td><td>새로 추가</td><td>7분 · 10월 1일</td></tr>
+</tbody>
+</table>
+<p><strong>코딩 에이전트</strong></p>
+<table class="numeric-table label-first glance-table">
+<thead>
+<tr><th rowspan="2">서비스</th><th colspan="3">장애 건수</th><th rowspan="2">가장 긴 장애 (지속 시간 · 시작일)</th></tr>
+<tr><th>10월</th><th>9월</th><th>9월 대비</th></tr>
+</thead>
+<tbody>
+<tr data-service="claudecode"><td>Claude Code</td><td>12</td><td>7</td><td>▲ 5</td><td>3시간 47분 · 10월 28일</td></tr>
+<tr data-service="codex"><td>Codex</td><td>7</td><td>6</td><td>▲ 1</td><td>8시간 27분 · 10월 13일</td></tr>
+<tr data-service="cursor"><td>Cursor</td><td>24</td><td>23</td><td>▲ 1</td><td>9시간 35분 · 10월 29일</td></tr>
+<tr data-service="copilot"><td>GitHub Copilot</td><td>3</td><td>6</td><td>▼ 3</td><td>2시간 30분 · 10월 29일</td></tr>
+<tr data-service="junie"><td>Junie</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>
+<tr data-service="windsurf"><td>Windsurf (Devin Desktop)</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>
+</tbody>
+</table>
+<p><strong>더 보기</strong></p>
+<ul>
+<li>쓰는 도구에 문제가 있었는지: <a href="#incident-summary">Incident Summary</a></li>
+<li>큰 장애: <a href="#notable-incidents">Notable Incidents</a></li>
+<li>서비스 고르기: <a href="#recommendations">Recommendations</a></li>
+</ul>
+</details>
 
 ## Summary
 <!-- BEGIN AUTO-DRAFT — review, then DELETE this entire block before merge -->
@@ -123,7 +208,7 @@ AIWatch Score direction over the last 3 months (2026-08 → 2026-10). The lines 
 - 🔺 **OpenAI API** — Score 74 → 65 → 71 (−3) · **MTTR 14h 33m → 2h 51m → 2h 10m (−12h 23m)** · downtime 29h 5m → 19h 55m → 21h 40m (−7h 25m)
 - 🔺 **Voyage AI** — Score 74 → 78 → 79 (+5) · **MTTR 11h 20m → 22m → 34m (−10h 46m)** · downtime 11h 20m → 1h 26m → 34m (−10h 46m)
 - 🔻 **OpenRouter** — Score 87 → 78 → 70 (−17) · **MTTR 1h 22m → 1h 37m → 9h 31m (+8h 9m)** · downtime 2h 44m → 4h 50m → 47h 37m (+44h 53m)
-- 🔺 **Mistral API** — Score 42 → 73 → 82 (+40) · MTTR 6h 50m → 41m → 1h 34m (−5h 16m) · **downtime 129h 50m → 24h 49m → 3h 7m (−126h 43m)**
+- 🔺 **Mistral API** — Score 42 → 73 → 82 (+40) · MTTR 6h 50m → 41m → 1h 34m (−5h 16m) · **downtime 129h 50m → 24h 29m → 3h 7m (−126h 43m)**
 
 > **Downtime counting changed in September 2026**: from then on, time when several incidents were open at once counts once, and incidents opened by a provider's automatic monitor count as downtime. MTTR and downtime for the earlier months above are recounted from those months' incident records under the new rule, so they can differ from the figures in those months' own reports.
 
