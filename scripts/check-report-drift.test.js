@@ -11,12 +11,14 @@ const {
   incidentCountOf,
   scoreRows,
   incidentRows,
+  glanceRows,
   monthRows,
   findDrift,
   staleKnownDrift,
   checkedMonths,
   checkRepo,
 } = require('./check-report-drift')
+const { buildReaderSummary, injectGlance, servicesFromArchive } = require('./generate-report')
 
 let passed = 0
 let failed = 0
@@ -147,6 +149,126 @@ test('scoreRows reads both ranking tables and incidentRows a name with markup', 
   const md = read('2026-09')
   eq(scoreRows(md).length, 41)
   assert.ok(incidentRows(read('2026-04')).some(r => r.name === 'Codex <em>(9-day window)</em>'))
+})
+
+console.log('\nAt a glance drift (aiwatch-reports#184)')
+
+const GLANCE_MONTH = '2026-09'
+const GLANCE_PREV = '2026-08'
+const KO_MARK = 'At a glance in Korean'
+function glanceReport(ids = ['claude', 'chatgpt']) {
+  const services = servicesFromArchive(data(GLANCE_MONTH))
+  const meta = Object.fromEntries(ids.map(id => [id, { group: 'apps', name: `Renamed ${id}` }]))
+  const summary = buildReaderSummary(services, meta, data(GLANCE_PREV), GLANCE_PREV)
+  return `${read(GLANCE_MONTH)}\n${injectGlance('<!-- AT_A_GLANCE -->', summary, GLANCE_MONTH, GLANCE_PREV)}\n`
+}
+function bumpIncidents(text, id) {
+  const re = new RegExp(`(<tr data-service="${id}"><td>[^<]*</td><td>)(\\d+)(</td>)`)
+  assert.ok(re.test(text), `no row for ${id}`)
+  return text.replace(re, (_, a, n, b) => `${a}${Number(n) + 1}${b}`)
+}
+function glanceDriftTables(drift) {
+  return [...new Set(drift.map(d => d.table))].sort()
+}
+
+test('a section built from _data is not drift, under a service name _data does not hold', () => {
+  const md = glanceReport()
+  eq(glanceRows(md).glance.length, 2)
+  eq(glanceRows(md).glanceKo.length, 2)
+  assert.deepStrictEqual(findDrift(md, data(GLANCE_MONTH), GLANCE_MONTH), [])
+})
+
+test('a stale figure in the English table is drift in that table only', () => {
+  const md = glanceReport()
+  const koAt = md.indexOf(KO_MARK)
+  const stale = bumpIncidents(md.slice(0, koAt), 'claude') + md.slice(koAt)
+  assert.deepStrictEqual(glanceDriftTables(findDrift(stale, data(GLANCE_MONTH), GLANCE_MONTH)), ['glance'])
+})
+
+test('a stale figure in the Korean table is drift in that table only', () => {
+  const md = glanceReport()
+  const koAt = md.indexOf(KO_MARK)
+  const stale = md.slice(0, koAt) + bumpIncidents(md.slice(koAt), 'claude')
+  assert.deepStrictEqual(glanceDriftTables(findDrift(stale, data(GLANCE_MONTH), GLANCE_MONTH)), ['glanceKo'])
+})
+
+function editCell(text, id, index) {
+  const re = new RegExp(`<tr data-service="${id}">.*?</tr>`)
+  assert.ok(re.test(text), `no row for ${id}`)
+  return text.replace(re, row => {
+    let at = -1
+    return row.replace(/<td>.*?<\/td>/g, cell => (++at === index + 1 ? '<td>edited</td>' : cell))
+  })
+}
+
+for (const [cell, index] of [['incident count', 0], ['previous month', 1], ['change', 2], ['longest incident', 3]]) {
+  test(`a stale ${cell} cell is drift`, () => {
+    const md = glanceReport()
+    const koAt = md.indexOf(KO_MARK)
+    const drift = findDrift(editCell(md.slice(0, koAt), 'claude', index) + md.slice(koAt), data(GLANCE_MONTH), GLANCE_MONTH)
+    assert.deepStrictEqual(glanceDriftTables(drift), ['glance'])
+    assert.ok(drift.some(d => d.published?.key.split(' | ')[index + 1] === 'edited'), JSON.stringify(drift))
+  })
+}
+
+test('figures under the wrong service id are drift', () => {
+  const swapped = glanceReport().replaceAll('data-service="claude"', 'data-service="tmp"').replaceAll('data-service="chatgpt"', 'data-service="claude"').replaceAll('data-service="tmp"', 'data-service="chatgpt"')
+  assert.deepStrictEqual(glanceDriftTables(findDrift(swapped, data(GLANCE_MONTH), GLANCE_MONTH)), ['glance', 'glanceKo'])
+})
+
+test('each table is compared against the rows it lists', () => {
+  const md = glanceReport()
+  const koAt = md.indexOf(KO_MARK)
+  const noKoRow = md.slice(0, koAt) + md.slice(koAt).replace(/<tr data-service="chatgpt">.*?<\/tr>\n/, '')
+  const noEnRow = md.slice(0, koAt).replace(/<tr data-service="chatgpt">.*?<\/tr>\n/, '') + md.slice(koAt)
+  assert.deepStrictEqual(findDrift(noKoRow, data(GLANCE_MONTH), GLANCE_MONTH), [])
+  assert.deepStrictEqual(findDrift(noEnRow, data(GLANCE_MONTH), GLANCE_MONTH), [])
+})
+
+test('a correction to the previous month is drift on the following month', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'drift-'))
+  try {
+    fs.mkdirSync(path.join(root, '_data'))
+    const prev = data(GLANCE_PREV)
+    prev.services.claude.incidents += 5
+    fs.writeFileSync(path.join(root, '_data', `${GLANCE_PREV}.json`), JSON.stringify(prev))
+    const drift = findDrift(glanceReport(), data(GLANCE_MONTH), GLANCE_MONTH, [], root)
+    assert.deepStrictEqual(glanceDriftTables(drift), ['glance', 'glanceKo'])
+    assert.deepStrictEqual([...new Set(drift.map(d => (d.published ?? d.expected).name))], ['claude'])
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('checkRepo reads the previous month from the repo it was given', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'drift-'))
+  try {
+    fs.mkdirSync(path.join(root, GLANCE_MONTH))
+    fs.mkdirSync(path.join(root, '_data'))
+    const md = glanceReport()
+    fs.writeFileSync(path.join(root, GLANCE_MONTH, 'index.md'), md)
+    fs.copyFileSync(path.join(ROOT, '_data', `${GLANCE_MONTH}.json`), path.join(root, '_data', `${GLANCE_MONTH}.json`))
+    const prev = data(GLANCE_PREV)
+    prev.services.claude.incidents += 5
+    fs.writeFileSync(path.join(root, '_data', `${GLANCE_PREV}.json`), JSON.stringify(prev))
+    eq(checkRepo(root, []).length, 4)
+    const drift = findDrift(md, data(GLANCE_MONTH), GLANCE_MONTH, [], root)
+    const known = ['glance', 'glanceKo'].map(table => ({
+      month: GLANCE_MONTH, table, issue: 'x',
+      published: drift.find(d => d.table === table && d.published).published.key,
+      expected: drift.find(d => d.table === table && d.expected).expected.key,
+    }))
+    assert.deepStrictEqual(checkRepo(root, known), [])
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('a row for a service the archive no longer has is drift', () => {
+  const md = glanceReport().replaceAll('data-service="claude"', 'data-service="gone-service"')
+  const drift = findDrift(md, data(GLANCE_MONTH), GLANCE_MONTH)
+  assert.deepStrictEqual(glanceDriftTables(drift), ['glance', 'glanceKo'])
+  assert.ok(drift.every(d => d.published?.name === 'gone-service'))
+})
+
+test('a report without the section has no rows to check', () => {
+  assert.deepStrictEqual(glanceRows(read(GLANCE_MONTH)), { glance: [], glanceKo: [] })
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)
