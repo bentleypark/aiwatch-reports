@@ -29,6 +29,8 @@ published: true
         notice as downtime it inflates the Score drop (a worker-side classification bug, cf. aiwatch#707);
         flag it. A long duration alone does not make an availability incident. -->
 
+<!-- AT_A_GLANCE -->
+
 ## Summary
 
 > Every score in this report is the **AIWatch Score** (0–100): one number combining uptime, incident load, recovery speed and responsiveness. Higher is better. [How it's built →](#[SCORE_ANCHOR])

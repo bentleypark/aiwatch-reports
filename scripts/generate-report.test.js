@@ -18,6 +18,10 @@ const {
   isStaleSource,
   isRecentlyAdded,
   buildScoreTable,
+  buildReaderSummary,
+  renderGlanceEn,
+  renderGlanceKo,
+  injectGlance,
   buildIncidentTable,
   fmtMoverLine,
   officialUptimeFor,
@@ -3491,6 +3495,22 @@ test('buildMomIncidentDeltas returns {} when the prior _data archive is absent (
   }
 })
 
+test('buildMomIncidentDeltas uses the At-a-glance previous-month rule: no partial, stale or mid-month-added previous count', () => {
+  const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'mom-rule-'))
+  try {
+    const row = { score: 84, grade: 'good', incidents: 10, totalDowntimeMin: 60, avgResolutionMin: 40 }
+    const archive = { services: { full: row, frozen: row, late: row } }
+    const meta = { full: { name: 'Full' }, frozen: { name: 'Frozen' }, late: { name: 'Late' } }
+    const services = { full: { incidents: 4 }, frozen: { incidents: 5, incidentSourceStale: true }, late: { incidents: 6, addedAt: '2026-05-20' } }
+    fsT.writeFileSync(pathT.join(dir, '2026-05.json'), JSON.stringify({ archive: { daysCollected: 31, services } }))
+    assert.deepStrictEqual(buildMomIncidentDeltas(archive, meta, '2026-06', { dataDir: dir }), { Full: { curr: 10, prev: 4 } })
+    fsT.writeFileSync(pathT.join(dir, '2026-05.json'), JSON.stringify({ archive: { daysCollected: 12, services } }))
+    assert.deepStrictEqual(buildMomIncidentDeltas(archive, meta, '2026-06', { dataDir: dir }), {})
+  } finally {
+    fsT.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('computeCurrentSubjects derives slots from archive data (top-incident → summary)', () => {
   const dir = fsT.mkdtempSync(pathT.join(osR.tmpdir(), 'cur-'))
   try {
@@ -4375,6 +4395,175 @@ test('buildScoreTable carries the lost-points note into the ranking row', () => 
   const table = buildScoreTable([zeroRow('groq', 89, 'high', FULL_BREAKDOWN)], { groq: { name: 'Groq Cloud' } }, '2026-10')
   assert.match(table, /\| 1 \| Groq Cloud \| 89 \| Good \| Official \| Zero incidents, 100\.00% uptime — lost 11 pts on Responsiveness \(latency\) \|/)
 })
+
+console.log('\nAt a glance (aiwatch-reports#162)')
+{
+  const inc = (title, startedAt, durationMin) => ({ id: title, title, startedAt, resolvedAt: null, durationMin, finalStatus: 'resolved', impact: 'minor' })
+  const g = (id, over) => ({ id, data: { score: 80, grade: 'good', uptime: 99, officialUptime: 99, scoreConfidence: 'high', monthlyScoreConfidence: 'high', incidents: 0, totalDowntimeMin: null, avgResolutionMin: null, incidentList: [], ...over } })
+  const services = [
+    g('beta', { incidents: 3, longestIncidentMin: 1147, incidentList: [inc('Short one', '2026-10-03T10:00:00Z', 20), inc('Login errors', '2026-10-05T23:30:00Z', 1147), inc('Delayed Costs data in the Compliance API', '2026-10-09T00:00:00Z', 4240)] }),
+    g('alpha', { incidents: 1, longestIncidentMin: 7, incidentList: [inc('Single', '2026-10-01T00:05:00Z', 7)] }),
+    g('frozen', { incidents: 0, incidentSourceStale: true }),
+    g('newapp', { incidents: 3, addedAt: '2026-10-19', longestIncidentMin: 60, incidentList: [inc('Before it was added', '2026-10-01T08:00:00Z', 60)] }),
+    g('wasfrozen', { incidents: 4, longestIncidentMin: 90, incidentList: [inc('Back online', '2026-10-12T00:00:00Z', 90)] }),
+    g('agentx', { incidents: 0 }),
+    g('quiet', { incidents: 0 }),
+    g('agenty', { incidents: 2, longestIncidentMin: 30, incidentList: [inc('Ongoing', '2026-10-30T00:00:00Z', null), inc('Rate limits', '2026-10-20T00:00:00Z', 30)] }),
+    g('nodur', { incidents: 1, longestIncidentMin: null, incidentList: [inc('Still open', '2026-10-31T20:00:00Z', null)] }),
+    g('merged', { incidents: 2, longestIncidentMin: 75, incidentList: [inc('First half', '2026-10-07T00:00:00Z', 50), inc('Overlapping', '2026-10-07T00:30:00Z', 45)] }),
+    g('twin', { incidents: 2, longestIncidentMin: 40, incidentList: [inc('Same length A', '2026-10-08T00:00:00Z', 40), inc('Same length B', '2026-10-18T00:00:00Z', 40)] }),
+    g('llmapi', { incidents: 9, longestIncidentMin: 500, incidentList: [inc('API down', '2026-10-05T00:00:00Z', 500)] }),
+  ]
+  const meta = {
+    alpha: { name: 'alpha | app', group: 'apps' },
+    beta: { name: 'Beta App', group: 'apps' },
+    frozen: { name: 'Frozen App', group: 'apps' },
+    newapp: { name: 'New App', group: 'apps' },
+    wasfrozen: { name: 'Was Frozen App', group: 'apps' },
+    agentx: { name: 'Agent X & <Co>', group: 'agents' },
+    agenty: { name: 'Agent Y', group: 'agents' },
+    nodur: { name: 'No Duration Agent', group: 'agents' },
+    merged: { name: 'Merged Agent', group: 'agents' },
+    twin: { name: 'Twin Agent', group: 'agents' },
+    quiet: { name: 'Quiet Agent', group: 'agents' },
+    llmapi: { name: 'LLM API', group: 'llm' },
+    webapp: { name: 'Unmonitored Web App', group: 'apps' },
+  }
+  const prevArchive = { services: {
+    alpha: { incidents: 0 }, beta: { incidents: 26 }, frozen: { incidents: 0 },
+    wasfrozen: { incidents: 0, incidentSourceStale: true },
+    agentx: { incidents: 1 }, agenty: { incidents: 2, addedAt: '2026-08-15' }, nodur: { incidents: 5 }, merged: { incidents: 1 }, twin: { incidents: 4, addedAt: '2026-09-20' }, llmapi: { incidents: 3 },
+  } }
+  const PERIOD = '2026-10'; const PREV = '2026-09'
+  const summary = buildReaderSummary(services, meta, prevArchive, '2026-09')
+  const byId = Object.fromEntries(summary.groups.flatMap(x => x.facts).map(f => [f.id, f]))
+  const en = renderGlanceEn(summary, PERIOD, PREV, {}).split('\n')
+  const ko = renderGlanceKo(summary, PERIOD, PREV, {}).split('\n')
+
+  test('lists AI apps then coding agents, by name ignoring case, and nothing else', () => {
+    assert.deepStrictEqual(summary.groups.map(x => x.group), ['apps', 'agents'])
+    assert.deepStrictEqual(summary.groups[0].facts.map(f => f.id), ['alpha', 'beta', 'newapp', 'wasfrozen'])
+    assert.deepStrictEqual(summary.groups[1].facts.map(f => f.id), ['agentx', 'agenty', 'merged', 'nodur', 'quiet', 'twin'])
+  })
+  test('a service whose incident feed is frozen is left out; a meta-only app is never listed', () => {
+    assert.ok(!byId.frozen && !byId.webapp && !byId.llmapi)
+  })
+  test('a previous archive that collected only part of its month gives no comparison and no "new"', () => {
+    const partial = buildReaderSummary(services, meta, { ...prevArchive, daysCollected: 12 }, '2026-09')
+    assert.ok(partial.groups.flatMap(g => g.facts).every(f => f.prevIncidents === null))
+    const full = buildReaderSummary(services, meta, { ...prevArchive, daysCollected: 30 }, '2026-09')
+    assert.deepStrictEqual(full, summary)
+  })
+  test('a previous entry without a numeric count gives no comparison', () => {
+    const noCount = buildReaderSummary(services, meta, { services: { ...prevArchive.services, beta: { score: 80 } } }, '2026-09')
+    eq(noCount.groups[0].facts.find(f => f.id === 'beta').prevIncidents, null)
+  })
+  test('no Score appears anywhere in the section', () => {
+    for (const line of [...en, ...ko]) assert.ok(!/score|점수|점\b/i.test(line), line)
+  })
+  test('the previous month: a count, "new" when the service was not archived, nothing when it was frozen', () => {
+    eq(byId.beta.prevIncidents, 26)
+    eq(byId.newapp.prevIncidents, 'new')
+    eq(byId.wasfrozen.prevIncidents, null)
+    eq(buildReaderSummary(services, meta, null).groups[0].facts[1].prevIncidents, null)
+  })
+  test('the longest incident is the archive\'s own longest figure, not a longer raw entry it left out', () => {
+    assert.deepStrictEqual(byId.beta.longest, { durationMin: 1147, startedAt: '2026-10-05T23:30:00Z', merged: false })
+    eq(byId.nodur.longest, null)
+  })
+  test('the date is named only when exactly one incident has the longest duration; no incident that long means a merged window', () => {
+    assert.deepStrictEqual(byId.merged.longest, { durationMin: 75, startedAt: null, merged: true })
+    assert.deepStrictEqual(byId.twin.longest, { durationMin: 40, startedAt: null, merged: false })
+  })
+  test('an incident list that is missing or shorter than the count cannot show a merge, so the window is not called overlapping', () => {
+    const one = data => buildReaderSummary([g('x', data)], { x: { name: 'X', group: 'apps' } }, null, '2026-09').groups[0].facts[0].longest
+    assert.deepStrictEqual(one({ incidents: 3, longestIncidentMin: 90 }), { durationMin: 90, startedAt: null, merged: false })
+    assert.deepStrictEqual(one({ incidents: 3, longestIncidentMin: 90, incidentList: [inc('Kept', '2026-10-02T00:00:00Z', 20)] }), { durationMin: 90, startedAt: null, merged: false })
+    assert.deepStrictEqual(one({ incidents: 1, longestIncidentMin: 90, incidentList: [inc('Kept', '2026-10-02T00:00:00Z', 20)] }), { durationMin: 90, startedAt: null, merged: true })
+  })
+  const H = (service, incidents, longest, m, p, c) => [
+    '<table class="numeric-table label-first glance-table">',
+    '<thead>',
+    `<tr><th rowspan="2">${service}</th><th colspan="3">${incidents}</th><th rowspan="2">${longest}</th></tr>`,
+    `<tr><th>${m}</th><th>${p}</th><th>${c}</th></tr>`,
+    '</thead>',
+    '<tbody>',
+  ]
+  const tableLines = lines => lines.filter(l => /^<\/?(table|thead|tbody|tr)\b/.test(l))
+  test('English: one table per group, one "Incidents" header over this month, last month and the change', () => {
+    const head = H('Service', 'Incidents', 'Longest incident (duration · start date)', 'Oct', 'Sep', 'Change')
+    assert.deepStrictEqual(tableLines(en), [
+      ...head,
+      '<tr><td>alpha | app</td><td>1</td><td>0</td><td>▲ 1</td><td>7m · Oct 1</td></tr>',
+      '<tr><td>Beta App</td><td>3</td><td>26</td><td>▼ 23</td><td>19h 7m · Oct 5</td></tr>',
+      '<tr><td>New App</td><td>3</td><td>—</td><td>new</td><td>1h · Oct 1</td></tr>',
+      '<tr><td>Was Frozen App</td><td>4</td><td>—</td><td>—</td><td>1h 30m · Oct 12</td></tr>',
+      '</tbody>', '</table>',
+      ...head,
+      '<tr><td>Agent X &amp; &lt;Co&gt;</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>',
+      '<tr><td>Agent Y</td><td>2</td><td>2</td><td>±0</td><td>30m · Oct 20</td></tr>',
+      '<tr><td>Merged Agent</td><td>2</td><td>1</td><td>▲ 1</td><td>1h 15m (overlapping incidents)</td></tr>',
+      '<tr><td>No Duration Agent</td><td>1</td><td>5</td><td>▼ 4</td><td>—</td></tr>',
+      '<tr><td>Quiet Agent</td><td>0</td><td>—</td><td>new</td><td>—</td></tr>',
+      '<tr><td>Twin Agent</td><td>2</td><td>—</td><td>—</td><td>40m</td></tr>',
+      '</tbody>', '</table>',
+    ])
+    assert.ok(en.includes('**AI apps**') && en.includes('**Coding agents**'))
+  })
+  test('Korean: the same tables in Korean, in their own Korean block', () => {
+    const head = H('서비스', '장애 건수', '가장 긴 장애 (지속 시간 · 시작일)', '10월', '9월', '9월 대비')
+    assert.deepStrictEqual(tableLines(ko), [
+      ...head,
+      '<tr><td>alpha | app</td><td>1</td><td>0</td><td>▲ 1</td><td>7분 · 10월 1일</td></tr>',
+      '<tr><td>Beta App</td><td>3</td><td>26</td><td>▼ 23</td><td>19시간 7분 · 10월 5일</td></tr>',
+      '<tr><td>New App</td><td>3</td><td>—</td><td>새로 추가</td><td>1시간 · 10월 1일</td></tr>',
+      '<tr><td>Was Frozen App</td><td>4</td><td>—</td><td>—</td><td>1시간 30분 · 10월 12일</td></tr>',
+      '</tbody>', '</table>',
+      ...head,
+      '<tr><td>Agent X &amp; &lt;Co&gt;</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>',
+      '<tr><td>Agent Y</td><td>2</td><td>2</td><td>±0</td><td>30분 · 10월 20일</td></tr>',
+      '<tr><td>Merged Agent</td><td>2</td><td>1</td><td>▲ 1</td><td>1시간 15분 (겹친 장애 합산)</td></tr>',
+      '<tr><td>No Duration Agent</td><td>1</td><td>5</td><td>▼ 4</td><td>—</td></tr>',
+      '<tr><td>Quiet Agent</td><td>0</td><td>—</td><td>새로 추가</td><td>—</td></tr>',
+      '<tr><td>Twin Agent</td><td>2</td><td>—</td><td>—</td><td>40분</td></tr>',
+      '</tbody>', '</table>',
+    ])
+    assert.deepStrictEqual(ko.slice(0, 2), ['<details>', '<summary><strong>At a glance in Korean</strong></summary>'])
+    eq(ko[ko.length - 1], '</details>')
+  })
+  test('links only to sections the page carries, under their own label', () => {
+    assert.ok(!en.includes('**Where to look next**') && !ko.includes('<p><strong>더 보기</strong></p>'))
+    const all = renderGlanceEn(summary, PERIOD, PREV, { incidents: 'i', notable: 'n', recommendations: 'r' })
+    assert.ok(all.endsWith('**Where to look next**\n\n- Did a tool you use have problems? [Incident Summary](#i)\n- The biggest incidents: [Notable Incidents](#n)\n- Choosing a service: [Recommendations](#r)'), all)
+    const koAll = renderGlanceKo(summary, PERIOD, PREV, { recommendations: 'r' })
+    assert.ok(koAll.includes('<p><strong>더 보기</strong></p>\n<ul>\n<li>서비스 고르기: <a href="#r">Recommendations</a></li>\n</ul>'), koAll)
+  })
+
+  const fsG = require('fs'); const pathG = require('path')
+  const realTemplate = fsG.readFileSync(pathG.join(__dirname, '..', '_templates', 'monthly-report.md'), 'utf-8')
+  const archiveOf = list => ({ services: Object.fromEntries(list.map(s => [s.id, s.data])), daysCollected: 31 })
+  test('fillTemplate puts the section and its Korean block above Summary, leaves Summary in Korean alone, and links the real headings', () => {
+    const out = fillTemplate(realTemplate, PERIOD, archiveOf(services), meta)
+    const glance = out.indexOf('## At a glance'); const koAt = out.indexOf('<summary><strong>At a glance in Korean'); const summaryAt = out.indexOf('## Summary')
+    assert.ok(glance > 0 && glance < koAt && koAt < summaryAt, `glance ${glance}, ko ${koAt}, summary ${summaryAt}`)
+    const koBlock = out.slice(koAt, out.indexOf('</details>', koAt))
+    assert.ok(koBlock.includes('<tr><td>Beta App</td><td>3</td>'), koBlock)
+    assert.ok(out.includes('<summary><strong>Summary in Korean</strong></summary>\n<ul>'), 'Summary in Korean unchanged')
+    for (const a of ['incident-summary', 'notable-incidents', 'recommendations']) {
+      assert.ok(out.includes(`](#${a})`) && koBlock.includes(`<a href="#${a}">`), `link #${a}`)
+    }
+    assert.ok(!out.includes('AT_A_GLANCE'), 'marker left behind')
+  })
+  test('fillTemplate drops the marker when no app or agent is archived', () => {
+    const out = fillTemplate(realTemplate, PERIOD, archiveOf(services.filter(s => s.id === 'llmapi')), meta)
+    assert.ok(!out.includes('AT_A_GLANCE') && !out.includes('## At a glance') && !out.includes('At a glance in Korean'), 'glance rendered or marker left')
+    assert.ok(/flag it\. A long duration alone does not make an availability incident\. -->\n\n## Summary/.test(out), 'spacing before Summary')
+    assert.ok(out.includes('<summary><strong>Summary in Korean</strong></summary>\n<ul>'), 'KO block spacing')
+  })
+  test('injectGlance leaves a template without markers unchanged', () => {
+    eq(injectGlance('## Summary\n', summary, PERIOD, PREV), '## Summary\n')
+  })
+}
 
 console.log(`\n${passed} passed, ${failed} failed`)
 process.exit(failed > 0 ? 1 : 0)

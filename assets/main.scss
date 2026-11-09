@@ -61,6 +61,8 @@ tr:nth-child(even) { background: var(--bg1) !important; }
 tr:nth-child(odd) { background: transparent !important; }
 .numeric-table th, .numeric-table td { text-align: center !important; }
 .numeric-table.label-first th:first-child, .numeric-table.label-first td:first-child { text-align: left !important; }
+.glance-table th { white-space: normal !important; }
+.numeric-table.label-first.glance-table thead tr + tr th:first-child { text-align: center !important; }
 /* Mobile table adjustments */
 @media (max-width: 768px) {
   th, td {
@@ -73,6 +75,9 @@ tr:nth-child(odd) { background: transparent !important; }
   }
   .numeric-table td:last-child, .numeric-table th:last-child { min-width: 0; }
   .hide-mobile { display: none !important; }
+  .glance-table td:first-child { white-space: normal !important; }
+  .glance-table th, .glance-table td { padding: 6px 5px !important; }
+  .glance-table th { font-size: 12px !important; }
 }
 
 /* Recommendations table — desktop: fixed-layout so long Why-column text wraps
