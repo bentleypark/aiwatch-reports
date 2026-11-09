@@ -2577,11 +2577,11 @@
                 "stability": 2.6,
                 "responsivenessStatus": "available"
             },
-            "incidents": 18,
+            "incidents": 10,
             "countedIncidents": 9,
-            "avgResolutionMin": 138,
-            "totalDowntimeMin": 1240,
-            "longestIncidentMin": 412,
+            "avgResolutionMin": 98,
+            "totalDowntimeMin": 883,
+            "longestIncidentMin": 298,
             "avgLatencyMs": 667,
             "p95LatencyMs": 920,
             "latencySpikes": 192,
@@ -2593,78 +2593,6 @@
             "p50LatencyMs": 513,
             "cvCombined": 0.683,
             "incidentList": [
-                {
-                    "id": "01M487JY3TE2QWKZRWB4W9ACVJ",
-                    "title": "increase in latency",
-                    "startedAt": "2026-10-06T09:09:18Z",
-                    "resolvedAt": "2026-10-06T12:14:21Z",
-                    "durationMin": 186,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "01M48C36FW1EZ6FFQYEXJKMT2Y",
-                    "title": "EU Agents disruption in SIP calls",
-                    "startedAt": "2026-10-06T10:28:05Z",
-                    "resolvedAt": "2026-10-06T12:51:21Z",
-                    "durationMin": 144,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "01M4DB5S42EQR46XED1FGEZAG4",
-                    "title": "Music 2.5 endpoints performance degraded",
-                    "startedAt": "2026-10-08T08:48:13Z",
-                    "resolvedAt": "2026-10-08T08:58:31Z",
-                    "durationMin": 11,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "01M4E1HC38AYN544QVC704X0FS",
-                    "title": "Agent SIP Conversation Disruption",
-                    "startedAt": "2026-10-08T15:19:02Z",
-                    "resolvedAt": "2026-10-08T15:43:58Z",
-                    "durationMin": 25,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "01M4E4CWPTSJZ9QH0J35V2Q0W6",
-                    "title": "Increased Dubbing Latency and Failure Rate",
-                    "startedAt": "2026-10-08T16:09:01Z",
-                    "resolvedAt": "2026-10-08T22:10:12Z",
-                    "durationMin": 362,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "01M4RYERPK4YKY04WE4A2AZ8KW",
-                    "title": "TTS failures and increased latency",
-                    "startedAt": "2026-10-12T16:19:00Z",
-                    "resolvedAt": "2026-10-12T16:30:00Z",
-                    "durationMin": 11,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "01M4SSZATF0RG1536979BS4R63",
-                    "title": "Instant Voice Clone creation failures",
-                    "startedAt": "2026-10-13T03:25:00Z",
-                    "resolvedAt": "2026-10-13T04:44:00Z",
-                    "durationMin": 79,
-                    "finalStatus": "resolved",
-                    "impact": "minor"
-                },
-                {
-                    "id": "01M4T91CTNSTQ93Q2Q31VQDBWH",
-                    "title": "Multiple endpoints experiencing timeouts and latency",
-                    "startedAt": "2026-10-13T09:21:00Z",
-                    "resolvedAt": "2026-10-13T09:47:48Z",
-                    "durationMin": 27,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
                 {
                     "id": "01M5FR7AS6WSNHC2FFAW0VMWTJ",
                     "title": "Instant Voice Clone creation failures",
@@ -4042,10 +3970,10 @@
                 "stability": 3.6,
                 "responsivenessStatus": "available"
             },
-            "incidents": 7,
+            "incidents": 5,
             "countedIncidents": 5,
-            "avgResolutionMin": 119,
-            "totalDowntimeMin": 597,
+            "avgResolutionMin": 97,
+            "totalDowntimeMin": 485,
             "longestIncidentMin": 304,
             "avgLatencyMs": 1393,
             "p95LatencyMs": 1786,
@@ -4066,26 +3994,6 @@
                     "durationMin": 304,
                     "finalStatus": "resolved",
                     "impact": "major"
-                },
-                {
-                    "id": "01M4DBWHC70F69E9T1TJ6QCWDX",
-                    "title": "LLM Gateway service interruption",
-                    "startedAt": "2026-10-08T07:42:00Z",
-                    "resolvedAt": "2026-10-08T07:42:00Z",
-                    "durationMin": 0,
-                    "finalStatus": "resolved",
-                    "impact": null,
-                    "startUnknown": true,
-                    "zeroLengthRecord": true
-                },
-                {
-                    "id": "01M4DCY41T6Y2Q4V9XEERXMX67",
-                    "title": "LLM Gateway service interruption",
-                    "startedAt": "2026-10-08T07:42:00Z",
-                    "resolvedAt": "2026-10-08T09:34:59.994Z",
-                    "durationMin": 113,
-                    "finalStatus": "resolved",
-                    "impact": null
                 },
                 {
                     "id": "01M4DFKCK22TD3N84814NSJJ9W",

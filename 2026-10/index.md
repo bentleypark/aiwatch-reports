@@ -89,7 +89,7 @@ _Auto-generated narrative draft — English only; translate for the KO `<details
 
 ## Key Insight
 
-October 2026 showed a clear divide: Windsurf (Devin Desktop), Junie, and Modal remained highly stable, while ChatGPT (58) experienced the most challenges. 34 out of 49 services recorded at least one incident, with a combined downtime of 653h 30m.
+October 2026 showed a clear divide: Windsurf (Devin Desktop), Junie, and Modal remained highly stable, while ChatGPT (58) experienced the most challenges. 34 out of 49 services recorded at least one incident, with a combined downtime of 645h 41m.
 
 - **Pattern 1**:
 - **Pattern 2**:
@@ -171,7 +171,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 26= | Codex | 75 | Good | Official | 7 incidents, avg 3h 32m over 6 |
 | 28= | Claude API | 74 | Fair | Official | 12 incidents, avg 1h 2m |
 | 28= | Claude Code | 74 | Fair | Official | 12 incidents, avg 59m |
-| 30 | LangChain (LangSmith) | 72 | Fair | Official | 7 incidents, avg 1h 59m over 5 |
+| 30 | LangChain (LangSmith) | 72 | Fair | Official | 5 incidents, avg 1h 37m |
 | 31 | OpenAI API | 71 | Fair | Official | 13 incidents, avg 2h 10m over 10 |
 | 32 | OpenRouter | 70 | Fair | Official | 5 incidents, avg 9h 31m |
 | 33 | turbopuffer | 69 | Fair | Official | 1 incident, 7h 27m |
@@ -189,7 +189,7 @@ Combines four components — Uptime (40%), Incident affected days (25%), Recover
 | 3 | Gemini API | 74 | Fair | 1 incident, 2h 49m |
 | 4 | Amazon Bedrock | 72 | Fair | Zero incidents — lost 28 pts on Responsiveness (latency) |
 | 5 | Helicone | 61 | Fair | 16 incidents |
-| 6 | ElevenLabs | 55 | Fair | 18 incidents, avg 2h 18m over 9 |
+| 6 | ElevenLabs | 55 | Fair | 10 incidents, avg 1h 38m over 9 |
 | 7 | Deepgram | 49 | Degrading | 9 incidents, avg 3h 25m over 8 |
 | 8 | Cursor | 43 | Degrading | 24 incidents, avg 1h 56m over 21 |
 
@@ -473,12 +473,12 @@ Recovered within ½× to 1× the estimate: **18** of 90 for the AI estimate, 28 
 <tr><td>Grok Bot</td><td>19</td><td>25h 1m (5h 19m)</td><td class="hide-mobile">5h 19m</td><td class="hide-mobile">1h 23m over 18</td></tr>
 <tr><td>OpenAI API</td><td>13</td><td>21h 40m (6h 33m)</td><td class="hide-mobile">6h 33m</td><td class="hide-mobile">2h 10m over 10</td></tr>
 <tr><td>Codex</td><td>7</td><td>21h 12m (8h 27m)</td><td class="hide-mobile">8h 27m</td><td class="hide-mobile">3h 32m over 6</td></tr>
-<tr><td>ElevenLabs</td><td>18</td><td>20h 40m (6h 52m)</td><td class="hide-mobile">6h 52m</td><td class="hide-mobile">2h 18m over 9</td></tr>
 <tr><td>claude.ai</td><td>13</td><td>16h 4m (4h 17m)</td><td class="hide-mobile">4h 17m</td><td class="hide-mobile">1h 14m</td></tr>
+<tr><td>ElevenLabs</td><td>10</td><td>14h 43m (4h 58m)</td><td class="hide-mobile">4h 58m</td><td class="hide-mobile">1h 38m over 9</td></tr>
 <tr><td>Claude API</td><td>12</td><td>12h 28m (6h 16m)</td><td class="hide-mobile">6h 16m</td><td class="hide-mobile">1h 2m</td></tr>
 <tr><td>Claude Code</td><td>12</td><td>11h 47m (3h 47m)</td><td class="hide-mobile">3h 47m</td><td class="hide-mobile">59m</td></tr>
 <tr><td>Jina AI</td><td>81</td><td>10h 10m (1h 10m)</td><td class="hide-mobile">1h 10m</td><td class="hide-mobile">12m over 52</td></tr>
-<tr><td>LangChain (LangSmith)</td><td>7</td><td>9h 57m (5h 4m)</td><td class="hide-mobile">5h 4m</td><td class="hide-mobile">1h 59m over 5</td></tr>
+<tr><td>LangChain (LangSmith)</td><td>5</td><td>8h 5m (5h 4m)</td><td class="hide-mobile">5h 4m</td><td class="hide-mobile">1h 37m</td></tr>
 <tr><td>DeepSeek App</td><td>6</td><td>7h 29m (4h 53m)</td><td class="hide-mobile">4h 53m</td><td class="hide-mobile">1h 15m</td></tr>
 <tr><td>turbopuffer</td><td>1</td><td>7h 27m (7h 27m)</td><td class="hide-mobile">7h 27m</td><td class="hide-mobile">7h 27m</td></tr>
 <tr><td>DeepSeek API</td><td>5</td><td>7h 23m (4h 53m)</td><td class="hide-mobile">4h 53m</td><td class="hide-mobile">1h 29m</td></tr>
