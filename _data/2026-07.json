@@ -3380,12 +3380,12 @@
             "score": 80,
             "grade": "good",
             "scoreConfidence": "high",
-            "monthlyScore": 77,
+            "monthlyScore": 76,
             "monthlyGrade": "good",
             "monthlyScoreConfidence": "high",
-            "incidents": 5,
-            "avgResolutionMin": 32,
-            "totalDowntimeMin": 162,
+            "incidents": 3,
+            "avgResolutionMin": 39,
+            "totalDowntimeMin": 118,
             "longestIncidentMin": 48,
             "avgLatencyMs": 1076,
             "p95LatencyMs": 1290,
@@ -3393,24 +3393,6 @@
             "p50LatencyMs": 896,
             "cvCombined": 0.392,
             "incidentList": [
-                {
-                    "id": "01KX23AZC62RE7TRMYA4PV48V9",
-                    "title": "Elevated Errors in Fleet",
-                    "startedAt": "2026-07-09T00:09:44Z",
-                    "resolvedAt": "2026-07-09T00:22:09Z",
-                    "durationMin": 13,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
-                {
-                    "id": "01KXC3QFPZEJAFQ4TJGC94RNRD",
-                    "title": "Ingestion is delayed",
-                    "startedAt": "2026-07-12T21:28:58Z",
-                    "resolvedAt": "2026-07-12T21:59:18Z",
-                    "durationMin": 31,
-                    "finalStatus": "resolved",
-                    "impact": "major"
-                },
                 {
                     "id": "01KXPKT912H3RXVKHH5AXVHG1X",
                     "title": "Build failure on new revisions",
@@ -3491,7 +3473,17 @@
                     "uptime": 100
                 }
             ],
-            "addedAt": "2026-06-11"
+            "addedAt": "2026-06-11",
+            "countedIncidents": 3,
+            "monthlyScoreBreakdown": {
+                "uptime": 39.8,
+                "incidents": 17.4,
+                "recovery": 12.8,
+                "responsiveness": 5.7,
+                "speed": 1.1,
+                "stability": 4.6,
+                "responsivenessStatus": "available"
+            }
         },
         "helicone": {
             "uptime": 100,
