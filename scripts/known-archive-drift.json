@@ -1,0 +1,32 @@
+{
+ "2026-05": {
+  "services.azureopenai.incidents": {
+   "data": 0,
+   "live": 1
+  },
+  "services.azureopenai.avgResolutionMin": {
+   "data": null,
+   "live": 446
+  },
+  "services.azureopenai.totalDowntimeMin": {
+   "data": null,
+   "live": 446
+  },
+  "services.azureopenai.longestIncidentMin": {
+   "data": null,
+   "live": 446
+  },
+  "services.azureopenai.incidentList": {
+   "live": [
+    {
+     "id": "azureopenai-LYXT-C1Z",
+     "title": "Azure OpenAI Service Elevated Error Rates in multiple regions",
+     "startedAt": "2026-05-29T09:39:00.000Z",
+     "resolvedAt": "2026-05-29T17:05:00.000Z",
+     "durationMin": 446,
+     "finalStatus": "resolved"
+    }
+   ]
+  }
+ }
+}

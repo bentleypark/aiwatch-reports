@@ -130,9 +130,9 @@ function readMonth(root, month) {
   return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null
 }
 
-function checkedMonths(root) {
+function checkedMonths(root, excluded = EXCLUDED_MONTHS) {
   return fs.readdirSync(root)
-    .filter(d => /^\d{4}-\d{2}$/.test(d) && !EXCLUDED_MONTHS.includes(d))
+    .filter(d => /^\d{4}-\d{2}$/.test(d) && !excluded.includes(d))
     .filter(d => readMonth(root, d) && fs.existsSync(path.join(root, '_data', `${d}.json`)))
     .sort()
 }

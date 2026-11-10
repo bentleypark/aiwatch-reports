@@ -27,6 +27,12 @@ The drift caveats below are handled, not ignored:
 - **Uptime is NOT trended** from these files — the `uptime` field mixes per-service sources (group aggregates /
   estimates), so only the incident-*measured* Score / MTTR / total-downtime fields feed the decomposition.
 
+## Kept in step with the live archive
+
+`scripts/check-report-archive.js` runs daily (`.github/workflows/check-report-archive.yml`) and fails when `/api/report?month=YYYY-MM` differs from the file here, naming each field. When it fails after a correction, re-sync the file with `bash scripts/fetch-archive.sh YYYY-MM` and bring the report body in line; `check-report-drift.js` names the rows.
+
+`scripts/known-archive-drift.json` holds the differences accepted as they stand. Re-syncing a listed month whole brings those differences in too, so correct only the fields the check names.
+
 ## Snapshot provenance
 
 Two paths produce these files:
@@ -43,3 +49,4 @@ Two paths produce these files:
 Known retrospective rebuilds in this repo:
 - `2026-03.json` — 12-day partial onboarding window; rebuilt 2026-05-03. Score reflects May rolling window, not March. Roster drift: `fireworks`, `voyageai`, `modal`, and `codex` were added after March and appear with `uptime: null` / `incidents: 0` — exclude these 4 entries from any March-period analysis.
 - `2026-04.json` — rebuilt 2026-05-02, day after the buggy original cron. Score drift minimal. No roster drift (no services added between Apr 30 and May 2).
+- `2026-05.json` — scores, grades and narrative are the snapshot of 2026-06-01. `officialUptime`, `p95LatencyMs`, `latencySpikes` and `degradation` were added afterwards from the archive rebuilt on 2026-06-13, so `generatedAt` does not date those fields.

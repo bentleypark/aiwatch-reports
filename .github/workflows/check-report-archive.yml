@@ -1,0 +1,28 @@
+name: Check Published Months Against the Live Archive
+
+# aiwatch-reports#167 — fails, naming the service and the field, when `/api/report?month=` no longer
+# says what `_data/YYYY-MM.json` says for a month in this repo.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: _data vs /api/report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+
+      - name: Compare each month
+        run: node scripts/check-report-archive.js
