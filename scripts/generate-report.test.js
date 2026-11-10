@@ -1761,6 +1761,93 @@ test('RTT degradation note frames a detection as a signal, not a confirmed outag
   assert.ok(out.includes('](https://ai-watch.dev/methodology#detection)'), 'links the definition on the methodology page')
   assert.ok(!/differentiator|real latency degradation/.test(out), 'no unmeasured claim that the detections are real')
 })
+// aiwatch-reports#165 — the real October 2026 windows, with totals that differ from `eligible`.
+const followThroughDeg = (followThrough) => ({
+  total: 145, noStatusTotal: 107, byService: { deepgram: 73 }, noStatusByService: { deepgram: 72 },
+  ...(followThrough ? { followThrough } : {}),
+})
+const realWindows = [
+  { windowHours: 1, eligible: 19, followed: 0, noStatusEligible: 17, noStatusFollowed: 0 },
+  { windowHours: 6, eligible: 19, followed: 1, noStatusEligible: 17, noStatusFollowed: 1 },
+  { windowHours: 24, eligible: 19, followed: 4, noStatusEligible: 17, noStatusFollowed: 4 },
+]
+const FOLLOW_THROUGH_HEADING = '**Followed by a new official incident on the same service**'
+test('follow-through uses eligible as the denominator, never total (#165)', () => {
+  const out = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg(realWindows) }, detMeta)
+  assert.ok(out.includes('| 1 hour | 0 of 19 (0%) | 0 of 17 (0%) |'), out)
+  assert.ok(out.includes('| 6 hours | 1 of 19 (5%) | 1 of 17 (6%) |'), out)
+  assert.ok(out.includes('| 24 hours | 4 of 19 (21%) | 4 of 17 (24%) |'), out)
+  assert.ok(!/of (145|107)\b/.test(out), `no figure against a total: ${out}`)
+})
+test('follow-through sits before the signal note and does not call the remainder an error rate (#165)', () => {
+  const out = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg(realWindows) }, detMeta)
+  assert.ok(out.indexOf(FOLLOW_THROUGH_HEADING) < out.indexOf('> A detection is a signal'), out)
+  assert.ok(out.includes('whole window falls inside the month'), out)
+  assert.ok(!/error rate|false positive|missed|caught/i.test(out), out)
+})
+test('October 2026 and earlier do not render follow-through; November does (#165)', () => {
+  for (const period of ['2026-09', '2026-10']) {
+    assert.ok(!buildDetectionSection({ period, degradation: followThroughDeg(realWindows) }, detMeta).includes(FOLLOW_THROUGH_HEADING), period)
+  }
+  for (const period of ['2026-11', '2026-12', '2027-01']) {
+    assert.ok(buildDetectionSection({ period, degradation: followThroughDeg(realWindows) }, detMeta).includes(FOLLOW_THROUGH_HEADING), period)
+  }
+  assert.ok(!buildDetectionSection({ degradation: followThroughDeg(realWindows) }, detMeta).includes(FOLLOW_THROUGH_HEADING), 'no period')
+})
+test('a committed month without followThrough renders the section exactly as before (#165)', () => {
+  const sept = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '_data', '2026-09.json'), 'utf-8'))
+  assert.strictEqual(sept.degradation.followThrough, undefined, 'fixture month predates the field')
+  const asPublished = buildDetectionSection(sept, detMeta)
+  assert.ok(!asPublished.includes(FOLLOW_THROUGH_HEADING))
+  assert.ok(asPublished.includes(' |\n\n> A detection is a signal'), 'the service table runs straight into the signal note')
+})
+test('an absent followThrough renders the exact section (#165)', () => {
+  eq(buildDetectionSection({ period: '2026-11', degradation: followThroughDeg() }, detMeta), [
+    '## Detection & RTT Degradation',
+    '',
+    '### RTT Degradation Detection',
+    '',
+    "AIWatch's direct RTT probes flagged **145** RTT degradations this month, of which **107** were **not reflected on the providers' official status pages at the time of detection**.",
+    '',
+    '| Service | RTT Degradations | Not on Status Page |',
+    '|---|---|---|',
+    '| Deepgram | 73 | 72 |',
+    '',
+    '> A detection is a signal, not a confirmed outage — what is counted: [How AIWatch Works → Detection](https://ai-watch.dev/methodology#detection).',
+    '',
+    '---',
+    '',
+  ].join('\n'))
+})
+test('the two follow-through columns read their own counts (#165)', () => {
+  const windows = [{ windowHours: 24, eligible: 20, followed: 5, noStatusEligible: 10, noStatusFollowed: 2 }]
+  const out = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg(windows) }, detMeta)
+  const start = out.indexOf(FOLLOW_THROUGH_HEADING)
+  eq(out.slice(start, out.indexOf('> A detection is a signal')), [
+    `${FOLLOW_THROUGH_HEADING}, by time since the first spike:`,
+    '',
+    '| Within | All Detections | Not on Status Page |',
+    '|---|---|---|',
+    '| 24 hours | 5 of 20 (25%) | 2 of 10 (20%) |',
+    '',
+    'Only detections whose whole window falls inside the month are counted here, so the denominators can be smaller than the totals above.',
+    '',
+    '',
+  ].join('\n'))
+})
+test('a window with nothing eligible is dropped, and all-empty renders nothing (#165)', () => {
+  const windows = [{ windowHours: 1, eligible: 0, followed: 0, noStatusEligible: 0, noStatusFollowed: 0 }, realWindows[2]]
+  const out = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg(windows) }, detMeta)
+  assert.ok(!out.includes('| 1 hour |'), out)
+  assert.ok(out.includes('| 24 hours |'), out)
+  const none = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg([windows[0]]) }, detMeta)
+  assert.ok(!none.includes(FOLLOW_THROUGH_HEADING), none)
+})
+test('an empty not-on-status subset shows a dash, not 0 of 0 (#165)', () => {
+  const windows = [{ windowHours: 6, eligible: 4, followed: 2, noStatusEligible: 0, noStatusFollowed: 0 }]
+  const out = buildDetectionSection({ period: '2026-11', degradation: followThroughDeg(windows) }, detMeta)
+  assert.ok(out.includes('| 6 hours | 2 of 4 (50%) | — |'), out)
+})
 test('renders Early RTT Detections + Official Update = detectedAt + leadMs', () => {
   const out = buildDetectionSection({
     detectionLead: { count: 6, avgLeadMs: 480000, topExamples: [
