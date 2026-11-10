@@ -1095,6 +1095,31 @@ function fmtLeadMin(ms) {
   return `${Math.round(ms / 60000)}m`
 }
 
+// aiwatch-reports#165 — `degradation.events` starts on 2026-10-26 (aiwatch#1786), so October's
+// follow-through covers six days of a month whose totals cover all of it.
+const FOLLOW_THROUGH_FIRST_MONTH = '2026-11'
+
+function followThroughCell(followed, eligible) {
+  return eligible > 0 ? `${followed} of ${eligible} (${Math.round((followed / eligible) * 100)}%)` : '—'
+}
+
+function buildFollowThroughLines(archive) {
+  const windows = archive.degradation.followThrough
+  if (!(archive.period >= FOLLOW_THROUGH_FIRST_MONTH) || !Array.isArray(windows)) return []
+  const rows = windows.filter(w => w.eligible > 0)
+  if (!rows.length) return []
+  return [
+    '**Followed by a new official incident on the same service**, by time since the first spike:',
+    '',
+    '| Within | All Detections | Not on Status Page |',
+    '|---|---|---|',
+    ...rows.map(w => `| ${w.windowHours} hour${w.windowHours === 1 ? '' : 's'} | ${followThroughCell(w.followed, w.eligible)} | ${followThroughCell(w.noStatusFollowed, w.noStatusEligible)} |`),
+    '',
+    'Only detections whose whole window falls inside the month are counted here, so the denominators can be smaller than the totals above.',
+    '',
+  ]
+}
+
 function buildDetectionSection(archive, meta) {
   const deg = archive && archive.degradation
   const lead = archive && archive.detectionLead
@@ -1128,6 +1153,7 @@ function buildDetectionSection(archive, meta) {
         '',
       )
     }
+    parts.push(...buildFollowThroughLines(archive))
     parts.push(
       "> A detection is a signal, not a confirmed outage — what is counted: [How AIWatch Works → Detection](https://ai-watch.dev/methodology#detection).",
       '',
