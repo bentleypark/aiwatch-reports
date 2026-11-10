@@ -5,6 +5,7 @@
     "services": {
         "claude": {
             "uptime": 96.36,
+            "officialUptime": 99.2,
             "score": 63,
             "grade": "fair",
             "incidents": 34,
@@ -12,6 +13,8 @@
             "totalDowntimeMin": 3060,
             "longestIncidentMin": 1084,
             "avgLatencyMs": 158,
+            "p95LatencyMs": 193,
+            "latencySpikes": 1105,
             "incidentList": [
                 {
                     "id": "zxv1xv501678",
@@ -289,6 +292,7 @@
         },
         "openai": {
             "uptime": 97.76,
+            "officialUptime": 99.98,
             "score": 80,
             "grade": "good",
             "incidents": 7,
@@ -296,6 +300,8 @@
             "totalDowntimeMin": 669,
             "longestIncidentMin": 176,
             "avgLatencyMs": 205,
+            "p95LatencyMs": 257,
+            "latencySpikes": 249,
             "incidentList": [
                 {
                     "id": "01KR0PY1JN26FEK5829QZ2F59T",
@@ -349,6 +355,7 @@
         },
         "gemini": {
             "uptime": 97,
+            "officialUptime": null,
             "score": 64,
             "grade": "fair",
             "incidents": 2,
@@ -356,6 +363,8 @@
             "totalDowntimeMin": 2704,
             "longestIncidentMin": 2594,
             "avgLatencyMs": 63,
+            "p95LatencyMs": 83,
+            "latencySpikes": 572,
             "incidentList": [
                 {
                     "id": "aistudio:GeminiAPI-deep-research-breakages-20260503",
@@ -377,26 +386,33 @@
         },
         "bedrock": {
             "uptime": 100,
+            "officialUptime": null,
             "score": 90,
             "grade": "excellent",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": null
+            "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null
         },
         "azureopenai": {
             "uptime": 99.91,
+            "officialUptime": null,
             "score": 90,
             "grade": "excellent",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": null
+            "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null
         },
         "mistral": {
             "uptime": 93.78,
+            "officialUptime": 99.599,
             "score": 78,
             "grade": "good",
             "incidents": 155,
@@ -404,6 +420,8 @@
             "totalDowntimeMin": 2938,
             "longestIncidentMin": 1432,
             "avgLatencyMs": 196,
+            "p95LatencyMs": 244,
+            "latencySpikes": 411,
             "incidentList": [
                 {
                     "id": "0744e971-5695-484d-aa7a-bdd22736235c",
@@ -1609,26 +1627,33 @@
         },
         "cohere": {
             "uptime": 100,
+            "officialUptime": 100,
             "score": 89,
             "grade": "good",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": 215
+            "avgLatencyMs": 215,
+            "p95LatencyMs": 274,
+            "latencySpikes": 415
         },
         "groq": {
             "uptime": 100,
+            "officialUptime": 100,
             "score": 91,
             "grade": "excellent",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": 208
+            "avgLatencyMs": 208,
+            "p95LatencyMs": 244,
+            "latencySpikes": 222
         },
         "together": {
             "uptime": 99.99,
+            "officialUptime": 99.65,
             "score": 84,
             "grade": "good",
             "incidents": 133,
@@ -1636,6 +1661,8 @@
             "totalDowntimeMin": 5695,
             "longestIncidentMin": 380,
             "avgLatencyMs": 282,
+            "p95LatencyMs": 430,
+            "latencySpikes": 132,
             "incidentList": [
                 {
                     "id": "#399b629527e14b1096c7b8cc760ae3690b937e9992a431479e8c853c1ec3bee3",
@@ -2657,6 +2684,7 @@
         },
         "fireworks": {
             "uptime": 100,
+            "officialUptime": 99.97,
             "score": 88,
             "grade": "good",
             "incidents": 3,
@@ -2664,6 +2692,8 @@
             "totalDowntimeMin": 15,
             "longestIncidentMin": 9,
             "avgLatencyMs": 216,
+            "p95LatencyMs": 307,
+            "latencySpikes": 444,
             "incidentList": [
                 {
                     "id": "#96b2939fa628e15e05fbc079b1da400aad564cd0ce11df9451e9533ced986cee",
@@ -2693,6 +2723,7 @@
         },
         "perplexity": {
             "uptime": 99.61,
+            "officialUptime": null,
             "score": 68,
             "grade": "fair",
             "incidents": 1,
@@ -2700,6 +2731,8 @@
             "totalDowntimeMin": 240,
             "longestIncidentMin": 240,
             "avgLatencyMs": 429,
+            "p95LatencyMs": 531,
+            "latencySpikes": 192,
             "incidentList": [
                 {
                     "id": "cmow64ygu00nssas2uxewm3ur",
@@ -2713,6 +2746,7 @@
         },
         "xai": {
             "uptime": 99.78,
+            "officialUptime": null,
             "score": 75,
             "grade": "good",
             "incidents": 2,
@@ -2720,6 +2754,8 @@
             "totalDowntimeMin": 48,
             "longestIncidentMin": 47,
             "avgLatencyMs": 489,
+            "p95LatencyMs": 616,
+            "latencySpikes": 185,
             "incidentList": [
                 {
                     "id": "INC78c0aac0",
@@ -2741,6 +2777,7 @@
         },
         "deepseek": {
             "uptime": 99.92,
+            "officialUptime": 99.88,
             "score": 82,
             "grade": "good",
             "incidents": 3,
@@ -2748,6 +2785,8 @@
             "totalDowntimeMin": 53,
             "longestIncidentMin": 34,
             "avgLatencyMs": 576,
+            "p95LatencyMs": 700,
+            "latencySpikes": 4,
             "incidentList": [
                 {
                     "id": "d9c1gqhzsrcl",
@@ -2777,16 +2816,20 @@
         },
         "openrouter": {
             "uptime": 100,
+            "officialUptime": null,
             "score": 88,
             "grade": "good",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": 482
+            "avgLatencyMs": 482,
+            "p95LatencyMs": 586,
+            "latencySpikes": 124
         },
         "elevenlabs": {
             "uptime": 97.21,
+            "officialUptime": null,
             "score": 65,
             "grade": "fair",
             "incidents": 9,
@@ -2794,6 +2837,8 @@
             "totalDowntimeMin": 829,
             "longestIncidentMin": 301,
             "avgLatencyMs": 498,
+            "p95LatencyMs": 632,
+            "latencySpikes": 107,
             "incidentList": [
                 {
                     "id": "01KQSSXNY53GHFQ6471JCYMAZ6",
@@ -2871,6 +2916,7 @@
         },
         "assemblyai": {
             "uptime": 100,
+            "officialUptime": 100,
             "score": 75,
             "grade": "good",
             "incidents": 3,
@@ -2878,6 +2924,8 @@
             "totalDowntimeMin": 524,
             "longestIncidentMin": 261,
             "avgLatencyMs": 844,
+            "p95LatencyMs": 1172,
+            "latencySpikes": 99,
             "incidentList": [
                 {
                     "id": "lmz6d399jjv6",
@@ -2907,6 +2955,7 @@
         },
         "deepgram": {
             "uptime": 93.89,
+            "officialUptime": null,
             "score": 64,
             "grade": "fair",
             "incidents": 5,
@@ -2914,6 +2963,8 @@
             "totalDowntimeMin": 1820,
             "longestIncidentMin": 1460,
             "avgLatencyMs": 1999,
+            "p95LatencyMs": 2930,
+            "latencySpikes": 178,
             "incidentList": [
                 {
                     "id": "hc5r6kbsm7by",
@@ -2959,16 +3010,20 @@
         },
         "huggingface": {
             "uptime": 100,
+            "officialUptime": 99.99,
             "score": 88,
             "grade": "good",
             "incidents": 1,
             "avgResolutionMin": 10,
             "totalDowntimeMin": 10,
             "longestIncidentMin": 10,
-            "avgLatencyMs": 372
+            "avgLatencyMs": 372,
+            "p95LatencyMs": 455,
+            "latencySpikes": 580
         },
         "replicate": {
             "uptime": 97.48,
+            "officialUptime": null,
             "score": 61,
             "grade": "fair",
             "incidents": 4,
@@ -2976,6 +3031,8 @@
             "totalDowntimeMin": 893,
             "longestIncidentMin": 417,
             "avgLatencyMs": 443,
+            "p95LatencyMs": 662,
+            "latencySpikes": 604,
             "incidentList": [
                 {
                     "id": "01KRECT7JYBP8DEX4XC6ZXZ0GK",
@@ -3013,6 +3070,7 @@
         },
         "pinecone": {
             "uptime": 96.96,
+            "officialUptime": 99.96,
             "score": 87,
             "grade": "good",
             "incidents": 4,
@@ -3020,6 +3078,8 @@
             "totalDowntimeMin": 189,
             "longestIncidentMin": 79,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "gq8tqkh3p20h",
@@ -3057,26 +3117,33 @@
         },
         "stability": {
             "uptime": 100,
+            "officialUptime": null,
             "score": 76,
             "grade": "good",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": 711
+            "avgLatencyMs": 711,
+            "p95LatencyMs": 1120,
+            "latencySpikes": 208
         },
         "voyageai": {
             "uptime": 100,
+            "officialUptime": 100,
             "score": 86,
             "grade": "good",
             "incidents": 0,
             "avgResolutionMin": null,
             "totalDowntimeMin": null,
             "longestIncidentMin": null,
-            "avgLatencyMs": 697
+            "avgLatencyMs": 697,
+            "p95LatencyMs": 849,
+            "latencySpikes": 64
         },
         "modal": {
             "uptime": 99.4,
+            "officialUptime": 99.93,
             "score": 97,
             "grade": "excellent",
             "incidents": 5,
@@ -3084,6 +3151,8 @@
             "totalDowntimeMin": 325,
             "longestIncidentMin": 148,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "890542",
@@ -3129,6 +3198,7 @@
         },
         "claudeai": {
             "uptime": 94.61,
+            "officialUptime": 98.85,
             "score": 63,
             "grade": "fair",
             "incidents": 34,
@@ -3136,6 +3206,8 @@
             "totalDowntimeMin": 3131,
             "longestIncidentMin": 1084,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "zxv1xv501678",
@@ -3413,6 +3485,7 @@
         },
         "characterai": {
             "uptime": 98.71,
+            "officialUptime": null,
             "score": 75,
             "grade": "good",
             "incidents": 29,
@@ -3420,6 +3493,8 @@
             "totalDowntimeMin": 580,
             "longestIncidentMin": 115,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "194pf806k2rz",
@@ -3633,6 +3708,7 @@
         },
         "chatgpt": {
             "uptime": 72.78,
+            "officialUptime": 99.83,
             "score": 85,
             "grade": "good",
             "incidents": 11,
@@ -3640,6 +3716,8 @@
             "totalDowntimeMin": 3055,
             "longestIncidentMin": 916,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "01KQSSQK74KJVJVGCS97TV156G",
@@ -3725,6 +3803,7 @@
         },
         "claudecode": {
             "uptime": 93.85,
+            "officialUptime": 99.05,
             "score": 65,
             "grade": "fair",
             "incidents": 35,
@@ -3732,6 +3811,8 @@
             "totalDowntimeMin": 3367,
             "longestIncidentMin": 1084,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "zxv1xv501678",
@@ -4017,6 +4098,7 @@
         },
         "codex": {
             "uptime": 90.14,
+            "officialUptime": 99.96,
             "score": 82,
             "grade": "good",
             "incidents": 7,
@@ -4024,6 +4106,8 @@
             "totalDowntimeMin": 3277,
             "longestIncidentMin": 1101,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "01KR421V8PCTFKA8EJJC2VCGA3",
@@ -4085,6 +4169,7 @@
         },
         "cursor": {
             "uptime": 93.46,
+            "officialUptime": 99.65,
             "score": 71,
             "grade": "fair",
             "incidents": 25,
@@ -4092,6 +4177,8 @@
             "totalDowntimeMin": 2231,
             "longestIncidentMin": 274,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "2tnjkh2yrj43",
@@ -4297,6 +4384,7 @@
         },
         "copilot": {
             "uptime": 99.83,
+            "officialUptime": 99.92,
             "score": 92,
             "grade": "excellent",
             "incidents": 6,
@@ -4304,6 +4392,8 @@
             "totalDowntimeMin": 545,
             "longestIncidentMin": 229,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "72q3n8yxthcy",
@@ -4357,6 +4447,7 @@
         },
         "windsurf": {
             "uptime": 99.45,
+            "officialUptime": 99.95,
             "score": 92,
             "grade": "excellent",
             "incidents": 5,
@@ -4364,6 +4455,8 @@
             "totalDowntimeMin": 287,
             "longestIncidentMin": 98,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "5h70gqpgnsdv",
@@ -4409,6 +4502,7 @@
         },
         "junie": {
             "uptime": 99.84,
+            "officialUptime": 100,
             "score": 93,
             "grade": "excellent",
             "incidents": 4,
@@ -4416,6 +4510,8 @@
             "totalDowntimeMin": 121,
             "longestIncidentMin": 45,
             "avgLatencyMs": null,
+            "p95LatencyMs": null,
+            "latencySpikes": null,
             "incidentList": [
                 {
                     "id": "096zxyn9hmqy",
@@ -4453,6 +4549,7 @@
         },
         "cerebras": {
             "uptime": 100,
+            "officialUptime": 100,
             "score": 88,
             "grade": "good",
             "incidents": 1,
@@ -4460,6 +4557,8 @@
             "totalDowntimeMin": 58,
             "longestIncidentMin": 58,
             "avgLatencyMs": 389,
+            "p95LatencyMs": 465,
+            "latencySpikes": 112,
             "incidentList": [
                 {
                     "id": "sytksrjb1bgk",
@@ -4607,6 +4706,7 @@
         ]
     },
     "detectionLead": null,
+    "degradation": null,
     "narrative": {
         "notableIncidents": [
             {
