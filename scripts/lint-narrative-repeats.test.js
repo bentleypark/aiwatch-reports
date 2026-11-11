@@ -23,6 +23,11 @@ test('percentages, score moves and "N of M" are tokens', () => {
   assert.deepEqual(figures('99.97% uptime, 88 → 56, 24 of 64, 48%'), ['99.97%', '88 → 56', '24 of 64', '48%'])
 })
 
+test('a score move written with its grades is the same token as the bare move', () => {
+  assert.deepEqual(figures('Good 88 → Fair 56, then Fair 62 → 76'), ['88 → 56', '62 → 76'])
+  assert.deepEqual(figures('Good 88 → Fair 56 and 88 → 56'), ['88 → 56'])
+})
+
 test('prose that merely contains digits is not a token', () => {
   assert.deepEqual(figures('a 24-hour window on Ray2 and Qwen3.8-2.4T'), [])
 })
