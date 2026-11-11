@@ -11,7 +11,7 @@
 //
 // Known limits:
 // - It sees only four figure shapes: a duration, a percentage, `N → M` and `N of M`. A story retold
-//   through a bare Score (`(45)`), a latency (`174ms`) or no figure at all is invisible to it.
+//   through a single score (`Fair 67`), a latency (`174ms`) or no figure at all is invisible to it.
 // - Cross-MONTH framing repetition is the RECURRENCE CHECK's job; this is strictly within one report.
 // - It cannot tell a legitimate contrast from a duplication.
 // - The Korean `<details>` mirrors are excluded: they restate their English section by design.
@@ -23,7 +23,12 @@ const SECTIONS = ['Summary', 'Key Insight', 'Notable Incidents', 'Observations']
 const THRESHOLD = 3
 
 // Longest alternative first, so `138h 3m` is one token rather than `138h` + `3m`.
-const FIGURE_RE = /(?<![\d.,])(?:\d+(?:\.\d+)?%|\d+h \d+m|\d+h|\d+m|\d+ → \d+|\d+ of \d+)(?![\w]|[.,]\d)/g
+const GRADE = '(?:(?:Excellent|Good|Fair|Degrading|Unstable) )?'
+const FIGURE_RE = new RegExp(
+  `(?<![\\d.,])(?:\\d+(?:\\.\\d+)?%|\\d+h \\d+m|\\d+h|\\d+m|${GRADE}\\d+ → ${GRADE}\\d+|\\d+ of \\d+)(?![\\w]|[.,]\\d)`,
+  'g',
+)
+const GRADE_WORD_RE = /(?:Excellent|Good|Fair|Degrading|Unstable) /g
 
 /** `## Heading` → body, for every level-2 heading. A repeated heading keeps the first. */
 function splitSections(src) {
@@ -46,7 +51,7 @@ function narrativeText(body) {
 
 /** Distinct figure tokens in a text, in first-seen order. */
 function figures(text) {
-  return [...new Set(String(text).match(FIGURE_RE) || [])]
+  return [...new Set((String(text).match(FIGURE_RE) || []).map((f) => f.replace(GRADE_WORD_RE, '')))]
 }
 
 /**
