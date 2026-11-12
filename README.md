@@ -1,6 +1,8 @@
 # AIWatch Monthly Reports
 
-> Monthly AI service reliability reports covering uptime, incidents, and performance across 49 major AI services.
+[![Services monitored](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Faiwatch-worker.p2c2kbf.workers.dev%2Fapi%2Fstatus%2Fcached%3Fseries%3D0&query=%24.services.length&label=services%20monitored&color=3fb950&cacheSeconds=3600)](https://ai-watch.dev)
+
+> Monthly AI service reliability reports covering uptime, incidents, and performance across the AI services [AIWatch](https://ai-watch.dev) monitors.
 
 **Live site**: [ai-watch.dev/reports](https://ai-watch.dev/reports/) (served via Vercel rewrite; legacy `reports.ai-watch.dev` self-redirects to the canonical path — #264)
 **Data source**: [ai-watch.dev](https://ai-watch.dev) — Real-time AI service status monitoring
@@ -31,7 +33,7 @@ Each monthly report includes:
 
 ## Methodology
 
-- **49 services monitored**: 16 LLM APIs, 6 coding agents, 4 voice, 9 inference & infra, 3 observability, 2 video, 2 image, 7 AI apps
+- **Services monitored**: each report states its own service count and per-category breakdown for that month
 - **Data sources**: Atlassian Statuspage, incident.io, Google Cloud Status, Better Stack, Instatus, AWS Health Dashboard, Azure Status RSS, OnlineOrNot
 - **AIWatch Score**: Weighted composite of uptime (40pts), incident affected days (25pts), recovery time (15pts), and probe-based responsiveness (20pts). Services without probe data use 80→100 score redistribution. A service whose status page publishes no uptime records drops the 40-point Uptime component and is rescaled over the remaining three onto the same 0–100 range, so that number is not on the same scale as one built from a measured uptime. Where a month's data records which services those are, they get their **own ranking table**, never a shared rank sequence (aiwatch-reports#106). A service with **neither** uptime **nor** a probe has too little signal, so its Score is withheld and it is not ranked at all.
 - **Uptime figures**: computed by AIWatch, not copied from a status page — from the provider's own incident and outage records where available ("Official"), or from the status-page platform's own monitoring history otherwise ("Platform")
@@ -83,7 +85,7 @@ After generation, fill in the narrative sections (`Summary`, `Recommendations`, 
 
 ## About AIWatch
 
-AIWatch is an AI service status monitoring dashboard that aggregates real-time status from 49 major AI services.
+AIWatch is an AI service status monitoring dashboard that aggregates real-time status from the major AI services.
 
 - **Live dashboard**: [ai-watch.dev](https://ai-watch.dev)
 - **Source code**: [github.com/bentleypark/aiwatch](https://github.com/bentleypark/aiwatch) (AGPL-3.0)
