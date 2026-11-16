@@ -138,7 +138,7 @@ test('a rank-unchecked month differs only in its ranks, and its other columns ar
 })
 
 test('incidentCountOf reads the count a Why cell opens with', () => {
-  eq(incidentCountOf('Zero incidents, 100.00% uptime — lost 11 pts on Responsiveness (latency)'), '0')
+  eq(incidentCountOf('Zero incidents, 100.00% uptime — lost 11 points on Responsiveness (latency)'), '0')
   eq(incidentCountOf('Zero incidents (no published uptime)'), '0')
   eq(incidentCountOf('1 incident, 23m'), '1')
   eq(incidentCountOf('49 incidents'), '49')

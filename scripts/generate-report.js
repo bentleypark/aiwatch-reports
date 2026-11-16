@@ -346,7 +346,7 @@ const SHORT_PROBE_FACTOR = 0.95
 
 function fmtLostPoints(points) {
   const rounded = Math.round(points)
-  return rounded === 0 ? '<1 pt' : `${rounded} pt${rounded === 1 ? '' : 's'}`
+  return rounded === 0 ? '<1 point' : `${rounded} point${rounded === 1 ? '' : 's'}`
 }
 
 function formatPointsLost(breakdown) {
@@ -1140,7 +1140,7 @@ function buildDetectionSection(archive, meta) {
     parts.push(
       '### RTT Degradation Detection',
       '',
-      `AIWatch's direct RTT probes flagged **${deg.total}** RTT degradations this month, of which **${deg.noStatusTotal ?? 0}** were **not reflected on the providers' official status pages at the time of detection**.`,
+      `AIWatch's direct RTT probes flagged **${deg.total}** RTT degradation signals this month, of which **${deg.noStatusTotal ?? 0}** were **not reflected on the providers' official status pages at the time of detection**.`,
       '',
     )
     // Only emit the table when there's a per-service breakdown — a total>0 with an empty
@@ -1711,7 +1711,7 @@ function longestCellEn(f) {
   if (f.longest.merged) return `${dur} (overlapping incidents)`
   if (!f.longest.startedAt) return dur
   const d = new Date(f.longest.startedAt)
-  return `${dur} · ${keepTogether(`${d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })} ${d.getUTCDate()}`)}`
+  return `${dur} · ${keepTogether(`${d.getUTCDate()} ${d.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })}`)}`
 }
 
 function longestCellKo(f) {
@@ -1750,7 +1750,7 @@ function glanceTable(facts, head, row) {
 }
 
 function renderGlanceEn(summary, month, prevMonth, links) {
-  const out = ['## At a glance', '']
+  const out = ['## At a Glance', '']
   out.push(
     '> This report covers incidents that providers posted on their status pages, plus AIWatch\'s own measurements. It does not measure the quality of a model\'s answers. Providers split incidents differently, so here each count is compared only with the same service\'s previous month, not with other services.',
     '',

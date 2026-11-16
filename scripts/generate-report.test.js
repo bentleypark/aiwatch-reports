@@ -1747,7 +1747,7 @@ test('renders RTT Degradation from archive.degradation', () => {
   }, detMeta)
   assert.ok(out.startsWith('## Detection & RTT Degradation'), `heading first: ${out.slice(0, 40)}`)
   assert.ok(!out.includes('Detection Latency'), 'no Detection Latency subsection: AIWatch measures no detection time (#178)')
-  assert.ok(/flagged \*\*12\*\* RTT degradations/.test(out), `total: ${out}`)
+  assert.ok(/flagged \*\*12\*\* RTT degradation signals/.test(out), `total: ${out}`)
   assert.ok(out.includes("**8** were **not reflected on the providers' official status pages at the time of detection**."), 'noStatus total rendered')
   assert.ok(/\| Deepgram \| 5 \| 4 \|/.test(out), 'degradation row rendered with display name')
   assert.ok(!out.includes('### Early RTT Detections'), 'no Early RTT subsection without leads')
@@ -1807,7 +1807,7 @@ test('an absent followThrough renders the exact section (#165)', () => {
     '',
     '### RTT Degradation Detection',
     '',
-    "AIWatch's direct RTT probes flagged **145** RTT degradations this month, of which **107** were **not reflected on the providers' official status pages at the time of detection**.",
+    "AIWatch's direct RTT probes flagged **145** RTT degradation signals this month, of which **107** were **not reflected on the providers' official status pages at the time of detection**.",
     '',
     '| Service | RTT Degradations | Not on Status Page |',
     '|---|---|---|',
@@ -4432,27 +4432,27 @@ console.log('\naiwatch#1779 — Score breakdown')
 const FULL_BREAKDOWN = { uptime: 40, incidents: 25, recovery: 15, responsiveness: 9.3, speed: 6.1, stability: 3.2, responsivenessStatus: 'available' }
 
 test('formatPointsLost states each shortfall in Score points', () => {
-  eq(formatPointsLost(FULL_BREAKDOWN), '11 pts on Responsiveness (latency)')
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 36, responsiveness: 9 }), '4 pts on Uptime, 11 pts on Responsiveness (latency)')
+  eq(formatPointsLost(FULL_BREAKDOWN), '11 points on Responsiveness (latency)')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 36, responsiveness: 9 }), '4 points on Uptime, 11 points on Responsiveness (latency)')
   eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: 20 }), null)
 })
 
 test('formatPointsLost scales a rescaled row so the losses still add up to 100 minus the Score', () => {
   // (25 + 15 + 12) / 60 × 100 = 86.7 → printed 87; 8 of 60 lost = 13 Score points.
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), '13 pts on Responsiveness (latency)')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), '13 points on Responsiveness (latency)')
   eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: null, responsivenessStatus: 'unsupported' }), null)
 })
 
 test('formatPointsLost names the short-probe penalty, which no component shows', () => {
   // (40 + 25 + 15) / 80 × 100 × 0.95 = 95.
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: null, responsivenessStatus: 'insufficient' }), '5 pts for a short probe history')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, responsiveness: null, responsivenessStatus: 'insufficient' }), '5 points for a short probe history')
   // (34 + 25 + 15) / 80 × 100 × 0.95 = 87.9 → 88: 6 × 1.25 × 0.95 = 7.1 → 7 (8 without the penalty), plus the 5.
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 34, responsiveness: null, responsivenessStatus: 'insufficient' }), '7 pts on Uptime, 5 pts for a short probe history')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 34, responsiveness: null, responsivenessStatus: 'insufficient' }), '7 points on Uptime, 5 points for a short probe history')
 })
 
 test('formatPointsLost never prints a shortfall as 0', () => {
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.8, responsiveness: 20 }), '<1 pt on Uptime')
-  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.2, responsiveness: 20 }), '1 pt on Uptime')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.8, responsiveness: 20 }), '<1 point on Uptime')
+  eq(formatPointsLost({ ...FULL_BREAKDOWN, uptime: 39.2, responsiveness: 20 }), '1 point on Uptime')
 })
 
 const zeroRow = (id, score, conf, breakdown) => ({
@@ -4460,7 +4460,7 @@ const zeroRow = (id, score, conf, breakdown) => ({
 })
 
 test('buildWhy says where a zero-incident row below 100 lost its points (the Groq case)', () => {
-  eq(buildWhy(zeroRow('groq', 89, 'high', FULL_BREAKDOWN), 'groq'), 'Zero incidents, 100.00% uptime — lost 11 pts on Responsiveness (latency)')
+  eq(buildWhy(zeroRow('groq', 89, 'high', FULL_BREAKDOWN), 'groq'), 'Zero incidents, 100.00% uptime — lost 11 points on Responsiveness (latency)')
 })
 
 test('buildWhy adds nothing at 100, even when a component rounds into it', () => {
@@ -4469,7 +4469,7 @@ test('buildWhy adds nothing at 100, even when a component rounds into it', () =>
 })
 
 test('buildWhy on a medium-tier zero-incident row never names Uptime', () => {
-  eq(buildWhy(zeroRow('gemini', 87, 'medium', { ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), 'gemini'), 'Zero incidents — lost 13 pts on Responsiveness (latency)')
+  eq(buildWhy(zeroRow('gemini', 87, 'medium', { ...FULL_BREAKDOWN, uptime: null, responsiveness: 12 }), 'gemini'), 'Zero incidents — lost 13 points on Responsiveness (latency)')
 })
 
 test('buildWhy leaves a month written before the field, and every row with incidents, as it was', () => {
@@ -4480,7 +4480,7 @@ test('buildWhy leaves a month written before the field, and every row with incid
 
 test('buildScoreTable carries the lost-points note into the ranking row', () => {
   const table = buildScoreTable([zeroRow('groq', 89, 'high', FULL_BREAKDOWN)], { groq: { name: 'Groq Cloud' } }, '2026-10')
-  assert.match(table, /\| 1 \| Groq Cloud \| 89 \| Good \| Official \| Zero incidents, 100\.00% uptime — lost 11 pts on Responsiveness \(latency\) \|/)
+  assert.match(table, /\| 1 \| Groq Cloud \| 89 \| Good \| Official \| Zero incidents, 100\.00% uptime — lost 11 points on Responsiveness \(latency\) \|/)
 })
 
 console.log('\nAt a glance (aiwatch-reports#162)')
@@ -4581,14 +4581,14 @@ console.log('\nAt a glance (aiwatch-reports#162)')
     const head = H('Service', 'Incidents', 'Longest incident (duration · start date)', 'Oct', 'Sep', 'Change')
     assert.deepStrictEqual(tableLines(en), [
       ...head,
-      '<tr><td>alpha | app</td><td>1</td><td>0</td><td>▲ 1</td><td>7m · Oct 1</td></tr>',
-      '<tr><td>Beta App</td><td>3</td><td>26</td><td>▼ 23</td><td>19h 7m · Oct 5</td></tr>',
-      '<tr><td>New App</td><td>3</td><td>—</td><td>new</td><td>1h · Oct 1</td></tr>',
-      '<tr><td>Was Frozen App</td><td>4</td><td>—</td><td>—</td><td>1h 30m · Oct 12</td></tr>',
+      '<tr><td>alpha | app</td><td>1</td><td>0</td><td>▲ 1</td><td>7m · 1 October</td></tr>',
+      '<tr><td>Beta App</td><td>3</td><td>26</td><td>▼ 23</td><td>19h 7m · 5 October</td></tr>',
+      '<tr><td>New App</td><td>3</td><td>—</td><td>new</td><td>1h · 1 October</td></tr>',
+      '<tr><td>Was Frozen App</td><td>4</td><td>—</td><td>—</td><td>1h 30m · 12 October</td></tr>',
       '</tbody>', '</table>',
       ...head,
       '<tr><td>Agent X &amp; &lt;Co&gt;</td><td>0</td><td>1</td><td>▼ 1</td><td>—</td></tr>',
-      '<tr><td>Agent Y</td><td>2</td><td>2</td><td>±0</td><td>30m · Oct 20</td></tr>',
+      '<tr><td>Agent Y</td><td>2</td><td>2</td><td>±0</td><td>30m · 20 October</td></tr>',
       '<tr><td>Merged Agent</td><td>2</td><td>1</td><td>▲ 1</td><td>1h 15m (overlapping incidents)</td></tr>',
       '<tr><td>No Duration Agent</td><td>1</td><td>5</td><td>▼ 4</td><td>—</td></tr>',
       '<tr><td>Quiet Agent</td><td>0</td><td>—</td><td>new</td><td>—</td></tr>',
@@ -4631,7 +4631,7 @@ console.log('\nAt a glance (aiwatch-reports#162)')
   const archiveOf = list => ({ services: Object.fromEntries(list.map(s => [s.id, s.data])), daysCollected: 31 })
   test('fillTemplate puts the section and its Korean block above Summary, leaves Summary in Korean alone, and links the real headings', () => {
     const out = fillTemplate(realTemplate, PERIOD, archiveOf(services), meta)
-    const glance = out.indexOf('## At a glance'); const koAt = out.indexOf('<summary><strong>At a glance in Korean'); const summaryAt = out.indexOf('## Summary')
+    const glance = out.indexOf('## At a Glance'); const koAt = out.indexOf('<summary><strong>At a glance in Korean'); const summaryAt = out.indexOf('## Summary')
     assert.ok(glance > 0 && glance < koAt && koAt < summaryAt, `glance ${glance}, ko ${koAt}, summary ${summaryAt}`)
     const koBlock = out.slice(koAt, out.indexOf('</details>', koAt))
     assert.match(koBlock, /<tr data-service="[^"]+"><td>Beta App<\/td><td>3<\/td>/, koBlock)
@@ -4643,7 +4643,7 @@ console.log('\nAt a glance (aiwatch-reports#162)')
   })
   test('fillTemplate drops the marker when no app or agent is archived', () => {
     const out = fillTemplate(realTemplate, PERIOD, archiveOf(services.filter(s => s.id === 'llmapi')), meta)
-    assert.ok(!out.includes('AT_A_GLANCE') && !out.includes('## At a glance') && !out.includes('At a glance in Korean'), 'glance rendered or marker left')
+    assert.ok(!out.includes('AT_A_GLANCE') && !out.includes('## At a Glance') && !out.includes('At a glance in Korean'), 'glance rendered or marker left')
     assert.ok(/flag it\. A long duration alone does not make an availability incident\. -->\n\n## Summary/.test(out), 'spacing before Summary')
     assert.ok(out.includes('<summary><strong>Summary in Korean</strong></summary>\n<ul>'), 'KO block spacing')
   })
