@@ -2857,13 +2857,13 @@
             "score": 59,
             "grade": "fair",
             "scoreConfidence": "medium",
-            "monthlyScore": 59,
+            "monthlyScore": 58,
             "monthlyGrade": "fair",
             "monthlyScoreConfidence": "medium",
-            "incidents": 6,
-            "countedIncidents": 5,
-            "avgResolutionMin": 97,
-            "totalDowntimeMin": 483,
+            "incidents": 7,
+            "countedIncidents": 6,
+            "avgResolutionMin": 82,
+            "totalDowntimeMin": 493,
             "longestIncidentMin": 240,
             "avgLatencyMs": 2798,
             "p95LatencyMs": 3940,
@@ -2926,6 +2926,15 @@
                     "durationMin": 13,
                     "finalStatus": "resolved",
                     "impact": "minor"
+                },
+                {
+                    "id": "thyrbpkl5z0f",
+                    "title": "Elevated API errors",
+                    "startedAt": "2026-09-30T19:29:08.000Z",
+                    "resolvedAt": "2026-09-30T19:39:04.000Z",
+                    "impact": "minor",
+                    "durationMin": 10,
+                    "finalStatus": "resolved"
                 }
             ],
             "components": [
@@ -2974,7 +2983,16 @@
                     "name": "Voice Agent API: Downstream Providers",
                     "uptime": 100
                 }
-            ]
+            ],
+            "monthlyScoreBreakdown": {
+                "uptime": null,
+                "incidents": 20.1,
+                "recovery": 12.7,
+                "responsiveness": 2.3,
+                "speed": 0.1,
+                "stability": 2.2,
+                "responsivenessStatus": "available"
+            }
         },
         "huggingface": {
             "uptime": 100,
