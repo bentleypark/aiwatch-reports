@@ -228,7 +228,7 @@ test('…while the INCIDENT-ordered picks still name it, deliberately', () => {
   // every tracked service, so gating them too would drop real findings for no gain. Pinned, or the
   // "deliberately not gated" comment in analyze() is just an assertion nobody checks.
   const a = analyze(HELD_OUT_FIRST, HELD_OUT_INCIDENTS)
-  const recovery = generateTldr(a, HELD_OUT_INCIDENTS).split('\n').find(l => l.includes('Recovery performance'))
+  const recovery = generateTldr(a, HELD_OUT_INCIDENTS).split('\n').find(l => l.includes('Average resolution time'))
   assert.ok(HELD_OUT_NAMES.some(n => recovery.includes(n)), recovery)
 })
 
@@ -317,7 +317,7 @@ test('includes all required sections', () => {
   assert(text.includes('Riskiest'), 'should have riskiest')
   assert(text.includes('Most incidents'), 'should have most incidents')
   assert(text.includes('Recommendations'), 'should have recommendations')
-  assert(text.includes('Recovery performance'), 'should have recovery')
+  assert(text.includes('Average resolution time'), 'should have recovery')
 })
 
 test('most reliable shows perfect services', () => {

@@ -2332,6 +2332,14 @@ async function main() {
     console.warn('[generate-report] Recurrence check failed (continuing without it):', err instanceof Error ? err.message : err)
   }
 
+  try {
+    const before = withDraft
+    withDraft = applyScoreChangeCheck(withDraft, archive, meta, month, dataDir)
+    if (withDraft !== before) console.log('[generate-report] Injected SCORE CHANGE CHECK (review, then DELETE the block before merge).')
+  } catch (err) {
+    console.warn('[generate-report] Score change check failed (continuing without it):', err instanceof Error ? err.message : err)
+  }
+
   const outDir = path.join(OUT_DIR_ROOT, month)
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'index.md')
@@ -2731,6 +2739,82 @@ function buildRecurrenceBlock(flags, opts = {}) {
   return lines.join('\n')
 }
 
+// aiwatch-reports#194 — a Score change's reason must be the component that moved, read from both
+// months' `monthlyScoreBreakdown`. Each component's change is put on the Score's own scale, the same
+// way formatPointsLost scales a loss. When the two months score different components (uptime gained
+// or lost) or only one carries the short-probe penalty, the scales differ and no per-component change is given.
+function scoreComponentChanges(prevBd, currBd) {
+  if (!prevBd || !currBd) return { comparable: false, reason: 'missing', changes: [] }
+  const presentKeys = bd => SCORE_COMPONENTS.filter(([key]) => typeof bd[key] === 'number').map(([key]) => key)
+  const factorOf = bd => (bd.responsivenessStatus === 'insufficient' ? SHORT_PROBE_FACTOR : 1)
+  const prevKeys = presentKeys(prevBd)
+  if (prevKeys.join() !== presentKeys(currBd).join()) return { comparable: false, reason: 'components', changes: [] }
+  if (factorOf(prevBd) !== factorOf(currBd)) return { comparable: false, reason: 'probe', changes: [] }
+  const present = SCORE_COMPONENTS.filter(([key]) => prevKeys.includes(key))
+  const scale = (100 / present.reduce((sum, [, , max]) => sum + max, 0)) * factorOf(currBd)
+  const changes = present
+    .map(([key, label]) => ({ key, label, delta: (currBd[key] - prevBd[key]) * scale }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  return { comparable: true, changes }
+}
+
+const SCORE_CHANGE_OPEN_MARKER = '<!-- BEGIN SCORE CHANGE CHECK — name the component that moved when you give a reason for a Score change, then DELETE this entire block before merge -->'
+const SCORE_CHANGE_CLOSE_MARKER = '<!-- END SCORE CHANGE CHECK -->'
+
+const NOT_COMPARABLE_REASON = {
+  components: 'the two months score different components',
+  probe: 'only one month carries the short-probe penalty',
+  missing: 'a month has no archived breakdown',
+}
+
+function fmtComponentDelta(d) {
+  const r = Math.round(d * 10) / 10
+  return r === 0 ? '±0' : `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(1)}`
+}
+
+function buildScoreChangeBlock(archive, prevArchive, meta, month) {
+  if (!archive?.services || !prevArchive?.services) return ''
+  const prevMonth = charts.monthsBefore(month, 1)[0]
+  if (typeof prevArchive.daysCollected === 'number' && prevArchive.daysCollected < charts.daysInMonthOf(prevMonth)) return ''
+  const exclude = new Set([...charts.buildMoverExclude(archive.services, month), ...charts.buildMoverExclude(prevArchive.services, prevMonth)])
+  const rows = []
+  for (const [id, s] of Object.entries(archive.services)) {
+    if (exclude.has(id)) continue
+    const p = prevArchive.services[id]
+    if (!p || typeof s.monthlyScore !== 'number' || typeof p.monthlyScore !== 'number') continue
+    const scoreDelta = s.monthlyScore - p.monthlyScore
+    if (scoreDelta === 0) continue
+    const c = scoreComponentChanges(p.monthlyScoreBreakdown, s.monthlyScoreBreakdown)
+    rows.push({ name: meta[id]?.name || id, prev: p.monthlyScore, curr: s.monthlyScore, scoreDelta, c })
+  }
+  if (rows.length === 0) return ''
+  rows.sort((a, b) => Math.abs(b.scoreDelta) - Math.abs(a.scoreDelta))
+  const lines = [
+    SCORE_CHANGE_OPEN_MARKER,
+    '_Score change by component vs last month, largest first. A figure written beside a Score change reads as its reason: it must sit on the component that moved most._',
+    '',
+  ]
+  for (const r of rows) {
+    const head = `- **${r.name}** ${r.prev} → ${r.curr} (${r.scoreDelta > 0 ? '+' : '−'}${Math.abs(r.scoreDelta)})`
+    lines.push(r.c.comparable
+      ? `${head}: ${r.c.changes.map(x => `${x.label} ${fmtComponentDelta(x.delta)}`).join(', ')}`
+      : `${head}: not comparable by component — ${NOT_COMPARABLE_REASON[r.c.reason]}`)
+  }
+  lines.push('', SCORE_CHANGE_CLOSE_MARKER)
+  return lines.join('\n')
+}
+
+function applyScoreChangeCheck(filled, archive, meta, month, dataDir) {
+  const prevArchive = charts.readDataArchive(charts.monthsBefore(month, 1)[0], dataDir)
+  return injectScoreChangeCheck(filled, buildScoreChangeBlock(archive, prevArchive, meta, month))
+}
+
+function injectScoreChangeCheck(filled, block) {
+  if (!block) return filled
+  if (filled.includes(SCORE_CHANGE_OPEN_MARKER)) return filled
+  return filled.replace(/^## Summary$/m, () => `${block}\n\n## Summary`)
+}
+
 // Insert the block directly above `## Summary` (near the top, next to the narrative
 // work). Idempotent — a document already carrying the open marker is returned as-is.
 function injectRecurrenceCheck(filled, block) {
@@ -2825,6 +2909,11 @@ module.exports = {
   detectRecurrence,
   buildRecurrenceBlock,
   injectRecurrenceCheck,
+  scoreComponentChanges,
+  buildScoreChangeBlock,
+  injectScoreChangeCheck,
+  applyScoreChangeCheck,
+  SCORE_CHANGE_OPEN_MARKER,
   buildMomIncidentDeltas,
   computeCurrentSubjects,
   loadPriorNarrative,

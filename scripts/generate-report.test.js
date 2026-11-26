@@ -2400,7 +2400,7 @@ test('multi-line TL;DR with nested markdown survives interpolation unchanged', (
     '**Recommendations**',
     '- **Primary**: ClaudeAI or OpenAI',
     '',
-    '**Recovery performance**: Fastest — Cohere (12m avg). Slowest — Gemini (5h avg).',
+    '**Average resolution time**: Fastest — Cohere (12m avg). Slowest — Gemini (5h avg).',
   ].join('\n')
   const out = injectAutoDraft(SAMPLE_FILLED, 'opening', tldr)
   // Every non-blank line of tldr must appear between the markers in order.
@@ -4649,6 +4649,118 @@ console.log('\nAt a glance (aiwatch-reports#162)')
   })
   test('injectGlance leaves a template without markers unchanged', () => {
     eq(injectGlance('## Summary\n', summary, PERIOD, PREV), '## Summary\n')
+  })
+}
+
+console.log('\naiwatch-reports#194 — Score change by component')
+
+{
+  const { scoreComponentChanges, buildScoreChangeBlock, injectScoreChangeCheck, applyScoreChangeCheck, SCORE_CHANGE_OPEN_MARKER } = require('./generate-report')
+  // OpenRouter 2026-09 → 2026-10 (September recomputed from the worker's computeMonthlyScore; October archived).
+  const OR_SEP = { uptime: 39.0, incidents: 22.2, recovery: 10.0, responsiveness: 6.8, responsivenessStatus: 'available' }
+  const OR_OCT = { uptime: 38.6, incidents: 17.1, recovery: 8.7, responsiveness: 5.4, responsivenessStatus: 'available' }
+  // ChatGPT has no probe, so both months are scored over 80 and rescaled ×1.25.
+  const GPT_SEP = { uptime: 29.0, incidents: 12.7, recovery: 11.3, responsiveness: null, responsivenessStatus: 'unsupported' }
+  const GPT_OCT = { uptime: 26.6, incidents: 9.6, recovery: 10.1, responsiveness: null, responsivenessStatus: 'unsupported' }
+
+  test('scoreComponentChanges orders components by how far they moved, on the Score scale', () => {
+    const c = scoreComponentChanges(OR_SEP, OR_OCT)
+    eq(c.comparable, true)
+    eq(c.changes.map(x => x.key).join(), 'incidents,responsiveness,recovery,uptime')
+    assert.ok(Math.abs(c.changes[0].delta - -5.1) < 1e-9)
+  })
+
+  test('scoreComponentChanges rescales a row scored over fewer than 100 points', () => {
+    const c = scoreComponentChanges(GPT_SEP, GPT_OCT)
+    eq(c.changes[0].key, 'incidents')
+    assert.ok(Math.abs(c.changes[0].delta - -3.1 * 1.25) < 1e-9)
+  })
+
+  test('scoreComponentChanges gives no per-component change when the months score different components', () => {
+    const lostUptime = { ...OR_OCT, uptime: null }
+    eq(scoreComponentChanges(OR_SEP, lostUptime).comparable, false)
+    eq(scoreComponentChanges(OR_SEP, lostUptime).changes.length, 0)
+    const noProbe = { ...OR_OCT, responsiveness: null, responsivenessStatus: 'unsupported' }
+    eq(scoreComponentChanges(noProbe, { ...noProbe, responsivenessStatus: 'insufficient' }).reason, 'probe')
+    eq(scoreComponentChanges(noProbe, { ...noProbe }).comparable, true)
+    const short = { ...noProbe, responsivenessStatus: 'insufficient' }
+    const c = scoreComponentChanges(short, { ...short, incidents: OR_OCT.incidents - 8 })
+    assert.ok(Math.abs(c.changes[0].delta - -8 * 1.25 * 0.95) < 1e-9, 'both months short: change carries the 0.95 factor')
+  })
+
+  test('scoreComponentChanges marks a month with no breakdown as not comparable', () => {
+    eq(scoreComponentChanges(undefined, OR_OCT).reason, 'missing')
+    eq(scoreComponentChanges(OR_SEP, null).reason, 'missing')
+  })
+
+  const arch = services => ({ services })
+  const META = { unarchived: { name: 'Unarchived' }, small: { name: 'Small' }, openrouter: { name: 'OpenRouter' }, chatgpt: { name: 'ChatGPT' }, flat: { name: 'Flat' }, eleven: { name: 'ElevenLabs' } }
+  const prev = arch({
+    openrouter: { monthlyScore: 78, monthlyScoreBreakdown: OR_SEP },
+    chatgpt: { monthlyScore: 66, monthlyScoreBreakdown: GPT_SEP },
+    flat: { monthlyScore: 80, monthlyScoreBreakdown: OR_SEP },
+    small: { monthlyScore: 70, monthlyScoreBreakdown: OR_SEP },
+    unarchived: { monthlyScore: 90 },
+    eleven: { monthlyScore: 63, monthlyScoreBreakdown: OR_SEP },
+  })
+  const curr = arch({
+    openrouter: { monthlyScore: 70, monthlyScoreBreakdown: OR_OCT },
+    chatgpt: { monthlyScore: 58, monthlyScoreBreakdown: GPT_OCT },
+    flat: { monthlyScore: 80, monthlyScoreBreakdown: OR_OCT },
+    small: { monthlyScore: 72, monthlyScoreBreakdown: OR_OCT },
+    unarchived: { monthlyScore: 85, monthlyScoreBreakdown: OR_OCT },
+    eleven: { monthlyScore: 55, monthlyScoreBreakdown: { ...OR_OCT, uptime: null } },
+    added: { monthlyScore: 83, monthlyScoreBreakdown: OR_OCT },
+  })
+
+  test('buildScoreChangeBlock lists changed Scores largest first, with the moving component first', () => {
+    const block = buildScoreChangeBlock(curr, prev, META, '2026-10')
+    const lines = block.split('\n').filter(l => l.startsWith('- '))
+    eq(lines.length, 5)
+    eq(lines[0], '- **OpenRouter** 78 → 70 (−8): Incidents −5.1, Responsiveness (latency) −1.4, Recovery −1.3, Uptime −0.4')
+    assert.ok(lines[1].startsWith('- **ChatGPT** 66 → 58 (−8): Incidents −3.9,'), lines[1])
+    eq(lines[2], '- **ElevenLabs** 63 → 55 (−8): not comparable by component — the two months score different components')
+    eq(lines[3], '- **Unarchived** 90 → 85 (−5): not comparable by component — a month has no archived breakdown')
+    assert.ok(lines[4].startsWith('- **Small** 70 → 72 (+2):'), 'the smaller change sorts last: ' + lines[4])
+    assert.ok(!block.includes('Flat'), 'an unchanged Score is not listed')
+    assert.ok(block.startsWith(SCORE_CHANGE_OPEN_MARKER), 'fenced so the publish lint catches a leak')
+  })
+
+  test('buildScoreChangeBlock leaves out services the ranking leaves out, in either month', () => {
+    const p = arch({ ...prev.services, stale: { monthlyScore: 76, incidentSourceStale: true, monthlyScoreBreakdown: OR_SEP }, fresh: { monthlyScore: 60, addedAt: '2026-09-12', monthlyScoreBreakdown: OR_SEP } })
+    const c = arch({ ...curr.services, stale: { monthlyScore: 75, incidentSourceStale: true, monthlyScoreBreakdown: OR_OCT }, fresh: { monthlyScore: 80, addedAt: '2026-09-12', monthlyScoreBreakdown: OR_OCT } })
+    const block = buildScoreChangeBlock(c, p, { ...META, stale: { name: 'Stale' }, fresh: { name: 'Fresh' } }, '2026-10')
+    assert.ok(block.includes('OpenRouter'), 'control: a ranked service is still listed')
+    assert.ok(!block.includes('Stale'), 'a frozen feed is not ranked')
+    const p2 = arch({ ...prev.services, froze: { monthlyScore: 76, monthlyScoreBreakdown: OR_SEP } })
+    const c2 = arch({ ...curr.services, froze: { monthlyScore: 70, incidentSourceStale: true, monthlyScoreBreakdown: OR_OCT } })
+    assert.ok(!buildScoreChangeBlock(c2, p2, { ...META, froze: { name: 'Froze' } }, '2026-10').includes('Froze'), 'a feed that froze this month is not ranked')
+    assert.ok(!block.includes('Fresh'), 'a partial prior month is not a real change')
+  })
+
+  test('buildScoreChangeBlock is empty when the prior month is short', () => {
+    eq(buildScoreChangeBlock(curr, { ...prev, daysCollected: 29 }, META, '2026-10'), '')
+    assert.ok(buildScoreChangeBlock(curr, { ...prev, daysCollected: 30 }, META, '2026-10').includes('OpenRouter'))
+  })
+
+  test('buildScoreChangeBlock is empty without a prior month', () => {
+    eq(buildScoreChangeBlock(curr, null, META, '2026-10'), '')
+  })
+
+  test('applyScoreChangeCheck reads the prior month from the data dir and injects the block', () => {
+    const dir = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'scc-'))
+    require('fs').writeFileSync(require('path').join(dir, '2026-09.json'), JSON.stringify(prev))
+    const out = applyScoreChangeCheck('intro\n## Summary\nbody', curr, META, '2026-10', dir)
+    assert.ok(out.includes(SCORE_CHANGE_OPEN_MARKER) && out.includes('OpenRouter'))
+    eq(applyScoreChangeCheck('x\n## Summary', curr, META, '2026-11', dir), 'x\n## Summary')
+    require('fs').rmSync(dir, { recursive: true })
+  })
+
+  test('injectScoreChangeCheck puts the block above Summary, once', () => {
+    const block = buildScoreChangeBlock(curr, prev, META, '2026-10')
+    const once = injectScoreChangeCheck('intro\n## Summary\nbody', block)
+    assert.ok(once.indexOf(SCORE_CHANGE_OPEN_MARKER) < once.indexOf('## Summary'))
+    eq(injectScoreChangeCheck(once, block), once)
   })
 }
 

@@ -187,7 +187,7 @@ function generateTldr(a, incidents, momByService = {}) {
 
   // Recovery
   if (a.fastestRecovery && a.slowestRecovery) {
-    lines.push(`\n**Recovery performance**: Fastest — ${a.fastestRecovery.Service} (${a.fastestRecovery['Avg Resolution']} avg). Slowest — ${a.slowestRecovery.Service} (${a.slowestRecovery['Avg Resolution']} avg).`)
+    lines.push(`\n**Average resolution time**: Fastest — ${a.fastestRecovery.Service} (${a.fastestRecovery['Avg Resolution']} avg). Slowest — ${a.slowestRecovery.Service} (${a.slowestRecovery['Avg Resolution']} avg).`)
   }
 
   return lines.join('\n')
