@@ -9,7 +9,7 @@ const {
   lintReport,
   priorReportPath,
 } = require('./lint-recurrence')
-const { RECURRENCE_OPEN_MARKER, SUMMARY_OPEN_MARKER } = require('./generate-report')
+const { RECURRENCE_OPEN_MARKER, SUMMARY_OPEN_MARKER, SCORE_CHANGE_OPEN_MARKER } = require('./generate-report')
 
 let passed = 0
 let failed = 0
@@ -107,6 +107,11 @@ test('detects an AUTO-DRAFT fence', () => {
 
 test('detects a RECURRENCE CHECK fence', () => {
   eq(findLeakedFences(`a\nb\n${RECURRENCE_OPEN_MARKER}`).length, 1)
+})
+
+test('a published report with a leaked SCORE CHANGE CHECK fence FAILS', () => {
+  eq(lintReport({ md: report({ published: true, extra: SCORE_CHANGE_OPEN_MARKER }) }).errors.length, 1)
+  eq(lintReport({ md: report({ published: true, extra: '<!-- END SCORE CHANGE CHECK -->' }) }).errors.length, 1)
 })
 
 test('detects both BEGIN and END markers', () => {

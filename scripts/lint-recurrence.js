@@ -27,6 +27,7 @@ const {
   NOTABLE_OPEN_MARKER,
   OBSERVATIONS_OPEN_MARKER,
   RECURRENCE_OPEN_MARKER,
+  SCORE_CHANGE_OPEN_MARKER,
 } = require('./generate-report')
 const { monthsBefore } = require('./generate-charts')
 
@@ -37,12 +38,12 @@ const { monthsBefore } = require('./generate-charts')
 
 // The exact fence markers we ship (kept for reference/coupling); the detector below is a
 // keyword check so a hand-edited/close marker or a future fence variant is still caught.
-const KNOWN_FENCE_MARKERS = [SUMMARY_OPEN_MARKER, NOTABLE_OPEN_MARKER, OBSERVATIONS_OPEN_MARKER, RECURRENCE_OPEN_MARKER]
+const KNOWN_FENCE_MARKERS = [SUMMARY_OPEN_MARKER, NOTABLE_OPEN_MARKER, OBSERVATIONS_OPEN_MARKER, RECURRENCE_OPEN_MARKER, SCORE_CHANGE_OPEN_MARKER]
 // Match each HTML comment INDIVIDUALLY (lazy to the first `-->`) — a keyword regex spanning
 // `[^]*?` across comments would swallow a benign comment up to a downstream fence and
 // mis-locate it. We then keyword-check the comment's own body.
 const COMMENT_RE = /<!--([\s\S]*?)-->/g
-const FENCE_KEYWORD_RE = /\b(?:AUTO-DRAFT|RECURRENCE CHECK)\b/i
+const FENCE_KEYWORD_RE = /\b(?:AUTO-DRAFT|RECURRENCE CHECK|SCORE CHANGE CHECK)\b/i
 
 // PURE. Read the leading `---` YAML frontmatter into a shallow key→string map. Only the
 // scalar fields we need (`published`) matter; missing frontmatter → {}.
